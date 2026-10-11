@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "0.120.0",
-  "commit": "c273c26dcda53d7bcb4fdbc292d827feab385412",
-  "buildRun": 38163400576,
-  "tag": "v0.120.0",
+  "version": "0.121.0",
+  "commit": "ce944ecf65bb86eaf5974276e694c42f231c5718",
+  "buildRun": 38169569092,
+  "tag": "v0.121.0",
   "attempt": 1,
-  "title": "Localtone 0.120.0 — Playback scrolling and disc-number display"
+  "title": "Localtone 0.121.0 — A cleaner first launch"
 }
