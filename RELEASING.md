@@ -154,3 +154,9 @@ Upload every `Localtone-VERSION-ffmpeg-source-PLATFORM-ARCH.tar.gz` alongside th
 `Publish verified early access` is triggered by an explicit change to `build/release-plan.json`. The plan pins the app commit and its successful native build run. The publishing job downloads that run's combined candidate, creates the source ZIP from the pinned app commit, checks archive CRCs, internal update manifests, decoder/source hashes and dependency notices, then uploads all files to a draft. It verifies GitHub's uploaded asset hashes before publishing as a pre-release. Existing conflicting assets and already-published releases are never overwritten.
 
 Only the publishing job has `contents: write`; its GitHub token is ephemeral. Actions used by that job are pinned to reviewed official revisions. No personal token or signing secret is stored. For a later early-access release, complete its native build, update the plan with that version/commit/run and add matching release notes. Physical hardware and signing validation remain separate release gates. Stable in-app update checks intentionally ignore pre-releases.
+
+## macOS bundle integrity (0.115)
+
+Early-access Mac builds use explicit ad-hoc signing (`mac.identity: "-"`), hardened runtime, and only the JIT and library-validation entitlements needed by Electron. They are not Developer ID signed or notarized. The decoder is ad-hoc signed during finalization before provenance is hashed; `signIgnore` prevents packaging from changing those bytes. Changing this to Developer ID signing requires removing that exclusion and redesigning the manifest/provenance signing order.
+
+The native CI job verifies signatures and release hashes from the extracted ZIP and executes the packaged Electron runtime and decoder. Failures block publication. Manual Gatekeeper, playback and device tests remain required. Version 0.114 skipped app signing and can produce a damaged-app warning; use 0.115 instead once published.

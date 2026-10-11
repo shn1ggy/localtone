@@ -14,6 +14,11 @@ if (run('git', ['-C', sourceRoot, 'rev-parse', 'HEAD']).trim() !== source.commit
 if (run('git', ['-C', sourceRoot, 'status', '--porcelain', '--untracked-files=no']).trim())
   throw Error('FFmpeg source has modifications.');
 const binary = path.join(buildRoot, process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
+// Sign before hashing: packaging preserves this signature and the decoder provenance.
+if (process.platform === 'darwin') {
+  run('/usr/bin/codesign', ['--force', '--sign', '-', '--timestamp=none', binary]);
+  run('/usr/bin/codesign', ['--verify', '--strict', '--verbose=2', binary]);
+}
 const versionOutput = run(binary, ['-version']);
 const config = await fs.readFile(path.join(buildRoot, 'ffbuild/config.mak'), 'utf8');
 const compiler = /^CC_IDENT=(.+)$/m.exec(config)?.[1];

@@ -1,6 +1,6 @@
 {
   "name": "localtone",
-  "version": "0.114.0",
+  "version": "0.115.0",
   "private": true,
   "description": "A local-first desktop music player",
   "author": "Localtone",
@@ -78,7 +78,14 @@
         "zip"
       ],
       "category": "public.app-category.music",
-      "icon": "build/icon.icns"
+      "icon": "build/icon.icns",
+      "identity": "-",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "signIgnore": [
+        "/node_modules/ffmpeg-static/ffmpeg$"
+      ]
     },
     "win": {
       "target": [

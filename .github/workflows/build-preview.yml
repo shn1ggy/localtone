@@ -77,6 +77,8 @@ jobs:
       - run: node build/ffmpeg/smoke.mjs
       - run: npm run release:${{ matrix.target }}
       - run: npm run release:verify-downloads -- dist/checksums.json
+      - if: runner.os == 'macOS'
+        run: node build/verify-mac-package.mjs
       - uses: actions/upload-artifact@v7
         with:
           name: unsigned-test-${{ matrix.target }}-${{ runner.arch }}
