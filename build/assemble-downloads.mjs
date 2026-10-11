@@ -16,6 +16,7 @@ export async function assembleDownloads(input, output) {
     const names = await verifyDownloads(path.join(root, 'checksums.json'));
     for (const name of names) {
       const match =
+        /^Localtone-(\d+\.\d+\.\d+)-linux-(x86_64|aarch64)\.AppImage(?:\.blockmap)?$/.exec(name) ||
         /^Localtone-(\d+\.\d+\.\d+)-(mac|win|linux)-(x64|arm64)\.(zip|AppImage)(?:\.blockmap)?$/.exec(
           name,
         ) ||
