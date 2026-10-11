@@ -6,6 +6,29 @@ import sys
 import tarfile
 import zipfile
 
+def verify_manifest(archive, manifest_name, manifest):
+    if manifest['kind'] == 'source':
+        prefix = manifest_name[:-len('localtone-release.json')]
+    else:
+        suffix = ('Contents/Resources/' if manifest['platform'] == 'darwin' else 'resources/') + 'localtone-release.json'
+        assert manifest_name.endswith(suffix)
+        prefix = manifest_name[:-len(suffix)]
+    for file, expected in manifest['files'].items():
+        name = prefix + file
+        assert archive.namelist().count(name) == 1, 'Missing or ambiguous manifest file: ' + file
+        assert hashlib.sha256(archive.read(name)).hexdigest() == expected, file
+
+if sys.argv[1] == '--self-test':
+    import io
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, 'w') as archive:
+        archive.writestr('Localtone/package.json', b'root')
+        archive.writestr('Localtone/app/rules/package.json', b'nested')
+    with zipfile.ZipFile(buffer) as archive:
+        verify_manifest(archive, 'Localtone/localtone-release.json', {'kind': 'source', 'files': {'package.json': hashlib.sha256(b'root').hexdigest()}})
+    print('Source archive root regression check passed.')
+    sys.exit(0)
+
 root = pathlib.Path(sys.argv[1])
 plan = json.loads((pathlib.Path(__file__).parent / 'release-plan.json').read_text())
 provenance = {}
@@ -28,10 +51,7 @@ for app in root.glob('*.zip'):
         manifest_name = next(n for n in archive.namelist() if n.endswith('localtone-release.json'))
         manifest = json.loads(archive.read(manifest_name))
         assert manifest['version'] == plan['version']
-        for file, expected in manifest['files'].items():
-            matches = [n for n in archive.namelist() if n == file or n.endswith('/' + file)]
-            assert len(matches) == 1, 'Missing or ambiguous manifest file: ' + file
-            assert hashlib.sha256(archive.read(matches[0])).hexdigest() == expected, file
+        verify_manifest(archive, manifest_name, manifest)
         if manifest['kind'] == 'desktop':
             audit = json.loads(archive.read(next(n for n in archive.namelist() if n.endswith('localtone-build-audit.json'))))
             assert not audit['packagesWithoutNotice'], audit['packagesWithoutNotice']

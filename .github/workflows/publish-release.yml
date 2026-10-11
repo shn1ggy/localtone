@@ -58,6 +58,7 @@ jobs:
       - run: npm run release:source
         working-directory: release-source
       - run: cp release-source/dist/*-source.zip release-candidate/
+      - run: python build/verify-release-archives.py --self-test
       - run: python build/verify-release-archives.py release-candidate
       - run: node build/publish-release.mjs release-candidate
         env:
