@@ -365,6 +365,19 @@ function renderSidebar() {
     }
     if (container === 'libraries') $(container).append(all);
   }
+  syncPlaybackMarkers();
+}
+function syncPlaybackMarkers() {
+  for (const marker of document.querySelectorAll('.playback-marker')) {
+    if (!marker.closest('.playing-source, tr.current')) marker.remove();
+  }
+  for (const node of document.querySelectorAll('.playing-source, tr.current .track-name')) {
+    if (!node.querySelector('.playback-marker')) {
+      const marker = icon('playback');
+      if (node.classList.contains('track-name')) node.prepend(marker);
+      else node.append(marker);
+    }
+  }
 }
 function render() {
   syncSearchClear();
@@ -428,6 +441,7 @@ function render() {
     $('empty-add').hidden = true;
   }
   renderBrowser();
+  syncPlaybackMarkers();
   renderQueue();
   renderPlayerRating();
   syncScrollbarControls();
@@ -540,6 +554,7 @@ async function startTrack(resume = null, scheduled = false) {
       button.dataset.sourceKind === playingOrigin.kind &&
         button.dataset.sourceId === playingOrigin.id,
     );
+  syncPlaybackMarkers();
   renderQueue();
   renderPlayerRating();
   if (resume !== null) {
@@ -3007,7 +3022,9 @@ function buildTrackTable(table, tracks, playSource, playlist = null) {
         cell.className = 'title-cell';
         const title = el('div', null, 'track-title');
         if (main) title.append(cover(track));
-        title.append(el('span', track.title, 'track-name'));
+        const name = el('span', track.title, 'track-name');
+        if (row.classList.contains('current')) name.prepend(icon('playback'));
+        title.append(name);
         cell.append(title);
       } else if (column.key === 'rating') {
         cell.className = 'rating-cell';
@@ -4299,8 +4316,14 @@ function paintPaneFocus(pulse = true) {
         : document.querySelector('.library-content');
   if (pulse) {
     const padding = getComputedStyle(node);
-    node.style.setProperty('--pane-focus-left', padding.paddingLeft);
-    node.style.setProperty('--pane-focus-right', padding.paddingRight);
+    node.style.setProperty(
+      '--pane-focus-left',
+      selection.pane === 'sidebar' ? '0px' : padding.paddingLeft,
+    );
+    node.style.setProperty(
+      '--pane-focus-right',
+      selection.pane === 'sidebar' ? '0px' : padding.paddingRight,
+    );
     void node.offsetWidth;
     node.classList.add('pane-focus-pulse');
   }

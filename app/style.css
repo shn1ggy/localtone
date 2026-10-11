@@ -8043,24 +8043,27 @@ dialog input[type='checkbox']:focus-visible {
 }
 
 /* A shared playback mark distinguishes playback from browsing selection. */
-.playing-source::after,
-.track-table tr.current .track-name::before {
-  content: '';
+.playback-marker.ui-icon {
   display: inline-block;
-  width: 10px;
-  height: 12px;
-  flex: 0 0 10px;
-  background:
-    linear-gradient(var(--accent), var(--accent)) 0 4px / 2px 6px no-repeat,
-    linear-gradient(var(--accent), var(--accent)) 4px 0 / 2px 12px no-repeat,
-    linear-gradient(var(--accent), var(--accent)) 8px 2px / 2px 8px no-repeat;
+  width: 12px;
+  height: 14px;
+  flex: 0 0 12px;
+  fill: var(--accent);
+  stroke: none;
 }
-.playing-source::after {
-  margin-left: auto;
+.playing-source {
+  position: relative;
+  padding-right: 36px;
 }
-.track-table tr.current .track-name::before {
+.playing-source > .playback-marker {
+  position: absolute;
+  right: 23px;
+  top: 50%;
+  transform: translate(50%, -50%);
+}
+.track-name > .playback-marker {
   margin-right: 6px;
-  vertical-align: -1px;
+  vertical-align: -2px;
 }
 .track-table tr.current {
   background: transparent;

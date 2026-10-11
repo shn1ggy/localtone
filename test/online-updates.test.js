@@ -12,7 +12,7 @@ const url = name => `https://github.com/shn1ggy/localtone/releases/download/v0.1
 function fixture({platform='darwin',arch='arm64',tag='v0.112.0',checksum=sha256,body=payload,assets, fetchOverride}={}) {
  const name=`Localtone-${tag.replace(/^v/,'')}-${{darwin:'mac',win32:'win',linux:'linux'}[platform]}-${arch}.zip`;
  const release={tag_name:tag,body:'Release notes <script>never run</script>',assets:assets||[{name,size:payload.length,browser_download_url:url(name)},{name:'checksums.json',browser_download_url:url('checksums.json')}]};
- const fetch=fetchOverride|| (async address => new Response(address.endsWith('/latest')?JSON.stringify(release):address.endsWith('checksums.json')?JSON.stringify({schema:1,artifacts:[{name,size:payload.length,sha256:checksum}]}):body));
+ const fetch=fetchOverride|| (async address => new Response(address.includes('/releases?')?JSON.stringify([release]):address.endsWith('checksums.json')?JSON.stringify({schema:1,artifacts:[{name,size:payload.length,sha256:checksum}]}):body));
  const progress=[];
  return {name,service:createOnlineUpdates({fetch,version:'0.111.0',platform,arch,progress:value=>progress.push(value)}),progress};
 }
@@ -35,13 +35,13 @@ test('metadata/network errors have actionable outcomes and unsafe redirects are 
  for(const [status,pattern] of [[404,/public release/],[403,/limited/],[429,/limited/],[500,/500/]])await assert.rejects(fixture({fetchOverride:async()=>new Response('',{status})}).service.check(),pattern);
  for(const target of ['http://github.com/file','https://evil.example/file','https://github.com@evil.example/file','https://github.com:444/file'])assert.throws(()=>trustedURL(target),/untrusted/);
  await assert.rejects(fixture({fetchOverride:async()=>new Response(null,{status:302,headers:{location:'https://evil.example/file'}})}).service.check(),/untrusted/);
- await assert.rejects(fixture({fetchOverride:async()=>new Response('x'.repeat(1024**2+1))}).service.check(),/too large/);
+ await assert.rejects(fixture({fetchOverride:async()=>new Response('x'.repeat(4*1024**2+1))}).service.check(),/too large/);
 });
 test('cancelled operations remove partial files and can be retried; duplicate checks are blocked',()=>directory(async dir=>{
  let block=false,started;
  const wait=new Promise(resolve=>started=resolve);
  const {service}=fixture({fetchOverride:async(address,{signal})=>{
-  if(address.endsWith('/latest'))return new Response(JSON.stringify({tag_name:'v0.112.0',assets:[{name:'Localtone-0.112.0-mac-arm64.zip',size:payload.length,browser_download_url:url('archive.zip')},{name:'checksums.json',browser_download_url:url('checksums.json')}]}));
+  if(address.includes('/releases?'))return new Response(JSON.stringify([{tag_name:'v0.112.0',assets:[{name:'Localtone-0.112.0-mac-arm64.zip',size:payload.length,browser_download_url:url('archive.zip')},{name:'checksums.json',browser_download_url:url('checksums.json')}]}]));
   if(address.endsWith('checksums.json'))return new Response(JSON.stringify({schema:1,artifacts:[{name:'Localtone-0.112.0-mac-arm64.zip',size:payload.length,sha256}]}));
   if(block){started();return await new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(signal.reason),{once:true}));}
   return new Response(payload);
@@ -50,3 +50,16 @@ test('cancelled operations remove partial files and can be retried; duplicate ch
  await assert.rejects(service.check(),/already running/);service.cancel();assert.deepEqual(await task,{cancelled:true});assert.deepEqual(await readdir(dir),[]);
  block=false;await service.download(path.join(dir,'update.zip'));assert.deepEqual(await readFile(path.join(dir,'update.zip')),payload);
 }));
+
+test('early-access releases are recognized, drafts ignored and numeric versions ordered',async()=>{
+ const service = (version, releases) => createOnlineUpdates({version,platform:'darwin',arch:'arm64',fetch:async address=>{
+  assert.match(address,/\/releases\?per_page=100$/);
+  return new Response(JSON.stringify(releases));
+ }});
+ const releases=[{tag_name:'v0.114.0',prerelease:true},{tag_name:'v0.115.0',prerelease:true},{tag_name:'v0.999.0',draft:true},{tag_name:'nightly',prerelease:true}];
+ assert.deepEqual(await service('0.115.0',releases).check(),{available:false,version:'0.115.0'});
+ await assert.rejects(service('0.114.0',releases).check(),/compatible verified/);
+ assert.deepEqual(await service('1.0.0',[{tag_name:'v1.1.0',prerelease:true},{tag_name:'v1.0.0',prerelease:false}]).check(),{available:false,version:'1.0.0'});
+ await assert.rejects(service('0.115.0',[]).check(),/No published Localtone/);
+ await assert.rejects(service('1.0.0',[{tag_name:'v1.1.0',prerelease:true}]).check(),/No stable Localtone/);
+});

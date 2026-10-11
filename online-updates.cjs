@@ -102,14 +102,34 @@ function createOnlineUpdates({ fetch, version, platform, arch, progress = () => 
   async function check() {
     return operation(async (signal) => {
       candidate = null;
-      const release = JSON.parse(
+      // GitHub's /latest endpoint deliberately excludes prereleases. Localtone 0.x
+      // is early access, so use the published feed and compare numeric versions.
+      const releases = JSON.parse(
         await bytes(
-          `https://api.github.com/repos/${repository}/releases/latest`,
+          `https://api.github.com/repos/${repository}/releases?per_page=100`,
           signal,
-          1024 ** 2,
+          4 * 1024 ** 2,
         ),
       );
-      if (release.draft || release.prerelease) throw new Error('No stable release is available.');
+      if (!Array.isArray(releases)) throw new Error('GitHub returned invalid release metadata.');
+      const earlyAccess = versionParts(version)[0] === 0;
+      const published = releases.filter(
+        (item) =>
+          item &&
+          !item.draft &&
+          (earlyAccess || !item.prerelease) &&
+          /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(item.tag_name || ''),
+      );
+      published.sort((a, b) =>
+        newerVersion(a.tag_name, b.tag_name) ? -1 : newerVersion(b.tag_name, a.tag_name) ? 1 : 0,
+      );
+      const release = published[0];
+      if (!release)
+        throw new Error(
+          earlyAccess
+            ? 'No published Localtone release is available yet.'
+            : 'No stable Localtone release is available yet.',
+        );
       const next = release.tag_name;
       if (!newerVersion(next, version)) return { available: false, version };
       const os = { darwin: 'mac', win32: 'win', linux: 'linux' }[platform];

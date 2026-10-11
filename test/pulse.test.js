@@ -12,7 +12,7 @@ function setup() {
  const api=createIcons(d),svg=api.icon('pulse');d.querySelector('.brand').append(svg);
  const audio=new w.EventTarget();audio.paused=false;
  const controller=api.animatePulse(svg,audio);
- return {dom,w,d,svg,audio,media,controller,frames,event:name=>audio.dispatchEvent(new w.Event(name)),tick(){now+=16;const pending=[...frames.values()];frames.clear();pending.forEach(fn=>fn(now));}};
+ return {dom,w,d,svg,api,audio,media,controller,frames,event:name=>audio.dispatchEvent(new w.Event(name)),tick(){now+=16;const pending=[...frames.values()];frames.clear();pending.forEach(fn=>fn(now));}};
 }
 const shape=s=>[...s.svg.children].map(b=>[b.getAttribute('y'),b.getAttribute('height')]);
 test('Pulse changes real bar heights, preserves circular ends and freezes its frame on pause',()=>{
@@ -40,4 +40,18 @@ test('logo preference persists and legacy search queue exports import without re
  assert.equal(preferences.defaults.animateLogo,true);assert.equal(preferences.normalizeSettings({animateLogo:false}).animateLogo,false);
  const file=transfer.exportSettings({...preferences.defaults,animateLogo:false});file.settings.searchQueueOnEnter=true;
  const result=transfer.importSettings(file);assert.equal(result.animateLogo,false);assert.equal(Object.hasOwn(result,'searchQueueOnEnter'),false);
+});
+
+test('playback markers share logo geometry and freeze on pause, including newly rendered markers',()=>{
+ const s=setup();try {
+  const marker=s.api.icon('playback');s.d.body.append(marker);
+  s.event('playing');for(let i=0;i<40;i++)s.tick();
+  assert.deepEqual(shape({svg:marker}),shape(s));
+  const later=s.api.icon('playback');s.d.body.append(later);
+  assert.deepEqual(shape({svg:later}),shape(s));
+  s.tick();assert.deepEqual(shape({svg:later}),shape(s));
+  const frozen=shape({svg:marker});s.event('pause');for(let i=0;i<10;i++)s.tick();assert.deepEqual(shape({svg:marker}),frozen);
+  s.event('playing');s.controller.setEnabled(false);const logo=shape(s);for(let i=0;i<10;i++)s.tick();assert.deepEqual(shape(s),logo);assert.notDeepEqual(shape({svg:marker}),frozen);
+  for(const bar of marker.children)assert.equal(bar.getAttribute('rx'),'2.4');
+ }finally{s.controller.dispose();s.dom.window.close();}
 });

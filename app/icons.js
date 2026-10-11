@@ -27,6 +27,8 @@ const iconPaths = {
 };
 
 export function createIcons(document) {
+  const markers = new Set();
+  let markerShape = null;
   function icon(name) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 24 24');
@@ -34,7 +36,7 @@ export function createIcons(document) {
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('focusable', 'false');
     svg.dataset.icon = name;
-    if (name === 'pulse') {
+    if (name === 'pulse' || name === 'playback') {
       svg.setAttribute('viewBox', '0 0 24 27');
       for (const [x, y, height] of [
         [0.6, 2, 22],
@@ -47,6 +49,16 @@ export function createIcons(document) {
           bar.setAttribute(key, String(value));
         svg.append(bar);
       }
+      if (name === 'playback') {
+        svg.classList.add('playback-marker');
+        if (markerShape)
+          [...svg.children].forEach((bar, i) => {
+            bar.setAttribute('y', markerShape[i].y);
+            bar.setAttribute('height', markerShape[i].height);
+          });
+        for (const old of markers) if (!old.isConnected) markers.delete(old);
+        markers.add(svg);
+      }
       return svg;
     }
     const path = document.createElementNS(svg.namespaceURI, 'path');
@@ -57,11 +69,18 @@ export function createIcons(document) {
   function setIcon(node, name) {
     node.replaceChildren(icon(name));
   }
-  return { icon, setIcon, animatePulse: (svg, audio) => animatePulse(svg, audio, document) };
+  return {
+    icon,
+    setIcon,
+    animatePulse: (svg, audio) =>
+      animatePulse(svg, audio, document, markers, (shape) => {
+        markerShape = shape;
+      }),
+  };
 }
 
 // Height/y changes preserve the exact circular caps; transforms would stretch them.
-function animatePulse(svg, audio, document) {
+function animatePulse(svg, audio, document, markers, rememberShape) {
   const window = document.defaultView;
   const bars = [...svg.querySelectorAll('rect')];
   const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
@@ -74,6 +93,7 @@ function animatePulse(svg, audio, document) {
   let active = false,
     frameId = null,
     elapsed = 0,
+    markerElapsed = 0,
     previous = null,
     disposed = false;
   const bindings = [];
@@ -84,30 +104,47 @@ function animatePulse(svg, audio, document) {
   }
   function frame(now) {
     frameId = null;
-    if (!active || !enabled || disposed || document.hidden || motion?.matches) return;
-    if (previous !== null) elapsed += Math.min((now - previous) / 1000, 0.05);
+    if (!active || disposed || document.hidden || motion?.matches) return;
+    const delta = previous === null ? 0 : Math.min((now - previous) / 1000, 0.05);
+    if (enabled) elapsed += delta;
+    markerElapsed = enabled ? elapsed : markerElapsed + delta;
     previous = now;
-    const t = (elapsed * Math.PI * 2) / 2.5;
-    bars.forEach((bar, i) => {
-      const height = (i === 0 || i === 3 ? 16.5 : 14) + 5.5 * Math.cos(t + phases[i]);
-      const center = 13.5 + 1.1 * Math.sin(t + phases[i]);
-      const progress = Math.min(1, elapsed / 0.4),
-        blend = progress * progress * (3 - 2 * progress);
-      const initial = original[i];
-      bar.setAttribute(
-        'height',
-        (Number(initial.height) + (height - Number(initial.height)) * blend).toFixed(3),
-      );
-      bar.setAttribute(
-        'y',
-        (Number(initial.y) + (center - height / 2 - Number(initial.y)) * blend).toFixed(3),
-      );
-    });
+    const geometry = (time) => {
+      const t = (time * Math.PI * 2) / 2.5;
+      return bars.map((bar, i) => {
+        const height = (i === 0 || i === 3 ? 16.5 : 14) + 5.5 * Math.cos(t + phases[i]);
+        const center = 13.5 + 1.1 * Math.sin(t + phases[i]);
+        const progress = Math.min(1, time / 0.4),
+          blend = progress * progress * (3 - 2 * progress);
+        return {
+          height: (
+            Number(original[i].height) +
+            (height - Number(original[i].height)) * blend
+          ).toFixed(3),
+          y: (
+            Number(original[i].y) +
+            (center - height / 2 - Number(original[i].y)) * blend
+          ).toFixed(3),
+        };
+      });
+    };
+    const shape = geometry(markerElapsed);
+    rememberShape(shape);
+    const paint = (nodes, values) =>
+      nodes.forEach((bar, i) => {
+        bar.setAttribute('height', values[i].height);
+        bar.setAttribute('y', values[i].y);
+      });
+    if (enabled) paint(bars, shape);
+    for (const marker of markers) {
+      if (!marker.isConnected) markers.delete(marker);
+      else paint([...marker.children], shape);
+    }
     schedule();
   }
   function schedule() {
     if (
-      enabled &&
+      (enabled || markers.size > 0) &&
       active &&
       !disposed &&
       !document.hidden &&
