@@ -60,7 +60,7 @@ For every target, check launch, About/version, data location, first-run/restart,
 
 ## GitHub preparation added in 0.105
 
-The source archive includes `.github`, `.gitignore`, `.gitattributes` and `.nvmrc`. The Verify workflow runs checks and both benchmark modes on Linux, macOS and Windows, with a separate production dependency audit. The manually triggered Build unsigned test packages workflow packages on the native runner and retains artifacts for 14 days. It never publishes to Releases or uses signing secrets. These workflows have been prepared and syntax-checked locally, not executed on GitHub yet. They use current official action major tags; Dependabot tracks updates. Pin reviewed commit SHAs before adding signing credentials or publishing jobs.
+The source archive includes `.github`, `.gitignore`, `.gitattributes` and `.nvmrc`. The Verify workflow runs checks and both benchmark modes on Linux, macOS and Windows, with a separate production dependency audit. The manually triggered Build unsigned test packages workflow packages on the native runner and retains artifacts for 14 days. It never publishes to Releases or uses signing secrets. Verify has run on GitHub; inspect [Actions](https://github.com/shn1ggy/localtone/actions) for the latest commit's results. The manual packaging workflow has not yet been executed there. They use current official action major tags; Dependabot tracks updates. Pin reviewed commit SHAs before adding signing credentials or publishing jobs.
 
 Create a repository with the contents of Localtone at its root (not a containing Localtone folder), review the ignored-file inventory, retain the agreed GPL-3.0-or-later license and fill in project contact metadata. Run CI on the exact intended commit. Inspect every job rather than assuming a green Linux result covers the other operating systems. Fix any platform-specific path/permission/symlink failures before publishing.
 
@@ -113,8 +113,10 @@ Use the exact filename shown on the release page; these names are examples. Wind
 5. Resolve licensing/source-distribution obligations and review packaged notices. For public signing/notarization, configure private credentials separately and pin workflow actions before enabling privileged jobs.
 6. Create a draft GitHub release tagged with the numeric version, marked pre-release. Attach the actual tested app archives, checksums and separately labelled source ZIP. State clearly whether the apps are unsigned. Publish only after reviewing the draft and assets.
 
-There is no repository, published release, signing identity or cross-platform hardware sign-off created by these source changes.
+The repository now exists. No published release, signing identity or cross-platform hardware sign-off has been created by these source changes.
 
 ## Selected project repository
 
-The owner supplied https://github.com/shn1ggy/localtone. Repository, homepage and issue metadata now point there. Initial upload and GitHub workflow runs must still be confirmed with authenticated access; this document does not claim that files have already been pushed or that remote checks have passed. Keep the repository private during preparation if desired, but make the project/contact route public before distributing an app that relies on this URL for its MusicBrainz identification.
+The owner supplied https://github.com/shn1ggy/localtone. Repository, homepage and issue metadata now point there. Version 0.109.0 was uploaded to `main` at commit `a8351514ed585bd5e5b814a1518d1a6064064816`; its complete Git tree hash matches the tested local source, including the binary icons and generated test fixtures. No user data was included. [Initial verification run](https://github.com/shn1ggy/localtone/actions/runs/38132531466).
+
+The repository is currently private. Make the project/contact route public before distributing an app that relies on this URL for its MusicBrainz identification. Passing source CI does not replace native packaging, signing or real-device audio tests.

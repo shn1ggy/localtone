@@ -1,5 +1,6 @@
 # 0.109.0
 
+- Fix Windows ASAR path normalization in the packaged dependency/notices audit, found by the first GitHub verification run. Cover Windows-style archive listings on every test host.
 - Configure the owner-supplied GitHub repository, homepage and issue links.
 - Identify MusicBrainz requests with the current app version and project URL instead of a stale hard-coded version/personal-player label.
 - Correct project/license documentation and prepare the initial upload inventory. Remote upload and CI require authenticated GitHub access.

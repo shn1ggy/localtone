@@ -94,7 +94,7 @@ For mixed tag values, focus the row and press Delete or Backspace to clear it fo
 
 ## Project and privacy
 
-Project repository: [shn1ggy/localtone](https://github.com/shn1ggy/localtone). The project is being prepared for its first upload and early-access release. Published installers are not available yet.
+Project repository: [shn1ggy/localtone](https://github.com/shn1ggy/localtone). Source, tests and release workflows are uploaded; an early-access release is being prepared. Published installers are not available yet. Check [GitHub Actions](https://github.com/shn1ggy/localtone/actions) for verification results.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development and bug reports, [PRIVACY.md](PRIVACY.md) for network/data behavior, and [LICENSING.md](LICENSING.md) for the agreed GPL-3.0-or-later project license and remaining third-party distribution review.
 

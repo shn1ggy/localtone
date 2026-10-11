@@ -58,7 +58,11 @@ async function inspectBinary(file, arch) {
 }
 async function packagedNotices(archive, installedRoot) {
   const asar = require('@electron/asar');
-  const names = asar.listPackage(archive).map((name) => name.replace(/^\//, ''));
+  // ASAR lists paths using the host separator. Use archive-relative POSIX
+  // names for matching, notices and lockfile lookups on every platform.
+  const names = asar
+    .listPackage(archive)
+    .map((name) => name.replaceAll('\\', '/').replace(/^\/+/, ''));
   const packages = [],
     texts = [];
   let installedPackages = {};

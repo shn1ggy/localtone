@@ -27,6 +27,10 @@ test('dependency inventory retains nested packages and the notices actually pack
  await fs.writeFile(path.join(source,'node_modules','a','LICENSE'),'Copyright A');await fs.writeFile(path.join(folder,'package.json'),JSON.stringify({name:'b',version:'2'}));await fs.writeFile(path.join(folder,'NOTICE.txt'),'Copyright B');
  const archive=path.join(dir,'app.asar');await require('@electron/asar').createPackage(source,archive);
  const result=await packagedNotices(archive);assert.deepEqual(result.packages.map(p=>p.name),['b','a']);assert.match(result.text,/Copyright A/);assert.match(result.text,/Copyright B/);assert.equal(result.packages[0].license,'Unspecified');
+ const asar=require('@electron/asar'),list=asar.listPackage,normalListing=await packagedNotices(archive,source);
+ // Exercise Windows archive listings even when this regression runs on Unix.
+ asar.listPackage=(...args)=>list(...args).map(name=>name.replaceAll('/','\\'));
+ try{assert.deepEqual(await packagedNotices(archive,source),normalListing);}finally{asar.listPackage=list;}
  await fs.writeFile(path.join(source,'node_modules','a','NOTICE'),'Additional copyright');const withInstalled=await packagedNotices(archive,source);assert.match(withInstalled.text,/Additional copyright/);assert.deepEqual(withInstalled.packages[1].additionalNotices,['node_modules/a/NOTICE']);
  await fs.writeFile(path.join(folder,'package.json'),JSON.stringify({name:'b',version:'different'}));const mismatched=await packagedNotices(archive,source);assert.equal(mismatched.packages[0].noticeSourceUnavailable,true);
  await fs.writeFile(path.join(source,'package-lock.json'),JSON.stringify({packages:{'node_modules/a/node_modules/b':{version:'2'}}}));await fs.writeFile(path.join(folder,'package.json'),JSON.stringify({name:'b',version:'2'}));assert.equal((await packagedNotices(archive,source)).packages[0].noticeSourceUnavailable,false);
