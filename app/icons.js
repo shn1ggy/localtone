@@ -37,15 +37,29 @@ export function createIcons(document) {
     svg.setAttribute('focusable', 'false');
     svg.dataset.icon = name;
     if (name === 'pulse' || name === 'playback') {
-      svg.setAttribute('viewBox', '0 0 24 27');
-      for (const [x, y, height] of [
-        [0.6, 2, 22],
-        [6.8, 9.5, 11.8],
-        [12.9, 15.1, 11.2],
-        [18.8, 10.5, 11.5],
-      ]) {
+      const playback = name === 'playback';
+      svg.setAttribute('viewBox', playback ? '0 0 10 12' : '0 0 24 27');
+      const shape = playback
+        ? [
+            [0, 4, 6],
+            [4, 0, 12],
+            [8, 2, 8],
+          ]
+        : [
+            [0.6, 2, 22],
+            [6.8, 9.5, 11.8],
+            [12.9, 15.1, 11.2],
+            [18.8, 10.5, 11.5],
+          ];
+      for (const [x, y, height] of shape) {
         const bar = document.createElementNS(svg.namespaceURI, 'rect');
-        for (const [key, value] of Object.entries({ x, y, width: 4.8, height, rx: 2.4 }))
+        for (const [key, value] of Object.entries({
+          x,
+          y,
+          width: playback ? 2 : 4.8,
+          height,
+          rx: playback ? 0 : 2.4,
+        }))
           bar.setAttribute(key, String(value));
         svg.append(bar);
       }
@@ -109,33 +123,35 @@ function animatePulse(svg, audio, document, markers, rememberShape) {
     if (enabled) elapsed += delta;
     markerElapsed = enabled ? elapsed : markerElapsed + delta;
     previous = now;
-    const geometry = (time) => {
+    const geometry = (time, initialShape = original, scale = 1) => {
       const t = (time * Math.PI * 2) / 2.5;
-      return bars.map((bar, i) => {
-        const height = (i === 0 || i === 3 ? 16.5 : 14) + 5.5 * Math.cos(t + phases[i]);
-        const center = 13.5 + 1.1 * Math.sin(t + phases[i]);
+      return initialShape.map((initial, i) => {
+        const height = ((i === 0 || i === 3 ? 16.5 : 14) + 5.5 * Math.cos(t + phases[i])) * scale;
+        const center = (13.5 + 1.1 * Math.sin(t + phases[i])) * scale;
         const progress = Math.min(1, time / 0.4),
           blend = progress * progress * (3 - 2 * progress);
         return {
-          height: (
-            Number(original[i].height) +
-            (height - Number(original[i].height)) * blend
-          ).toFixed(3),
-          y: (
-            Number(original[i].y) +
-            (center - height / 2 - Number(original[i].y)) * blend
-          ).toFixed(3),
+          height: (Number(initial.height) + (height - Number(initial.height)) * blend).toFixed(3),
+          y: (Number(initial.y) + (center - height / 2 - Number(initial.y)) * blend).toFixed(3),
         };
       });
     };
-    const shape = geometry(markerElapsed);
+    const shape = geometry(
+      markerElapsed,
+      [
+        { y: 4, height: 6 },
+        { y: 0, height: 12 },
+        { y: 2, height: 8 },
+      ],
+      12 / 27,
+    );
     rememberShape(shape);
     const paint = (nodes, values) =>
       nodes.forEach((bar, i) => {
         bar.setAttribute('height', values[i].height);
         bar.setAttribute('y', values[i].y);
       });
-    if (enabled) paint(bars, shape);
+    if (enabled) paint(bars, geometry(elapsed));
     for (const marker of markers) {
       if (!marker.isConnected) markers.delete(marker);
       else paint([...marker.children], shape);

@@ -42,16 +42,17 @@ test('logo preference persists and legacy search queue exports import without re
  const result=transfer.importSettings(file);assert.equal(result.animateLogo,false);assert.equal(Object.hasOwn(result,'searchQueueOnEnter'),false);
 });
 
-test('playback markers share logo geometry and freeze on pause, including newly rendered markers',()=>{
+test('three-bar playback markers retain their size and share logo timing, freezing on pause',()=>{
  const s=setup();try {
   const marker=s.api.icon('playback');s.d.body.append(marker);
   s.event('playing');for(let i=0;i<40;i++)s.tick();
-  assert.deepEqual(shape({svg:marker}),shape(s));
+  assert.equal(marker.children.length,3);assert.equal(marker.getAttribute('viewBox'),'0 0 10 12');
+  assert.ok(shape({svg:marker}).every(([y,h])=>Number(y)>=0&&Number(y)+Number(h)<=12));
   const later=s.api.icon('playback');s.d.body.append(later);
-  assert.deepEqual(shape({svg:later}),shape(s));
-  s.tick();assert.deepEqual(shape({svg:later}),shape(s));
+  assert.deepEqual(shape({svg:later}),shape({svg:marker}));
+  s.tick();assert.deepEqual(shape({svg:later}),shape({svg:marker}));
   const frozen=shape({svg:marker});s.event('pause');for(let i=0;i<10;i++)s.tick();assert.deepEqual(shape({svg:marker}),frozen);
   s.event('playing');s.controller.setEnabled(false);const logo=shape(s);for(let i=0;i<10;i++)s.tick();assert.deepEqual(shape(s),logo);assert.notDeepEqual(shape({svg:marker}),frozen);
-  for(const bar of marker.children)assert.equal(bar.getAttribute('rx'),'2.4');
+  for(const bar of marker.children)assert.equal(bar.getAttribute('rx'),'0');
  }finally{s.controller.dispose();s.dom.window.close();}
 });

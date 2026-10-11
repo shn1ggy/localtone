@@ -1,17 +1,17 @@
 # Localtone
 
-A compact local music player for macOS, Windows and Linux. **0.116.0 — early access.**
+A compact local music player for macOS, Windows and Linux. **0.117.0 — early access.**
 
 ## Download
 
-[All downloads and release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.116.0)
+[All downloads and release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.117.0)
 
 | System | Download |
 | --- | --- |
-| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.116.0/Localtone-0.116.0-mac-arm64.zip) |
-| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.116.0/Localtone-0.116.0-mac-x64.zip) |
-| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.116.0/Localtone-0.116.0-win-x64.zip) |
-| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v0.116.0/Localtone-0.116.0-linux-x86_64.AppImage) |
+| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.117.0/Localtone-0.117.0-mac-arm64.zip) |
+| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.117.0/Localtone-0.117.0-mac-x64.zip) |
+| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.117.0/Localtone-0.117.0-win-x64.zip) |
+| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v0.117.0/Localtone-0.117.0-linux-x86_64.AppImage) |
 
 These desktop packages include everything needed to run Localtone; Node.js is only needed to work with the source. Extract the complete ZIP, or make the Linux AppImage executable. Windows portable EXE and Linux ZIP are also on the release page. These early-access builds have no verified publisher identity. Mac bundles are ad-hoc signed for integrity but are not Apple notarized; macOS may require approval in Privacy & Security. Version 0.115 fixed Mac bundle signing; 0.116 also fixes early-access update discovery. Versions 0.115 and earlier need one manual download because their checker excludes early-access releases.
 

@@ -8045,15 +8045,21 @@ dialog input[type='checkbox']:focus-visible {
 /* A shared playback mark distinguishes playback from browsing selection. */
 .playback-marker.ui-icon {
   display: inline-block;
-  width: 12px;
-  height: 14px;
-  flex: 0 0 12px;
+  width: 10px;
+  height: 12px;
+  flex: 0 0 10px;
   fill: var(--accent);
   stroke: none;
 }
+.sidebar .nav {
+  justify-content: flex-start;
+  gap: 9px;
+}
+.sidebar .nav.playing-source {
+  padding-right: 36px;
+}
 .playing-source {
   position: relative;
-  padding-right: 36px;
 }
 .playing-source > .playback-marker {
   position: absolute;
@@ -8063,7 +8069,7 @@ dialog input[type='checkbox']:focus-visible {
 }
 .track-name > .playback-marker {
   margin-right: 6px;
-  vertical-align: -2px;
+  vertical-align: -1px;
 }
 .track-table tr.current {
   background: transparent;
