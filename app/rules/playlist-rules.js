@@ -1,10 +1,11 @@
 (function (root) {
-  const numeric = { rating: 5, year: 9999, duration: 86400 };
+  const numeric = { rating: 5, year: 9999, duration: 86400, disc: 9999 };
   const dateFields = ['addedAt', 'modifiedAt'],
     emptyOps = ['isEmpty', 'isNotEmpty'];
   const fields = [
     'rating',
     'year',
+    'disc',
     'duration',
     'title',
     'artist',
@@ -186,7 +187,15 @@
       };
     }
     return (track, ratings, now) =>
-      test(field === 'rating' ? ratings?.[track.id] || 0 : track[field], track, now);
+      test(
+        field === 'rating'
+          ? ratings?.[track.id] || 0
+          : field === 'disc' && track.discRaw !== undefined
+            ? Number.parseInt(track.discRaw, 10) || 0
+            : track[field],
+        track,
+        now,
+      );
   }
   function matcher(dynamic) {
     if (dynamic.mode === 'search') {
@@ -206,20 +215,28 @@
         ? tests.some((test) => test(track, state.ratings, now))
         : tests.every((test) => test(track, state.ratings, now)));
   }
+  function sourceLibraries(state, dynamic) {
+    return new Set(
+      (state.libraries || [])
+        .filter(
+          (library) =>
+            !library.importedFiles && (!dynamic.libraryId || library.id === dynamic.libraryId),
+        )
+        .map((library) => library.id),
+    );
+  }
   function matchesTrack(state, dynamic, track, now = Date.now()) {
     return (
       !track.missing &&
-      (!dynamic.libraryId || track.libraryId === dynamic.libraryId) &&
+      sourceLibraries(state, dynamic).has(track.libraryId) &&
       matcher(dynamic)(track, state, now)
     );
   }
   function matchingTracks(state, dynamic, now = Date.now()) {
-    const test = matcher(dynamic);
+    const test = matcher(dynamic),
+      libraries = sourceLibraries(state, dynamic);
     return state.tracks.filter(
-      (track) =>
-        !track.missing &&
-        (!dynamic.libraryId || track.libraryId === dynamic.libraryId) &&
-        test(track, state, now),
+      (track) => !track.missing && libraries.has(track.libraryId) && test(track, state, now),
     );
   }
 

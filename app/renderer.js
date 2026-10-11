@@ -4314,18 +4314,37 @@ function paintPaneFocus(pulse = true) {
       : selection.pane === 'artists'
         ? $('artist-pane')
         : document.querySelector('.library-content');
+  const overlay =
+    $('pane-focus-overlay') ||
+    (() => {
+      const element = el('div', null, '');
+      element.id = 'pane-focus-overlay';
+      element.setAttribute('aria-hidden', 'true');
+      document.body.append(element);
+      return element;
+    })();
+  overlay.classList.remove('pane-focus-pulse');
   if (pulse) {
-    const padding = getComputedStyle(node);
-    node.style.setProperty(
-      '--pane-focus-left',
-      selection.pane === 'sidebar' ? '0px' : padding.paddingLeft,
-    );
-    node.style.setProperty(
-      '--pane-focus-right',
-      selection.pane === 'sidebar' ? '0px' : padding.paddingRight,
-    );
-    void node.offsetWidth;
-    node.classList.add('pane-focus-pulse');
+    const bounds = node.getBoundingClientRect(),
+      tracks = document.querySelector('.library-content').getBoundingClientRect(),
+      queue = $('queue-panel'),
+      queueLeft = queue.hidden ? window.innerWidth : queue.getBoundingClientRect().left,
+      left =
+        selection.pane === 'sidebar'
+          ? bounds.left
+          : selection.pane === 'artists'
+            ? document.querySelector('.workspace').getBoundingClientRect().left
+            : tracks.left,
+      right =
+        selection.pane === 'sidebar'
+          ? bounds.right
+          : selection.pane === 'artists'
+            ? tracks.left
+            : Math.min(window.innerWidth, queueLeft);
+    overlay.style.left = `${left}px`;
+    overlay.style.width = `${Math.max(0, right - left)}px`;
+    void overlay.offsetWidth;
+    overlay.classList.add('pane-focus-pulse');
   }
 }
 function paintAlbumSelection() {

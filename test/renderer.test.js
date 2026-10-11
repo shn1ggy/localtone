@@ -597,7 +597,7 @@ test('search focus feedback, backdrop dismissal, album menu parity and album bat
  w.localtone={load:async()=>snapshot(state),onProgress:()=>{},settings:async p=>{patches.push(p);return p;},formatTrackNumbers:async(ids,mode)=>{formats.push({ids,mode});return {state:snapshot(state),failures:[]};}};
  const key=(target,key)=>target.dispatchEvent(new w.KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));
  try{await w.eval(`(async()=>{${source}\n})()`);
- const search=d.getElementById('search');search.focus();key(search,'Enter');assert.equal(d.body.dataset.browseFocus,'tracks');assert.ok(d.activeElement.matches('.album-cover-button'));assert.ok(d.querySelector('.library-content').classList.contains('pane-focus-pulse'));
+ const search=d.getElementById('search');search.focus();key(search,'Enter');assert.equal(d.body.dataset.browseFocus,'tracks');assert.ok(d.activeElement.matches('.album-cover-button'));assert.ok(d.getElementById('pane-focus-overlay').classList.contains('pane-focus-pulse'));
  search.focus();key(search,'Escape');assert.notEqual(d.activeElement,search);
  d.getElementById('open-settings').click();const dialog=d.getElementById('settings-dialog');dialog.getBoundingClientRect=()=>({left:100,right:500,top:100,bottom:500});for(const type of ['pointerdown','click'])dialog.dispatchEvent(new w.MouseEvent(type,{clientX:20,clientY:20,bubbles:true}));assert.equal(dialog.hasAttribute('open'),false);assert.ok(d.activeElement.matches('.album-cover-button'));
  d.getElementById('view-covers').click();const covers=[...d.querySelectorAll('.album-cover-button')];covers[1].dispatchEvent(new w.MouseEvent('click',{ctrlKey:true,bubbles:true}));assert.equal(d.querySelectorAll('.album-cover-button.album-selected').length,2);

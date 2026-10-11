@@ -43,7 +43,6 @@ const portableStorage = require('./portable.cjs');
 const releaseInfo = require('./release.cjs');
 const { prepareUpdate } = require('./update-preparation.cjs');
 const onlineUpdates = require('./online-updates.cjs').createOnlineUpdates({
-  fetch: (...args) => net.fetch(...args),
   version: app.getVersion(),
   platform: process.platform,
   arch: process.arch,

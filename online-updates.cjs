@@ -32,7 +32,14 @@ function trustedURL(value) {
     throw new Error('The release contains an untrusted download address.');
   return url.href;
 }
-function createOnlineUpdates({ fetch, version, platform, arch, progress = () => {} }) {
+// Node fetch exposes manual redirects; Electron net.fetch cancels them instead.
+function createOnlineUpdates({
+  fetch = globalThis.fetch,
+  version,
+  platform,
+  arch,
+  progress = () => {},
+}) {
   let controller = null,
     candidate = null;
   let completion = Promise.resolve();

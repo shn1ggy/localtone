@@ -63,3 +63,13 @@ test('early-access releases are recognized, drafts ignored and numeric versions 
  await assert.rejects(service('0.115.0',[]).check(),/No published Localtone/);
  await assert.rejects(service('1.0.0',[{tag_name:'v1.1.0',prerelease:true}]).check(),/No stable Localtone/);
 });
+
+test('trusted manual redirects work for both checksums and archives while unsafe targets are never fetched',()=>directory(async dir=>{
+ const requested=[];const name='Localtone-0.112.0-mac-arm64.zip';
+ const redirected='https://release-assets.githubusercontent.com/asset/';
+ const service=fixture({fetchOverride:async(address,options)=>{requested.push(address);assert.equal(options.redirect,'manual');
+ if(address.includes('/releases?'))return new Response(JSON.stringify([{tag_name:'v0.112.0',assets:[{name,size:payload.length,browser_download_url:url(name)},{name:'checksums.json',browser_download_url:url('checksums.json')}]}]));
+ if(address.startsWith('https://github.com/'))return new Response(null,{status:302,headers:{location:redirected+(address.endsWith('checksums.json')?'checksums':'archive')}});
+ return new Response(address.endsWith('checksums')?JSON.stringify({schema:1,artifacts:[{name,size:payload.length,sha256}]}):payload);
+ }}).service;await service.check();await service.download(path.join(dir,name));assert.deepEqual(await readFile(path.join(dir,name)),payload);assert.ok(requested.includes(redirected+'checksums'));assert.ok(requested.includes(redirected+'archive'));
+}));

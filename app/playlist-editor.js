@@ -43,6 +43,7 @@ export function createPlaylistEditor({
   const filterLabels = {
     rating: 'Rating',
     year: 'Year',
+    disc: 'Disc',
     duration: 'Duration (seconds)',
     title: 'Title',
     artist: 'Artist',

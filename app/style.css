@@ -5744,10 +5744,18 @@ body[data-browse-focus='tracks'] .library-content > .view-toolbar {
   box-shadow: 0 2px 0 rgb(var(--accent-rgb) / 0.45);
 }
 
+#pane-focus-overlay {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
 .pane-focus-pulse::after {
   content: '';
   position: absolute;
-  inset: 0 var(--pane-focus-right, 0px) 0 var(--pane-focus-left, 0px);
+  inset: 0;
   pointer-events: none;
   z-index: 5;
   animation: pane-focus 180ms ease-out;
