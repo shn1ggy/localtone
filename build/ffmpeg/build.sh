@@ -9,7 +9,7 @@ args=(--disable-autodetect --disable-debug --disable-doc --disable-network
   --disable-devices --disable-avdevice --disable-swscale
   --disable-programs --enable-ffmpeg --disable-encoders
   --enable-encoder=pcm_f32le,pcm_s16le --disable-muxers
-  --enable-muxer=f32le,s16le,null --disable-filters
+  --enable-muxer=pcm_f32le,pcm_s16le,null --disable-filters
   --enable-filter=aresample,aformat,anull,atrim,asetpts)
 case "$(uname -s)" in
   MINGW*|MSYS*) args+=(--target-os=mingw32 --extra-ldflags=-static) ;;
