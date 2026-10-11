@@ -93,7 +93,9 @@ export function mountVirtualTracks({
       window.clearTimeout(frame);
     }
     table._disposeVirtual = null;
+    table._refreshVirtual = null;
   };
+  table._refreshVirtual = paint;
   table._revealTrack = (id, nearest = false) => {
     const index = tracks.findIndex((t) => t.id === id);
     if (index < 0) return;

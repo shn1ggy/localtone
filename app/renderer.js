@@ -279,7 +279,7 @@ async function operation(fn, message = 'Saving…') {
     const result = await fn();
     if (result) {
       state = result.state || result;
-      render();
+      render({ preserveScroll: true });
       if (result.warnings)
         toast(`Imported with ${result.warnings} unreadable tags. Filenames are used where needed.`);
       else $('toast').hidden = true;
@@ -398,7 +398,16 @@ function isFirstLaunch() {
     !state.tracks.some((track) => !track.missing)
   );
 }
-function render() {
+function render({ preserveScroll = false } = {}) {
+  const pane = document.querySelector('.content-scroll'),
+    artists = $('artist-list');
+  const position = preserveScroll
+    ? { top: pane.scrollTop, artists: artists.scrollTop, focus: document.activeElement }
+    : null;
+  const focusedTrack = position?.focus?.closest('[data-track-id]')?.dataset.trackId;
+  const focusedArtist = position?.focus?.closest('[data-artist-key]')?.dataset.artistKey;
+  const focusedAlbum = position?.focus?.closest('[data-album-key]')?.dataset.albumKey;
+
   syncSearchClear();
   trackLookup = new Map(state.tracks.filter((t) => !t.missing).map((track) => [track.id, track]));
   renderSidebar();
@@ -469,12 +478,36 @@ function render() {
     $('empty-add').hidden = !needsLibrary;
     $('empty-status').hidden = true;
   }
-  renderBrowser();
+  renderBrowser(position?.top);
   syncPlaybackMarkers();
   renderQueue();
   renderPlayerRating();
   syncScrollbarControls();
   syncPaneBounds();
+  if (position) {
+    pane.scrollTop = position.top;
+    artists.scrollTop = position.artists;
+    for (const virtual of document.querySelectorAll('.track-table')) virtual._refreshVirtual?.();
+    if (!position.focus?.isConnected && (focusedTrack || focusedArtist || focusedAlbum)) {
+      const albumNode = [...pane.querySelectorAll('[data-album-key]')].find(
+        (node) => node.dataset.albumKey === focusedAlbum,
+      );
+      const replacement = focusedTrack
+        ? [...pane.querySelectorAll('[data-track-id]')].find(
+            (node) => node.dataset.trackId === focusedTrack,
+          )
+        : focusedArtist
+          ? [...artists.querySelectorAll('[data-artist-key]')].find(
+              (node) => node.dataset.artistKey === focusedArtist,
+            )
+          : albumNode?.matches('button')
+            ? albumNode
+            : albumNode?.querySelector('button');
+      replacement?.focus({ preventScroll: true });
+    }
+    pane.scrollTop = position.top;
+    artists.scrollTop = position.artists;
+  }
 }
 async function addLibrary() {
   if (busy) return;
@@ -1643,7 +1676,7 @@ function renderArtistPane() {
     } else list.scrollTop = 0;
   }
 }
-function renderBrowser() {
+function renderBrowser(viewportTop = document.querySelector('.content-scroll').scrollTop) {
   const container = $('browser'),
     nav = $('browse-navigation');
   container.dataset.albumLayout = prefs.albumLayout;
@@ -1882,8 +1915,8 @@ function renderBrowser() {
     container.append(section);
     if (
       !lazy ||
-      (offset + height >= scroller.scrollTop - 600 &&
-        offset <= scroller.scrollTop + (scroller.clientHeight || 600) + 600)
+      (offset + height >= viewportTop - 600 &&
+        offset <= viewportTop + (scroller.clientHeight || 600) + 600)
     )
       section._mountAlbum();
     else observer.observe(section);
@@ -1986,7 +2019,7 @@ function applyFileState(value) {
     !artistsFor(state.tracks, 'name', prefs.artistGrouping).includes(selection.artists.current)
   )
     selection.artists.current = null;
-  render();
+  render({ preserveScroll: true });
   const playing = currentTrack();
   if (playing) {
     $('now-title').textContent = playing.title;
@@ -2326,14 +2359,14 @@ async function rateTrack(id, rating) {
   ratingVersions.set(id, version);
   state.ratings ??= {};
   state.ratings[id] = rating;
-  render();
+  render({ preserveScroll: true });
   try {
     const result = await queuePreferenceWrite(() => saveRating(id, rating));
     rememberTagEdit(result, [id]);
   } catch (error) {
     if (ratingVersions.get(id) === version) {
       state.ratings[id] = before;
-      render();
+      render({ preserveScroll: true });
     }
     toast(error.message);
   }
@@ -2624,7 +2657,7 @@ $('setting-showColumnHeaders').onchange = (event) =>
   updateSettings({ showColumnHeaders: event.target.checked });
 $('setting-showDiscNumber').onchange = (event) => {
   updateSettings({ showDiscNumber: event.target.checked });
-  render();
+  render({ preserveScroll: true });
 };
 $('close-settings').onclick = () => $('settings-dialog').close();
 for (const key of [
@@ -2638,10 +2671,10 @@ for (const key of [
 ])
   $(`setting-${key}`).onchange = (event) => {
     updateSettings({ [key]: event.target.value });
-    if (key === 'albumLayout' || key === 'trackNumberFormat') render();
+    if (key === 'albumLayout' || key === 'trackNumberFormat') render({ preserveScroll: true });
     if (key === 'albumExpansion') {
       expandedAlbums.clear();
-      render();
+      render({ preserveScroll: true });
     }
     if (key === 'seekDisplay' && currentTrack()) loadWaveform(currentTrack());
   };
@@ -2669,7 +2702,7 @@ async function refreshTrackTotals() {
       await preferenceWrites;
       const refreshed = await api.trackNumbers();
       state = refreshed;
-      render();
+      render({ preserveScroll: true });
     } catch (error) {
       toast('Could not refresh track totals: ' + error.message);
     }
@@ -2852,7 +2885,7 @@ async function saveRating(id, rating, refresh = true) {
   if (result?.modifiedAt) {
     const track = state.tracks.find((t) => t.id === id);
     if (track) track.modifiedAt = result.modifiedAt;
-    if (refresh) render();
+    if (refresh) render({ preserveScroll: true });
   }
   return result;
 }
@@ -3002,7 +3035,7 @@ function buildTrackTable(table, tracks, playSource, playlist = null) {
       if (index < 0) return;
       next.splice(to, 0, next.splice(index, 1)[0]);
       saveColumns(layout, next);
-      render();
+      render({ preserveScroll: true });
     };
     const resize = el('span', null, 'column-resize');
     resize.title = `Resize ${columnLabel(column.key)}`;
@@ -3050,7 +3083,7 @@ function buildTrackTable(table, tracks, playSource, playlist = null) {
               };
         });
         saveColumns(layout, next);
-        render();
+        render({ preserveScroll: true });
       };
       resize.onpointerup = finish;
       resize.onpointercancel = finish;
@@ -3179,7 +3212,7 @@ function showColumnMenu(event, layout) {
           layout,
           columnsFor(layout).map((c) => (c.key === selected ? { ...c, align } : c)),
         );
-        render();
+        render({ preserveScroll: true });
         refreshContextOptions(() => showColumnMenu(event, layout));
       };
       container.append(button);
@@ -3202,7 +3235,7 @@ function showColumnMenu(event, layout) {
         layout,
         columnsFor(layout).map((c) => (c.key === column.key ? { ...c, visible: !c.visible } : c)),
       );
-      render();
+      render({ preserveScroll: true });
       refreshContextOptions(() => showColumnMenu(event, layout));
     };
     container.append(button);
@@ -3228,7 +3261,7 @@ function showColumnMenu(event, layout) {
         layout,
         columnsFor(layout).map((c) => (c.key === column.key ? { ...c, fixed: !c.fixed } : c)),
       );
-      render();
+      render({ preserveScroll: true });
       refreshContextOptions(() => showColumnMenu(event, layout));
     };
     container.append(button);
@@ -3749,7 +3782,7 @@ const dynamicPlaylistTimer = setInterval(() => {
     activePlaylist()?.dynamic?.enabled &&
     activePlaylist().dynamic.rules.some((r) => dateFields.includes(r.field))
   )
-    render();
+    render({ preserveScroll: true });
 }, 60000);
 window.addEventListener('beforeunload', () => clearInterval(dynamicPlaylistTimer));
 
@@ -3932,7 +3965,7 @@ for (const key of ['backgroundSaturation', 'backgroundBrightness']) {
 
 $('reset-appearance').onclick = async () => {
   await updateSettings(appearanceDefaults());
-  render();
+  render({ preserveScroll: true });
   if (currentTrack()) loadWaveform(currentTrack());
 };
 
@@ -4358,7 +4391,7 @@ function appendAlbumDetails() {
         : [...prefs.albumDetails, key];
       updateSettings({ albumDetails: next });
       paintMenuCheck(button, prefs.albumDetails.includes(key));
-      render();
+      render({ preserveScroll: true });
     };
     menu.append(button);
   }
@@ -4446,8 +4479,7 @@ function paintAlbumSelection() {
 function selectAlbumWithModifier(event, key) {
   if (!event || !(event.ctrlKey || event.metaKey || event.shiftKey)) return false;
   selection.pane = 'tracks';
-  selection.tracks.clear();
-  selection.tracks.current = null;
+  selection.tracks.reset();
   if (event.shiftKey) {
     const keys = browsingAlbums().map((a) => a.key);
     selection.albums.anchor ??= selection.coverFocus || key;
@@ -4458,6 +4490,9 @@ function selectAlbumWithModifier(event, key) {
   }
   selection.coverFocus = key;
   if (view === 'albums' || selection.albumDetail) selection.albumFocus = key;
+  for (const track of visible)
+    if (selection.albums.has(albumKey(track))) selection.tracks.add(track.id);
+  paintSelection();
   paintAlbumSelection();
   return true;
 }
@@ -4512,7 +4547,7 @@ async function rateSelection(rating) {
     state.ratings[id] = rating;
     return change;
   });
-  render();
+  render({ preserveScroll: true });
   await queuePreferenceWrite(async () => {
     const failures = [],
       tokens = [];
@@ -4528,7 +4563,7 @@ async function rateSelection(rating) {
     }
     if (tokens.length && api.mergeTagUndo)
       rememberTagEdit({ undoToken: await api.mergeTagUndo(tokens) }, ids);
-    render();
+    render({ preserveScroll: true });
     if (failures.length) toast(`${failures.length} rating(s) could not be saved: ${failures[0]}`);
   });
 }
@@ -5041,7 +5076,7 @@ async function refreshMissingFiles() {
   try {
     const result = await api.missingFiles();
     state = result.state;
-    render();
+    render({ preserveScroll: true });
     list.replaceChildren();
     $('missing-status').textContent = result.missing.length
       ? `${result.missing.length} files missing or unavailable.`
