@@ -15,6 +15,9 @@ if (run('git', ['-C', sourceRoot, 'status', '--porcelain', '--untracked-files=no
   throw Error('FFmpeg source has modifications.');
 const binary = path.join(buildRoot, process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
 const versionOutput = run(binary, ['-version']);
+const config = await fs.readFile(path.join(buildRoot, 'ffbuild/config.mak'), 'utf8');
+const compiler = /^CC_IDENT=(.+)$/m.exec(config)?.[1];
+if (!compiler) throw Error('Missing compiler identity in FFmpeg build configuration.');
 const pkg = require('../../package.json');
 const sourceArchive = `Localtone-${pkg.version}-ffmpeg-source-${process.platform}-${process.arch}.tar.gz`;
 const provenance = {
@@ -25,7 +28,7 @@ const provenance = {
   sha256: await digest(binary),
   sourceArchive,
   versionOutput,
-  compiler: run(process.platform === 'darwin' ? 'clang' : 'gcc', ['--version']),
+  compiler,
 };
 require('./policy.cjs').verifyDecoder(versionOutput, provenance, provenance.sha256);
 const folder = path.join(root, 'node_modules', 'ffmpeg-static');
@@ -49,7 +52,10 @@ await fs.writeFile(
 await fs.mkdir(path.join(root, 'dist'), { recursive: true });
 const tar = path.join(root, 'dist', sourceArchive.slice(0, -3));
 run('git', ['-C', sourceRoot, 'archive', '--format=tar', '--output=' + tar, source.commit]);
-run('tar', ['-rf', tar, '-C', buildRoot, 'Localtone-build']);
-run('gzip', ['-f', tar]);
-run('gzip', ['-t', tar + '.gz']);
+// GNU tar treats drive-letter paths as remote hosts. Relative POSIX paths
+// work in MSYS2, BSD tar and GNU tar without platform-specific flags.
+const portableTar = path.relative(root, tar).replaceAll('\\', '/');
+run('tar', ['-rf', portableTar, '-C', 'ffmpeg-build', 'Localtone-build'], { cwd: root });
+run('gzip', ['-f', portableTar], { cwd: root });
+run('gzip', ['-t', portableTar + '.gz'], { cwd: root });
 console.log('Verified source-built FFmpeg:', provenance.sha256, sourceArchive);

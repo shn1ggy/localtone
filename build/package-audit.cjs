@@ -167,7 +167,9 @@ async function packagedNotices(archive, installedRoot) {
           );
           if (metadata.name !== pkg.name || metadata.version !== pkg.version) continue;
           const text = await fs.readFile(path.join(location, 'README.md'), 'utf8');
-          const match = /(?:^|\n)##?\s+Licen[cs]e\s*\r?\n([\s\S]*)/i.exec(text);
+          const match = /(?:^|\n)(?:#{1,6}\s+)?Licen[cs]e\s*\r?\n(?:[-=]+\s*\r?\n)?([\s\S]*)/i.exec(
+            text,
+          );
           if (
             match &&
             /Copyright/i.test(match[1]) &&

@@ -64,6 +64,11 @@ jobs:
       - if: runner.os == 'Windows' && steps.decoder-cache.outputs.cache-hit != 'true'
         shell: msys2 {0}
         run: bash build/ffmpeg/build.sh
+      - if: steps.decoder-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ffmpeg-build
+          key: ffmpeg-9.0.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/ffmpeg/build.sh') }}
       - if: runner.os != 'Windows'
         run: node build/ffmpeg/finalize.mjs
       - if: runner.os == 'Windows'

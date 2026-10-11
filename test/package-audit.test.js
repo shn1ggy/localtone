@@ -57,4 +57,6 @@ test('license text embedded in an omitted README remains in shipped notices',()=
  const archive=path.join(dir,'app.asar');await require('@electron/asar').createPackage(source,archive);
  await fs.writeFile(path.join(pkg,'README.md'),'# Package\n\n## License\nCopyright (c) Example\nPermission is hereby granted to use this software.');
  const report=await packagedNotices(archive,source);assert.match(report.text,/Copyright \(c\) Example/);assert.deepEqual(report.packages[0].additionalNotices,['node_modules/legacy/README.md (license section)']);
+ await fs.writeFile(path.join(pkg,'README.md'),'Package\n\nLicense\n-------\n\nCopyright (c) Other\nPermission is hereby granted to use this software.');
+ const underlined=await packagedNotices(archive,source);assert.match(underlined.text,/Copyright \(c\) Other/);assert.equal(underlined.packages[0].additionalNotices.length,1);
 }));
