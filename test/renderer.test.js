@@ -1024,3 +1024,25 @@ test('album titles select every track without collapsing and playback markers fo
  d.querySelector('#playlists button').click();d.querySelector('.album-track').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));await flush();assert.ok(d.querySelector('#playlists .playing-source .playback-marker'));assert.ok(d.querySelector('.track-table tr.current .playback-marker'));assert.equal(d.querySelectorAll('.track-table tr.current').length,1);d.querySelector('#libraries button').click();assert.ok(d.querySelector('#playlists .playing-source'));assert.equal(d.querySelector('#libraries .playing-source'),null);
  }finally{w.close();}
 });
+
+
+test('blank album space clears selection without scrolling; disc prefixes render in every track layout',async()=>{
+ const dom=new JSDOM(html,{runScripts:'outside-only'}),w=dom.window,d=w.document;Object.assign(w,{createDuplicatesDialog},{createSettingsHelp,createDuplicatesDialog},core,browse,interactions,{structuredClone},{designDefaults,appearanceDefaults},{createSettingsWrites},{createTagEditor,createPlaylistEditor,createLastfmSettings},{createDialogCoordinator,createSettingsTabs},{createBrowseSelection},{createPlaybackQueue},{createWindowPresentation,createAudioOutputSettings,mountVirtualTracks},{createIcons,normalizeMenu,shortcutDefaults,createQueueViewCache,queuePage},{createNameDialog,ListenTracker,waveformPath});
+ const tracks=['a','b'].map((id,i)=>({id,libraryId:'l',title:id,album:'Album',artist:'Artist',disc:2,discRaw:'02/02',track:i+7,trackRaw:`0${i+7}/19`,duration:60}));
+ const patches=[];w.localtone={load:async()=>snapshot({libraries:[{id:'l',name:'Music'}],playlists:[],tracks,settings:{lastView:'albums',albumExpansion:'expanded',trackNumberFormat:'full'}}),onProgress(){},settings:async p=>{patches.push(p);return p;}};
+ try{await w.eval(`(async()=>{${source}\n})()`);const pane=d.querySelector('.content-scroll');pane.scrollTop=350;d.querySelector('.album-track').click();assert.ok(d.querySelector('.album-track.selected'));d.querySelector('.album-section').click();assert.equal(d.querySelector('.album-track.selected'),null);assert.equal(d.querySelector('.album-section.album-selected'),null);assert.equal(pane.scrollTop,350);assert.equal(d.body.dataset.browseFocus,'tracks');
+ const control=d.getElementById('setting-showDiscNumber');assert.equal(control.checked,false);control.checked=true;control.dispatchEvent(new w.Event('change'));await flush();assert.equal(patches.at(-1).showDiscNumber,true);
+ for(const tab of ['albums','tracks','covers']){d.getElementById('view-'+tab).click();if(tab==='covers')d.querySelector('.album-cover-button').click();assert.equal(d.querySelector('td[data-column=number]').textContent,'02.07/19');}
+ }finally{w.close();}
+});
+
+test('next playback preserves expanded albums and scroll and requests nearest-edge reveal in every tab',async()=>{
+ const dom=new JSDOM(html,{runScripts:'outside-only'}),w=dom.window,d=w.document;Object.assign(w,{createDuplicatesDialog},{createSettingsHelp,createDuplicatesDialog},core,browse,interactions,{structuredClone},{designDefaults,appearanceDefaults},{createSettingsWrites},{createTagEditor,createPlaylistEditor,createLastfmSettings},{createDialogCoordinator,createSettingsTabs},{createBrowseSelection},{createPlaybackQueue},{createWindowPresentation,createAudioOutputSettings,mountVirtualTracks},{createIcons,normalizeMenu,shortcutDefaults,createQueueViewCache,queuePage},{createNameDialog,ListenTracker,waveformPath});
+ w.HTMLMediaElement.prototype.play=async()=>{};w.HTMLMediaElement.prototype.pause=()=>{};
+ const tracks=['a','b','c'].map((id,i)=>({id,libraryId:'l',title:id,album:i<2?'First':'Second',artist:'Artist',track:i+1,duration:60}));
+ w.localtone={load:async()=>snapshot({libraries:[{id:'l',name:'Music'}],playlists:[],tracks,settings:{lastView:'albums',albumExpansion:'collapsed'}}),onProgress(){},settings:async p=>p};
+ let reveals=[];w.HTMLElement.prototype.scrollIntoView=function(options){reveals.push({id:this.dataset.trackId,block:options.block});};
+ try{await w.eval(`(async()=>{${source}\n})()`);for(const tab of ['albums','tracks','covers']){d.getElementById('view-'+tab).click();if(tab==='covers')d.querySelector('.album-cover-button').click();if(tab==='albums')for(const cover of d.querySelectorAll('.album-side-cover'))if(cover.getAttribute('aria-expanded')==='false')cover.click();
+ const pane=d.querySelector('.content-scroll');const row=d.querySelector(tab==='tracks'?'#tracks tr':'.album-track');row.dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));await flush();pane.scrollTop=350;d.getElementById('next-track').click();await flush();assert.equal(pane.scrollTop,350);assert.equal(reveals.at(-1).block,'nearest');assert.equal(reveals.at(-1).id,'b');if(tab==='albums')assert.equal([...d.querySelectorAll('.album-side-cover')].filter(b=>b.getAttribute('aria-expanded')==='true').length,2);}
+ }finally{w.close();}
+});

@@ -54,3 +54,11 @@ test('disc search distinguishes explicit tags from the untagged Disc 1 fallback'
  assert.equal(globalThis.LocaltoneSearch.compileSearch('disc:1').matches(untagged,{}),false);
  assert.equal(globalThis.LocaltoneSearch.compileSearch('has:artist').matches(tagged,{}),true);
 });
+
+
+test('All music excludes playlist-only imports but regular playlists retain them',()=>{
+ const collection={libraries:[{id:'one'},{id:'imports',importedFiles:true}],tracks:[track('1','A',2000),track('2','B',2001,'imports')],playlists:[{id:'p',trackIds:['1','2']}]};
+ assert.deepEqual(selectTracks(collection,{kind:'all'},'','manual').map(t=>t.id),['1']);
+ assert.deepEqual(selectTracks(collection,{kind:'playlist',id:'p'},'','manual').map(t=>t.id),['1','2']);
+ assert.deepEqual(selectTracks(collection,{kind:'all'},'title:"Song 2"','manual'),[]);
+});

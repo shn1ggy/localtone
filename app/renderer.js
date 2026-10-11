@@ -71,6 +71,7 @@ let prefs = {
   shortcuts: shortcutDefaults,
   albumDetails: ['artist', 'year', 'tracks', 'duration'],
   trackNumberFormat: 'number',
+  showDiscNumber: false,
   albumLayout: 'side',
   sidebarLocked: false,
   artistLocked: false,
@@ -2329,6 +2330,7 @@ function applyPreferences() {
     $(`setting-${key}`).value = prefs[key];
   $('setting-queuePresentation').value = prefs.queuePresentation || 'overlay';
   $('setting-trackNumberFormat').value = prefs.trackNumberFormat;
+  $('setting-showDiscNumber').checked = prefs.showDiscNumber;
   $('setting-portable').checked = prefs.portable;
   $('cleanup-external-data').disabled = !(state.storage?.portable ?? true);
   if (state.storage?.cleanupError) $('cleanup-status').textContent = state.storage.cleanupError;
@@ -2574,6 +2576,10 @@ $('setting-seekStep').onchange = (event) =>
 $('setting-portable').onchange = (event) => updateSettings({ portable: event.target.checked });
 $('setting-showColumnHeaders').onchange = (event) =>
   updateSettings({ showColumnHeaders: event.target.checked });
+$('setting-showDiscNumber').onchange = (event) => {
+  updateSettings({ showDiscNumber: event.target.checked });
+  render();
+};
 $('close-settings').onclick = () => $('settings-dialog').close();
 for (const key of [
   'trackNumberFormat',
@@ -2628,6 +2634,9 @@ $('setting-trackNumberFormat').onchange = async (event) => {
   await refreshTrackTotals();
 };
 function navigateFromPlayer(album = false, preserveView = false) {
+  const pane = document.querySelector('.content-scroll'),
+    previousScroll = pane.scrollTop;
+  const previousScope = { ...scope };
   searchResultIds = null;
   const targetView = preserveView ? view : 'albums';
   const previousCoverScroll =
@@ -2650,7 +2659,8 @@ function navigateFromPlayer(album = false, preserveView = false) {
   selection.artists.current = preserveView ? null : artistGroupKey(track, prefs.artistGrouping);
   revealOpeningArtist = !preserveView;
   selection.albumDetail = null;
-  expandedAlbums.clear();
+  const sameCollection = previousScope.kind === scope.kind && previousScope.id === scope.id;
+  if (!preserveView || !sameCollection) expandedAlbums.clear();
   changeView(album ? targetView : prefs.albumView === 'covers' ? 'covers' : 'albums');
   sort = 'folder';
   $('sort').value = sort;
@@ -2669,13 +2679,14 @@ function navigateFromPlayer(album = false, preserveView = false) {
     selection.tracks.add(track.id);
   }
   render();
-  if (targetView === 'tracks') $('tracks').closest('table')._revealTrack?.(track.id);
+  if (preserveView && sameCollection) pane.scrollTop = previousScroll;
+  if (targetView === 'tracks') $('tracks').closest('table')._revealTrack?.(track.id, true);
   else {
     const section = [...$('browser').querySelectorAll('[data-album-key]')].find(
       (node) => node.dataset.albumKey === albumKey(track),
     );
     section?._mountAlbum?.();
-    section?.querySelector('table')?._revealTrack?.(track.id);
+    section?.querySelector('table')?._revealTrack?.(track.id, true);
   }
   if (album) {
     const row = [
@@ -2683,7 +2694,7 @@ function navigateFromPlayer(album = false, preserveView = false) {
     ].find((node) => node.dataset.trackId === track.id);
     if (row) {
       row.focus({ preventScroll: true });
-      row.scrollIntoView?.({ block: 'center', inline: 'nearest', behavior: 'instant' });
+      row.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
     }
   }
 }
@@ -2843,7 +2854,9 @@ function columnLabel(key) {
 }
 function formatTrackNumber(track) {
   const raw = track.trackRaw ?? (track.track ? String(track.track).padStart(2, '0') : '');
-  return (prefs.trackNumberFormat === 'full' ? raw : raw.split('/')[0]) || '—';
+  const number = (prefs.trackNumberFormat === 'full' ? raw : raw.split('/')[0]) || '—';
+  const disc = String(track.discRaw?.split('/')[0] || track.disc || 1);
+  return prefs.showDiscNumber ? `${disc}.${number}` : number;
 }
 function buildTrackTable(table, tracks, playSource, playlist = null) {
   const layout =
@@ -2865,7 +2878,7 @@ function buildTrackTable(table, tracks, playSource, playlist = null) {
           : c,
       )
       .map((c) =>
-        c.key === 'number' && prefs.trackNumberFormat === 'full'
+        c.key === 'number' && (prefs.trackNumberFormat === 'full' || prefs.showDiscNumber)
           ? {
               ...c,
               width: Math.max(
@@ -4566,6 +4579,16 @@ document.querySelector('.library-content').addEventListener('pointerdown', (even
   if (event.target.closest('.view-toolbar')) return;
   selection.pane = 'tracks';
   document.body.dataset.browseFocus = selection.pane;
+});
+
+document.querySelector('.content-scroll').addEventListener('click', (event) => {
+  if (
+    event.target.closest('button, a, input, select, textarea, [data-track-id], th, .column-resize')
+  )
+    return;
+  selection.pane = 'tracks';
+  document.body.dataset.browseFocus = selection.pane;
+  deselectBrowse();
 });
 
 function positionNotice() {

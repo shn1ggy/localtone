@@ -223,3 +223,9 @@ Dynamic playlists draw only from registered user libraries, never internal impor
 Update requests use Node fetch in the Electron main process so manual redirects remain observable. Validate every redirected HTTPS host before requesting it, keep bounded streams, abort support and SHA-256 verification, and verify real check/download behavior inside Electron before publishing an updater change.
 
 Quit commands always enter the existing safe shutdown path, waiting for active writes and declining new tasks. Busy notices use plain language, and shared toasts remove Electron IPC prefixes. Batch tag saves validate all selected files before writes, use at most two concurrent MP3 tasks, drain active work before rejecting, preserve ordered outcomes and external-change checks, and close the editor before rebuilding the browse view. Renumbering corrects totals per disc (or across the album when Ignore discs is enabled); the existing totalLeadingZeros preference now applies to both renumbering and total insertion, without changing saved values.
+
+## Playback reveal and track metadata display
+
+Playback navigation reveals rows with nearest-edge scrolling. Preserve the collection scroll position and expanded albums when the playing collection remains open; a visible row must not be vertically centered. Clicking blank track-pane space clears track/album selection without scrolling or changing the active pane.
+
+Appearance → Albums & tracks offers a saved Show disc number switch, off by default. Prefix the displayed track number with the metadata disc number and a dot, preserving raw zero padding. Untagged discs display as disc 1. The number column reserves enough width for the complete displayed value. Finder/Explorer playlist imports remain playlist content and do not enter All music or dynamic playlists.

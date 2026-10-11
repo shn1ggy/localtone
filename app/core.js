@@ -61,6 +61,9 @@ export function selectTracks(
   randomSeed = 0,
   artistGrouping = 'folder',
 ) {
+  const importedLibraries = new Set(
+    (state.libraries || []).filter((l) => l.importedFiles).map((l) => l.id),
+  );
   let tracks =
     scope.kind === 'playlist'
       ? playlistTracks(
@@ -68,7 +71,10 @@ export function selectTracks(
           state.playlists.find((p) => p.id === scope.id),
         )
       : state.tracks.filter(
-          (t) => !t.missing && (scope.kind !== 'library' || t.libraryId === scope.id),
+          (t) =>
+            !t.missing &&
+            !importedLibraries.has(t.libraryId) &&
+            (scope.kind !== 'library' || t.libraryId === scope.id),
         );
   if (query.trim()) {
     const compiled = compileSearch(query);

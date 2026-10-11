@@ -62,6 +62,7 @@ const defaults = Object.freeze({
   shortcuts: shortcutDefaults,
   albumDetails: ['artist', 'year', 'tracks', 'duration'],
   trackNumberFormat: 'number',
+  showDiscNumber: false,
   albumLayout: 'side',
   sidebarLocked: false,
   artistLocked: false,
@@ -249,6 +250,7 @@ function validateSettings(patch) {
       key === 'shuffle' ||
       key === 'waveformNormalize' ||
       key === 'showColumnHeaders' ||
+      key === 'showDiscNumber' ||
       key === 'portable'
     ) {
       if (typeof value !== 'boolean') throw new Error(`Invalid ${key}.`);

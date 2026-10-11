@@ -90,3 +90,10 @@ test('quit default migrates without colliding with a custom action; text colors 
 });
 
 test('ignoring discs for renumbering is opt-in and validated',()=>{assert.equal(preferences.defaults.renumberIgnoreDiscs,false);assert.equal(preferences.normalizeSettings({renumberIgnoreDiscs:true}).renumberIgnoreDiscs,true);assert.throws(()=>preferences.validateSettings({renumberIgnoreDiscs:'yes'}));});
+
+
+test('disc-number display is off by default and persists only boolean preferences',()=>{
+ assert.equal(preferences.normalizeSettings().showDiscNumber,false);
+ assert.equal(preferences.normalizeSettings({showDiscNumber:true}).showDiscNumber,true);
+ assert.throws(()=>preferences.validateSettings({showDiscNumber:'true'}));
+});
