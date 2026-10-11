@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "0.114.0",
-  "commit": "d721a1e845a80318daeba124f39182fa5c78cfc8",
-  "buildRun": 38144539743,
-  "tag": "v0.114.0",
-  "attempt": 2,
-  "title": "Localtone 0.114.0 — Early access"
+  "version": "0.115.0",
+  "commit": "99f277d951ddf991c2a49858479797c9875cc918",
+  "buildRun": 38147788983,
+  "tag": "v0.115.0",
+  "attempt": 1,
+  "title": "Localtone 0.115.0 \u2014 macOS packaging fix"
 }

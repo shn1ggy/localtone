@@ -8,7 +8,7 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: publish-localtone-0.114.0
+  group: publish-localtone
   cancel-in-progress: false
 jobs:
   wait-for-verification:
