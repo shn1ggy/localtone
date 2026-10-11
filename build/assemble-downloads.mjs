@@ -16,8 +16,10 @@ export async function assembleDownloads(input, output) {
     const names = await verifyDownloads(path.join(root, 'checksums.json'));
     for (const name of names) {
       const match =
-        /^Localtone-(\d+\.\d+\.\d+)-(mac|win|linux)-(x64|arm64)\.(zip|AppImage)$/.exec(name) ||
-        /^Localtone-(\d+\.\d+\.\d+)-windows-(x64|arm64)-portable\.exe$/.exec(name);
+        /^Localtone-(\d+\.\d+\.\d+)-(mac|win|linux)-(x64|arm64)\.(zip|AppImage)(?:\.blockmap)?$/.exec(
+          name,
+        ) ||
+        /^Localtone-(\d+\.\d+\.\d+)-windows-(x64|arm64)-portable\.exe(?:\.blockmap)?$/.exec(name);
       if (!match || seen.has(name))
         throw Error('Unexpected or duplicate release artifact: ' + name);
       version ||= match[1];
