@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "0.118.0",
-  "commit": "ba4caa359156c46bd24753dc54863755b77349b2",
-  "buildRun": 38154206129,
-  "tag": "v0.118.0",
+  "version": "0.119.0",
+  "commit": "50e6875e6496f85247e04f92dd7adfb1f10ad615",
+  "buildRun": 38158737650,
+  "tag": "v0.119.0",
   "attempt": 1,
-  "title": "Localtone 0.118.0 — Update redirects and library-only dynamic playlists"
+  "title": "Localtone 0.119.0 — Safe quitting and batch tag improvements"
 }
