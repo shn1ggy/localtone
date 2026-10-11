@@ -3,6 +3,7 @@ const path = require('node:path');
 const { promisify } = require('node:util');
 const { execFile } = require('node:child_process');
 const { digest } = require('../release.cjs');
+const { verifyDecoder } = require('./ffmpeg/policy.cjs');
 
 // Inspect headers without executing a binary built for a different processor.
 function binaryArchitectures(data) {
@@ -188,6 +189,16 @@ async function writePackageAudit({
   decoder.versionOutput = (stdout + stderr).trim();
   if (!/^ffmpeg version /m.test(decoder.versionOutput))
     throw new Error('FFmpeg version verification failed.');
+  decoder.provenance = verifyDecoder(
+    decoder.versionOutput,
+    JSON.parse(
+      await fs.readFile(
+        path.join(path.dirname(path.join(root, ffmpeg)), 'ffmpeg.provenance.json'),
+        'utf8',
+      ),
+    ),
+    decoder.sha256,
+  );
   const notices = await packagedNotices(
     path.join(root, resources, 'app.asar'),
     path.resolve(__dirname, '..'),
@@ -214,7 +225,7 @@ async function writePackageAudit({
       .filter((item) => !item.notices.length && !item.additionalNotices.length)
       .map((item) => item.path),
     reviewRequired: [
-      'Choose Localtone project license',
+      'Review LGPL decoder source archive and build provenance',
       'Verify exact FFmpeg corresponding-source distribution',
       'Review Electron/Chromium notices and every dependency license',
     ],

@@ -2,7 +2,7 @@
 
 ## Build a desktop app
 
-Install Node.js 24 LTS (24.15+, tested on 24.19.0) and run `npm ci` in the source folder. On the target OS:
+Install Node.js 24 LTS (24.15+, tested on 24.19.0) and run `npm ci` in the source folder. Before native packaging, build the pinned source decoder using [build/ffmpeg/README.md](build/ffmpeg/README.md). Install the listed toolchain and run the build and finalize commands. Packaging intentionally rejects the development decoder installed by npm. On the target OS:
 
 | System | Command | Result |
 | --- | --- | --- |
@@ -144,3 +144,7 @@ Build unsigned test packages now runs when release-related files change on main,
 This candidate fixes sidebar focus feedback, keeps confirmed searches in the current tab and preserves their static-playlist action across tabs. Album title clicks select the album's tracks; artwork clicks expand/collapse. General → Library adds opt-in continuous renumbering across discs. Source collections and playing tracks share a subtle playback marker. All existing appearance preferences are preserved.
 
 Before publishing a release, confirm repository visibility with the owner, finish the FFmpeg corresponding-source/provenance review, and test downloaded native builds. Private Actions artifacts are temporary test downloads, not public Releases and not an update feed. The in-app updater reads public stable releases only; marking a release as prerelease intentionally keeps it out of that feed. Do not silently mark an untested alpha as stable to make updates work.
+
+## Decoder source assets (0.114+)
+
+Upload every `Localtone-VERSION-ffmpeg-source-PLATFORM-ARCH.tar.gz` alongside the matching application downloads and checksums. They contain the unmodified pinned source, license texts, build recipe, actual configuration and compiler/provenance record. Native packaging rejects nonfree, GPL-only and hash-mismatched decoders. Previous unsigned candidates with prebuilt decoders are not release assets.

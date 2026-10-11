@@ -1,3 +1,5 @@
+> Current follow-up (0.114): the repository is public. Native releases now require pinned-source FFmpeg builds and include platform-specific matching source archives; previous prebuilt decoder candidates must not be published. Native rebuilding and early-access release verification are in progress. Hardware/signing validation remains open.
+
 > Current follow-up (0.113): GPL-3.0-or-later and the private shn1ggy/localtone repository are established. Source CI has passed on all three operating systems. Public release assets, native hardware/signing validation and FFmpeg source redistribution review remain open. About supports public stable-release checks and verified downloads, with manual extraction/preparation. Private multi-platform release candidates are now built and combined automatically; see RELEASING.md. The older audit below remains historical.
 
 > Follow-up in 0.107: the owner selected GPL-3.0-or-later. LICENSE, the project licensing notice, contribution terms and package metadata now reflect it. The historical audit below predates this decision; third-party notices/source-distribution review and the other release gates remain outstanding.

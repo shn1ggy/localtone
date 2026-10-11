@@ -21,10 +21,15 @@ export async function assembleDownloads(input, output) {
           name,
         ) ||
         /^Localtone-(\d+\.\d+\.\d+)-windows-(x64|arm64)-portable\.exe(?:\.blockmap)?$/.exec(name);
-      if (!match || seen.has(name))
+      const sourceMatch =
+        /^Localtone-(\d+\.\d+\.\d+)-ffmpeg-source-(darwin|win32|linux)-(x64|arm64)\.tar\.gz$/.exec(
+          name,
+        );
+      const accepted = match || sourceMatch;
+      if (!accepted || seen.has(name))
         throw Error('Unexpected or duplicate release artifact: ' + name);
-      version ||= match[1];
-      if (match[1] !== version) throw Error('Release artifacts have different versions.');
+      version ||= accepted[1];
+      if (accepted[1] !== version) throw Error('Release artifacts have different versions.');
       seen.add(name);
       records.push({ name, source: path.join(root, name) });
     }

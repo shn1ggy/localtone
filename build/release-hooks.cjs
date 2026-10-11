@@ -51,7 +51,10 @@ exports.afterPack = async (context) => {
 };
 exports.afterAllArtifactBuild = async (result) => {
   const items = [];
-  for (const file of result.artifactPaths) {
+  const sourceArchives = (await fs.readdir(result.outDir))
+    .filter((name) => /^Localtone-.*-ffmpeg-source-.*\.tar\.gz$/.test(name))
+    .map((name) => path.join(result.outDir, name));
+  for (const file of [...result.artifactPaths, ...sourceArchives]) {
     const stat = await fs.stat(file);
     if (!stat.isFile()) continue;
     items.push({ name: path.basename(file), size: stat.size, sha256: await digest(file) });

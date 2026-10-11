@@ -1,3 +1,8 @@
+## 0.114.0
+
+- Build release decoders from pinned FFmpeg 9.0.2 source on all platforms. Reject nonfree or unverifiable decoders during packaging. Include matching source, actual configuration, licenses and build instructions with release downloads.
+- Smoke-check waveform and gapless PCM decoding before native packaging.
+
 # 0.112.0
 
 - Up/Down closes playlist submenu previews and continues through the parent context menu, including empty destinations.

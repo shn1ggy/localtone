@@ -1,5 +1,5 @@
 name: Build unsigned test packages
-# Build private test artifacts on release-related changes; never publish or use signing secrets.
+# Build unsigned release candidates on release-related changes; never publish or use signing secrets.
 on:
   workflow_dispatch:
   push:
@@ -26,7 +26,7 @@ jobs:
           - os: macos-15-intel
             target: mac
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
@@ -37,7 +37,34 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      - uses: actions/checkout@v7
+        with:
+          repository: FFmpeg/FFmpeg
+          ref: 946fcce07b6dcd0331c8cc609192aeff5e1924f8
+          path: ffmpeg-source
+          persist-credentials: false
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y nasm
+      - if: runner.os == 'macOS'
+        run: brew install nasm
+      - if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc make nasm diffutils
+          path-type: inherit
       - run: npm ci
+      - if: runner.os != 'Windows'
+        run: bash build/ffmpeg/build.sh
+      - if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: bash build/ffmpeg/build.sh
+      - if: runner.os != 'Windows'
+        run: node build/ffmpeg/finalize.mjs
+      - if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: node build/ffmpeg/finalize.mjs
+      - run: node build/ffmpeg/smoke.mjs
       - run: npm run release:${{ matrix.target }}
       - run: npm run release:verify-downloads -- dist/checksums.json
       - uses: actions/upload-artifact@v7
@@ -46,6 +73,7 @@ jobs:
           retention-days: 14
           if-no-files-found: error
           path: |
+            dist/*.tar.gz
             dist/*.zip
             dist/*.blockmap
             dist/*.exe

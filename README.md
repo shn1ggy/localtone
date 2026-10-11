@@ -1,6 +1,6 @@
 # Localtone
 
-A compact local music player for macOS, Windows and Linux. Source release **0.113.0**.
+A compact local music player for macOS, Windows and Linux. Source release **0.114.0**.
 
 This is an early-access development build. Native platform validation and third-party redistribution review are still pending; see [RELEASE-READINESS.md](RELEASE-READINESS.md).
 
@@ -16,6 +16,7 @@ npm start
 This download contains source code, not a signed installer. Build a launchable desktop package on its target operating system:
 
 ```sh
+# First build the pinned decoder; see build/ffmpeg/README.md
 npm run release:mac
 npm run release:win
 npm run release:linux

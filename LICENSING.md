@@ -12,7 +12,9 @@ You should have received a copy of the GNU General Public License along with Loc
 
 Third-party software, notices and separately attributed assets retain their own applicable licenses and copyright notices. The Localtone license does not replace those terms or certify that all native redistribution obligations have been completed.
 
-Important bundled component: the installed ffmpeg-static 5.3.0 package declares GPL-3.0-or-later. The inspected Linux executable reports FFmpeg 7.0.2 with --enable-gpl and --enable-version3, and its accompanying notice identifies GPLv3. The package's configured download tag says b6.1.1, so package version/tag alone is not adequate evidence of the binary actually shipped. Record actual binary version/configuration, architecture, hash, upstream source/build provenance and notices on each target OS. Different targets may use different upstream builds.
+Release builds from 0.114 compile FFmpeg 9.0.2 from pinned, unmodified source, with autodetected external libraries, GPL-only components and nonfree components disabled. The decoder uses LGPL-2.1-or-later; the JavaScript ffmpeg-static loader retains its own declared GPL-3.0-or-later license. Each platform's complete corresponding decoder source and actual build configuration are supplied as a release asset, identified in the packaged audit. See build/ffmpeg/README.md for rebuilding instructions.
+
+Earlier development candidates used prebuilt decoders with inconsistent upstream provenance. The inspected Apple Silicon executable enabled nonfree components. Do not redistribute those candidates as public releases. Packaging now rejects these executables and requires matching source-build provenance.
 
 Before native public distribution:
 
@@ -30,4 +32,4 @@ References checked 11 October 2026:
 
 The MusicBrainz User-Agent now identifies the running Localtone version and https://github.com/shn1ggy/localtone. Before a public app release, ensure that this repository and a maintained contact route are publicly accessible; a private repository URL alone is not a publicly contactable route. Review Last.fm API distribution/credential setup before promising one-click login to the public.
 
-As of 0.106, native packaging generates `localtone-build-audit.json` and `THIRD-PARTY-NOTICES.txt` from the shipped app archive and decoder. Use these as review evidence rather than relying only on package-lock.json. Packages without included notice files or with unspecified license metadata need manual review. The automatically collected text is not a claim that all redistribution requirements are satisfied, and it does not supply FFmpeg corresponding source.
+As of 0.106, native packaging generates `localtone-build-audit.json` and `THIRD-PARTY-NOTICES.txt` from the shipped app archive and decoder. Use these as review evidence rather than relying only on package-lock.json. Packages without included notice files or with unspecified license metadata need manual review. The automatically collected text is not a claim that all redistribution requirements are satisfied, and should be reviewed alongside the matching FFmpeg source archive.

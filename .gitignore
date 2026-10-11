@@ -24,3 +24,6 @@ browsing-session.json
 playback-session.json
 playback-history.json
 lastfm.enc
+
+ffmpeg-source/
+ffmpeg-build/
