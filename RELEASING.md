@@ -148,3 +148,9 @@ Before publishing a release, confirm repository visibility with the owner, finis
 ## Decoder source assets (0.114+)
 
 Upload every `Localtone-VERSION-ffmpeg-source-PLATFORM-ARCH.tar.gz` alongside the matching application downloads and checksums. They contain the unmodified pinned source, license texts, build recipe, actual configuration and compiler/provenance record. Native packaging rejects nonfree, GPL-only and hash-mismatched decoders. Previous unsigned candidates with prebuilt decoders are not release assets.
+
+## Verified early-access publication
+
+`Publish verified early access` is triggered by an explicit change to `build/release-plan.json`. The plan pins the app commit and its successful native build run. The publishing job downloads that run's combined candidate, creates the source ZIP from the pinned app commit, checks archive CRCs, internal update manifests, decoder/source hashes and dependency notices, then uploads all files to a draft. It verifies GitHub's uploaded asset hashes before publishing as a pre-release. Existing conflicting assets and already-published releases are never overwritten.
+
+Only the publishing job has `contents: write`; its GitHub token is ephemeral. Actions used by that job are pinned to reviewed official revisions. No personal token or signing secret is stored. For a later early-access release, complete its native build, update the plan with that version/commit/run and add matching release notes. Physical hardware and signing validation remain separate release gates. Stable in-app update checks intentionally ignore pre-releases.

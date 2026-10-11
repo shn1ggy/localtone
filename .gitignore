@@ -27,3 +27,4 @@ lastfm.enc
 
 ffmpeg-source/
 ffmpeg-build/
+__pycache__/
