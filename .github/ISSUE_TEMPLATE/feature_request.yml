@@ -1,0 +1,15 @@
+name: Feature request
+description: Describe a listening or library task Localtone could improve
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What task is difficult?
+      description: Describe the workflow and current workaround before proposing a control or feature.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested improvement
+      description: Include keyboard behavior and whether it changes files, playback or only the view.

@@ -1,0 +1,22 @@
+name: Bug report
+description: Report a reproducible Localtone problem
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version and system
+      description: Copy version, OS and architecture from Settings → About. Do not include your data-folder path.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include view, grouping, sort, selection and relevant keys. What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Relevant details
+      description: Audio format, approximate library size, portable/system storage and exact error if relevant. Remove usernames, private paths and credentials. Never upload your music or app-data folder.

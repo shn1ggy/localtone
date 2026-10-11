@@ -1,0 +1,44 @@
+name: Build unsigned test packages
+# Explicitly requested builds only; never publish a release or use signing secrets.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+          - os: windows-latest
+            target: win
+          - os: macos-latest
+            target: mac
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run release:${{ matrix.target }}
+      - run: npm run release:verify-downloads -- dist/checksums.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-test-${{ matrix.target }}-${{ runner.arch }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            dist/*.zip
+            dist/*.exe
+            dist/*.AppImage
+            dist/checksums.json
+            dist/SHA256SUMS.txt

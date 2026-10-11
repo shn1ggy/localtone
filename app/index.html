@@ -1,0 +1,1095 @@
+<!doctype html>
+<html lang="en" data-booting
+  ><head
+    ><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' localtone:; media-src localtone:; connect-src 'self'; object-src 'none'; base-uri 'none'" />
+    <title>Localtone</title
+    ><link rel="stylesheet" href="style.css"
+  /></head>
+  <body tabindex="-1">
+    <div class="shell">
+      <aside class="sidebar"
+        ><div class="brand"><span class="brandmark" aria-hidden="true"></span> localtone</div>
+
+        <div class="section-label"
+          >LIBRARIES<button id="add-library" title="Add library" aria-label="Add library"
+            >＋</button
+          ></div
+        ><div id="libraries"
+          ><button id="all" class="nav active"><span>▦</span> All music</button></div
+        >
+        <div class="section-label"
+          >PLAYLISTS<button id="add-playlist" title="Create playlist" aria-label="Create playlist"
+            >＋</button
+          ></div
+        ><div id="playlists"></div>
+        <section class="sidebar-player" aria-label="Now playing"
+          ><div class="now"
+            ><div id="now-art" class="cover">♫</div
+            ><div class="player-meta"
+              ><div class="player-rating" id="now-rating"></div
+              ><span class="player-time"
+                ><span id="elapsed">0:00</span><span> / </span><span id="duration">0:00</span></span
+              ></div
+            ><div class="now-text"
+              ><strong id="now-title">Nothing playing</strong
+              ><div class="now-links"
+                ><button id="now-artist" class="text-link" disabled></button
+                ><span id="now-separator" hidden>·</span
+                ><button id="now-album" class="text-link" hidden disabled></button></div></div></div
+          ><div class="controls transport-controls"
+            ><button id="shuffle" title="Shuffle off" aria-label="Shuffle" aria-pressed="false"
+              >⤨</button
+            ><div class="transport-center"
+              ><button id="previous-track" aria-label="Previous track">⏮</button
+              ><button id="toggle" class="play-toggle" aria-label="Play or pause">▶</button
+              ><button id="next-track" aria-label="Next track">⏭</button></div
+            ><button id="repeat" title="Repeat: off">↻</button></div
+          ></section
+        ></aside
+      ><div
+        id="sidebar-resize"
+        class="pane-resize"
+        role="separator"
+        aria-label="Resize sidebar"
+        aria-orientation="vertical"
+        tabindex="0"
+      ></div>
+      <div class="workspace"
+        ><div class="work-row"
+          ><main>
+            <section class="collection-heading" hidden
+              ><h1 id="title">All music</h1><span id="summary"></span
+            ></section>
+
+            <div class="library-layout"
+              ><aside id="artist-pane"
+                ><div class="collection-search"
+                  ><label class="search"
+                    ><span>⌕</span
+                    ><input
+                      id="search"
+                      type="search"
+                      maxlength="2000"
+                      placeholder="Search tracks, artists, albums…"
+                      aria-label="Search collection"
+                    /><button id="clear-search" type="button" aria-label="Clear search" hidden
+                      >×</button
+                    ></label
+                  ></div
+                ><div id="artist-list" class="artist-list"></div></aside
+              ><div
+                id="artist-resize"
+                class="pane-resize"
+                role="separator"
+                aria-label="Resize artist list"
+                aria-orientation="vertical"
+                tabindex="0"
+              ></div
+              ><section class="library-content"
+                ><div class="view-toolbar"
+                  ><div class="view-tabs-slot"
+                    ><div class="view-tabs" role="group" aria-label="Library view"
+                      ><button id="view-albums">Albums</button
+                      ><button id="view-covers">Covers</button
+                      ><button id="view-tracks">Tracks</button></div
+                    ></div
+                  ><div class="view-controls"
+                    ><div class="track-sort"
+                      ><label
+                        ><select aria-label="Sort tracks" id="sort"
+                          ><option value="folder">Folder order</option
+                          ><option value="manual">Playlist order</option
+                          ><option value="artist">Artist</option
+                          ><option value="album">Album</option
+                          ><option value="title">Title</option
+                          ><option value="year">Year</option
+                          ><option value="genre">Genre</option
+                          ><option value="duration">Duration</option
+                          ><option value="rating">Rating</option
+                          ><option value="random">Random</option></select
+                        ></label
+                      ><button id="direction" class="chip" aria-label="Reverse sort order"
+                        >↑</button
+                      ></div
+                    ></div
+                  ><div class="collection-actions"
+                    ><div class="volume"
+                      ><input
+                        id="volume"
+                        type="range"
+                        min="0"
+                        max="1"
+                        value="0.8"
+                        step="0.01"
+                        aria-label="Volume" /></div
+                    ><button id="open-settings" class="chip" title="Settings" aria-label="Settings"
+                      >⚙</button
+                    ><button id="queue" class="chip" title="Show queue" aria-label="Show queue"
+                      >☷</button
+                    ></div
+                  ></div
+                >
+                <div class="content-scroll"
+                  ><div id="browse-navigation"></div>
+                  <div id="browser"></div>
+                  <div class="table-wrap"
+                    ><table
+                      ><thead
+                        ><tr
+                          ><th>#</th><th><button data-sort="title">Title</button></th
+                          ><th><button data-sort="artist">Artist</button></th
+                          ><th><button data-sort="album">Album</button></th
+                          ><th><button data-sort="year">Year</button></th
+                          ><th><button data-sort="genre">Genre</button></th
+                          ><th><button data-sort="duration">Duration</button></th
+                          ><th class="rating-column"><button data-sort="rating">Rating</button></th
+                          ><th></th></tr></thead
+                      ><tbody id="tracks"></tbody></table
+                  ></div>
+                  <div id="empty"
+                    ><h2>No tracks</h2><p>Add a folder to get started.</p
+                    ><button id="empty-add" class="primary">Add folder</button></div
+                  >
+                </div></section
+              ></div
+            ></main
+          ><aside id="queue-panel" hidden
+            ><div class="section-label"
+              >PLAY QUEUE<button id="close-queue" aria-label="Close queue">×</button></div
+            ><div id="queue-list"></div></aside></div
+        ><footer class="waveform-dock"
+          ><div
+            id="seek-height-resize"
+            role="separator"
+            aria-label="Resize seek bar height"
+            aria-orientation="horizontal"
+            tabindex="0"
+          ></div
+          ><div class="scrubber"
+            ><div id="seek-visual"
+              ><svg
+                id="waveform-svg"
+                viewBox="0 0 1000 100"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+                hidden
+              >
+                <defs>
+                  <clipPath id="waveform-progress">
+                    <rect id="waveform-clip" x="0" y="0" width="0" height="100" />
+                  </clipPath>
+                </defs>
+                <path id="waveform-base" />
+                <path id="waveform-played" clip-path="url(#waveform-progress)" /></svg
+              ><span id="waveform-cursor" hidden></span
+              ><input
+                id="seek"
+                tabindex="-1"
+                type="range"
+                min="0"
+                max="100"
+                value="0"
+                step="0.1"
+                aria-label="Playback position" /></div></div></footer
+      ></div>
+    </div>
+
+    <div id="toast" role="status" hidden></div>
+    <dialog id="name-dialog" aria-labelledby="dialog-title"
+      ><form id="name-form"
+        ><div class="settings-heading"
+          ><h2 id="dialog-title"></h2
+          ><button id="name-close" type="button" aria-label="Close name dialog">×</button></div
+        ><label>Name<input id="name-input" maxlength="100" required autocomplete="off" /></label
+        ><div class="dialog-actions"
+          ><button id="name-cancel" class="chip dialog-button" type="button">Cancel</button
+          ><button id="name-save" type="submit" class="primary">Add</button></div
+        ></form
+      ></dialog
+    >
+    <div id="context-menu" role="menu" aria-label="Actions" hidden
+      ><div id="track-actions"></div
+    ></div>
+    <dialog id="tag-dialog" aria-labelledby="tag-heading"
+      ><form id="tag-form"
+        ><div class="settings-heading"
+          ><h2 id="tag-heading">Edit tags</h2><span id="tag-count" class="settings-note"></span
+          ><button type="button" id="tag-close" aria-label="Close tag editor">×</button></div
+        ><div class="tag-editor-body"
+          ><div class="tag-mb-heading"
+            ><h3>MusicBrainz</h3
+            ><button type="button" id="tag-mb-toggle" class="settings-link" aria-expanded="false"
+              >Compare with MusicBrainz…</button
+            ></div
+          ><section id="tag-mb-controls" hidden
+            ><div id="tag-mb-album-row" class="tag-mb-row"
+              ><label for="tag-mb-album">Album</label
+              ><select id="tag-mb-album"></select></div
+            ><div class="tag-mb-row"
+              ><label for="tag-mb-release">Release</label
+              ><div class="tag-mb-release-controls"
+                ><select id="tag-mb-release" disabled
+                  ><option>Find a release first</option></select
+                ><span
+                  id="tag-mb-loading"
+                  class="loading-indicator"
+                  role="status"
+                  aria-label="Loading MusicBrainz"
+                  hidden
+                ></span
+                ><button type="button" id="tag-mb-search" class="chip dialog-button"
+                  >Find release…</button
+                ></div
+              ></div
+            ><p id="tag-mb-status" class="settings-note" role="status"></p></section
+          ><details id="tag-standard-fields" open
+            ><summary>Tags</summary
+            ><div id="tag-field-headings" hidden
+              ><span>Field</span><span>Local value</span><span>MusicBrainz proposal</span
+              ><span>Use</span></div
+            ><div id="tag-fields"></div></details
+          ><details id="tag-mb-numbers" hidden open
+            ><summary>Track numbers</summary
+            ><label class="tag-mb-zero-row"
+              ><span>Leading zeros for numbers and totals</span
+              ><input
+                id="tag-mb-zeros"
+                class="preference-switch"
+                type="checkbox"
+                role="switch" /></label
+            ><div class="tag-mb-track-scroll"
+              ><table
+                ><thead
+                  ><tr
+                    ><th>Local track</th><th>Current</th><th>Release match</th><th>Use</th></tr
+                  ></thead
+                ><tbody id="tag-mb-tracks"></tbody></table></div></details
+          ><p id="tag-error" role="alert" hidden></p></div
+        ><div class="dialog-actions"
+          ><span class="tag-session-note settings-note">Undo available until exit</span
+          ><button id="tag-cancel" type="button" class="chip dialog-button">Cancel</button
+          ><button id="tag-save" type="submit" class="primary dialog-button">Save</button></div
+        ></form
+      ></dialog
+    >
+    <dialog id="playlist-settings-dialog" aria-labelledby="playlist-settings-title"
+      ><form id="playlist-settings-form"
+        ><div class="settings-heading"
+          ><h2 id="playlist-settings-title">Playlist settings</h2
+          ><button type="button" id="playlist-settings-close" aria-label="Close playlist settings"
+            >×</button
+          ></div
+        ><div class="playlist-editor-body"
+          ><section class="preference-group playlist-identity"
+            ><div class="settings-fields"
+              ><label class="playlist-name-row"
+                >Name<input id="playlist-name" maxlength="100" required /></label
+              ><label class="check-setting playlist-dynamic-row"
+                ><span>Dynamic playlist</span
+                ><input
+                  id="playlist-dynamic"
+                  type="checkbox"
+                  role="switch" /></label></div></section
+          ><section id="playlist-filters" class="preference-group"
+            ><div class="settings-fields playlist-source-fields"
+              ><label>Source library<select id="playlist-library"></select></label
+              ><label
+                >Filter by<select id="playlist-filter-mode"
+                  ><option value="rules">Rules</option
+                  ><option value="search">Search expression</option></select
+                ></label
+              ><label id="playlist-match-row"
+                >Match<select id="playlist-match"
+                  ><option value="all">All rules</option
+                  ><option value="any">Any rule</option></select
+                ></label
+              ></div
+            ><div id="playlist-search-row" hidden
+              ><label for="playlist-search">Search expression</label
+              ><input
+                id="playlist-search"
+                maxlength="2000"
+                placeholder="rating:&gt;=4 AND missing:year"
+              /><button
+                type="button"
+                class="settings-link"
+                id="playlist-search-guide"
+                data-settings-guide="search"
+                >Search guide…</button
+              ></div
+            ><div id="playlist-rule-heading" class="preference-group-heading rules-heading"
+              ><h3>Rules</h3
+              ><button type="button" class="chip" id="playlist-add-rule"
+                ><span aria-hidden="true">+</span> Add rule</button
+              ></div
+            ><div id="playlist-rules"></div></section
+          ><p id="playlist-preview" class="settings-note" aria-live="polite"></p
+          ><p id="playlist-settings-error" role="alert" hidden></p></div
+        ><div class="dialog-actions"
+          ><button type="button" id="playlist-settings-cancel" class="chip dialog-button"
+            >Cancel</button
+          ><button type="submit" class="primary">Save</button></div
+        ></form
+      ></dialog
+    >
+    <dialog id="duplicates-dialog" aria-labelledby="duplicates-heading"
+      ><div class="settings-heading"
+        ><h2 id="duplicates-heading">Find duplicates</h2
+        ><button id="duplicates-close" type="button" aria-label="Close duplicate review"
+          >×</button
+        ></div
+      ><div class="setting-row"
+        ><label for="duplicates-mode">Match by</label
+        ><select id="duplicates-mode"
+          ><option value="exact">Identical file contents</option
+          ><option value="metadata">Artist, title &amp; duration</option></select
+        ></div
+      ><p class="settings-note"
+        >Enable files to remove. Keep at least one copy per group. Possible matches may be different
+        recordings.</p
+      ><p id="duplicates-status" class="settings-note" role="status"></p
+      ><div id="duplicates-list"></div
+      ><div class="dialog-actions"
+        ><button id="duplicates-scan" type="button" class="chip dialog-button">Scan</button
+        ><button id="duplicates-remove" type="button" class="primary dialog-button" disabled
+          >Move selected to Trash…</button
+        ></div
+      ></dialog
+    >
+    <dialog id="rename-dialog" aria-labelledby="rename-heading"
+      ><div class="settings-heading"
+        ><h2 id="rename-heading">Rename files &amp; folders</h2
+        ><button id="rename-close" type="button" aria-label="Close naming window">×</button></div
+      ><div class="rename-body"
+        ><div class="setting-row"
+          ><label for="rename-folders">Album folders</label
+          ><input
+            id="rename-folders"
+            type="checkbox"
+            class="preference-switch"
+            role="switch"
+            checked /></div
+        ><input
+          id="rename-album-formula"
+          class="formula-input"
+          aria-label="Album folder formula"
+          maxlength="500"
+          spellcheck="false" /><div class="setting-row"
+          ><label for="rename-files">Track files</label
+          ><input
+            id="rename-files"
+            type="checkbox"
+            class="preference-switch"
+            role="switch"
+            checked /></div
+        ><input
+          id="rename-track-formula"
+          class="formula-input"
+          aria-label="Track file formula"
+          maxlength="500"
+          spellcheck="false" /><details class="naming-guide"
+          ><summary>Formula fields</summary
+          ><p class="settings-note"
+            ><code>%artist%</code> <code>%albumartist%</code> <code>%album%</code>
+            <code>%year%</code> <code>%tracknumber%</code> <code>%title%</code> <code>%genre%</code>
+            <code>%discnumber%</code></p
+          ><p class="settings-note"
+            >Type punctuation and spaces between fields. Track numbers exclude totals; file
+            extensions stay unchanged. Special characters use the replacements below.</p
+          ></details
+        ><details class="naming-guide" id="rename-characters"
+          ><summary>Special characters</summary
+          ><p class="settings-note"
+            >Set a replacement for each character, or leave it empty to remove it. Applies to
+            filenames and folders; tags stay unchanged.</p
+          ><div id="rename-character-rows"></div></details
+        ><p class="settings-note"
+          >Folder changes move all contents, including files whose individual rename is disabled.</p
+        ><p id="rename-status" class="settings-note" role="status"></p
+        ><details id="rename-problems" class="naming-guide" hidden
+          ><summary id="rename-problems-heading">Skipped problems</summary
+          ><div id="rename-problems-list"></div></details
+        ><div class="rename-table-scroll"
+          ><table
+            ><thead
+              ><tr
+                ><th>Type</th><th>Current name</th><th>New name</th
+                ><th class="rename-use">Use</th></tr
+              ></thead
+            ><tbody id="rename-items"></tbody></table></div></div
+      ><div class="dialog-actions"
+        ><button id="rename-preview" class="chip dialog-button" type="button">Preview</button
+        ><button id="rename-cancel" class="chip dialog-button" type="button">Cancel</button
+        ><button id="rename-apply" type="button" class="primary dialog-button" disabled
+          >Rename</button
+        ></div
+      ></dialog
+    >
+    <dialog id="settings-dialog" aria-labelledby="settings-heading"
+      ><div class="settings-heading"
+        ><h2 id="settings-heading">Settings</h2
+        ><div class="settings-tabs" role="tablist" aria-label="Settings categories"
+          ><button
+            type="button"
+            id="settings-tab-general"
+            role="tab"
+            aria-controls="settings-panel-general"
+            aria-selected="true"
+            tabindex="0"
+            >General</button
+          ><button
+            type="button"
+            id="settings-tab-appearance"
+            role="tab"
+            aria-controls="settings-panel-appearance"
+            aria-selected="false"
+            tabindex="-1"
+            >Appearance</button
+          ><button
+            type="button"
+            id="settings-tab-audio"
+            role="tab"
+            aria-controls="settings-panel-audio"
+            aria-selected="false"
+            tabindex="-1"
+            >Audio</button
+          ><button
+            type="button"
+            id="settings-tab-connections"
+            role="tab"
+            aria-controls="settings-panel-connections"
+            aria-selected="false"
+            tabindex="-1"
+            >Connections</button
+          ><button
+            type="button"
+            id="settings-tab-shortcuts"
+            role="tab"
+            aria-controls="settings-panel-shortcuts"
+            aria-selected="false"
+            tabindex="-1"
+            >Shortcuts</button
+          ><button
+            type="button"
+            id="settings-tab-about"
+            role="tab"
+            aria-controls="settings-panel-about"
+            aria-selected="false"
+            tabindex="-1"
+            >About</button
+          ></div
+        ><button id="close-settings" aria-label="Close settings">×</button></div
+      ><div class="settings-panels"
+        ><section
+          id="settings-panel-general"
+          class="settings-panel"
+          role="tabpanel"
+          aria-labelledby="settings-tab-general"
+          ><section class="preference-group"
+            ><h3>On opening</h3
+            ><div class="settings-fields"
+              ><div class="setting-row"
+                ><span><label for="setting-libraryOpening">Artist filter</label></span
+                ><select id="setting-libraryOpening"
+                  ><option value="random">Random</option
+                  ><option value="first">First</option
+                  ><option value="none">All artists</option
+                  ><option value="last">Last listened to</option></select
+                ></div
+              ><div class="setting-row"
+                ><span><label for="setting-albumExpansion">Albums</label></span
+                ><select id="setting-albumExpansion"
+                  ><option value="collapsed">Collapsed</option
+                  ><option value="expanded">Expanded</option></select
+                ></div
+              ></div
+            ></section
+          ><section class="preference-group"
+            ><h3>Play queue</h3
+            ><div class="settings-fields"
+              ><div class="setting-row"
+                ><span><label for="setting-queuePresentation">Queue placement</label></span
+                ><select id="setting-queuePresentation"
+                  ><option value="overlay">Overlay main view</option
+                  ><option value="extend">Extend window to the right</option></select
+                ></div
+              ><div class="setting-row"
+                ><span><label for="setting-queueDisplayCount">Visible songs in queue</label></span
+                ><input
+                  id="setting-queueDisplayCount"
+                  type="number"
+                  min="10"
+                  max="1000"
+                  step="1"
+                  value="100" /></div></div></section
+          ><section class="preference-group"
+            ><h3>Library</h3
+            ><div class="settings-fields"
+              ><div class="setting-row"
+                ><span>Missing files</span
+                ><div class="setting-actions"
+                  ><button type="button" id="open-missing-files" class="chip">Review…</button></div
+                ></div
+              ><div class="setting-row"
+                ><span>Duplicate files</span
+                ><div class="setting-actions"
+                  ><button type="button" id="open-duplicates" class="chip dialog-button"
+                    >Find duplicates…</button
+                  ></div
+                ></div
+              ><div class="setting-row"
+                ><span>Advanced search</span
+                ><div class="setting-actions"
+                  ><button type="button" class="settings-link" data-settings-guide="search"
+                    >Search guide…</button
+                  ></div
+                ></div
+              ><div class="setting-row"
+                ><span><label for="setting-artistGrouping">Artist names</label></span
+                ><select id="setting-artistGrouping"
+                  ><option value="folder">Parent folder</option
+                  ><option value="artist">Artist</option
+                  ><option value="albumArtist">Album artist</option></select
+                ></div
+              ><div class="setting-row"
+                ><span><label for="setting-defaultSort">Default sort order</label></span
+                ><select id="setting-defaultSort"
+                  ><option value="folder">Folder order</option
+                  ><option value="year">Year</option
+                  ><option value="artist">Artist</option
+                  ><option value="album">Album</option
+                  ><option value="title">Title</option
+                  ><option value="genre">Genre</option
+                  ><option value="duration">Duration</option
+                  ><option value="rating">Rating</option
+                  ><option value="random">Random</option></select
+                ></div
+              ><div class="setting-row"
+                ><span
+                  ><label for="setting-confirmMultiFileTags"
+                    >Confirm multi-file tag edits</label
+                  ></span
+                ><input id="setting-confirmMultiFileTags" type="checkbox" role="switch" /></div
+              ><div class="setting-row"
+                ><span
+                  ><label for="setting-totalLeadingZeros"
+                    >Leading zeros when adding track totals</label
+                  ></span
+                ><input
+                  id="setting-totalLeadingZeros"
+                  type="checkbox"
+                  role="switch" /></div></div></section
+          ><section class="preference-group"
+            ><h3>Settings &amp; storage</h3
+            ><div class="settings-fields"
+              ><div class="setting-row"
+                ><span>Settings backup</span
+                ><div class="setting-actions"
+                  ><button type="button" id="settings-export" class="chip">Export…</button
+                  ><button type="button" id="settings-import" class="chip">Import…</button></div
+                ></div
+              ><div class="setting-row"
+                ><span
+                  ><label for="setting-exportCollections">Include playlists &amp; libraries</label
+                  ><button
+                    type="button"
+                    class="setting-help-trigger"
+                    data-settings-help="setting-exportCollections"
+                    ><span aria-hidden="true">?</span></button
+                  ></span
+                ><input id="setting-exportCollections" type="checkbox" role="switch" /></div
+              ><p id="transfer-status" class="settings-note" role="status"></p
+              ><div class="setting-row"
+                ><span
+                  ><label for="setting-portable">Portable mode</label
+                  ><button
+                    type="button"
+                    class="setting-help-trigger"
+                    data-settings-help="setting-portable"
+                    ><span aria-hidden="true">?</span></button
+                  ></span
+                ><input id="setting-portable" type="checkbox" role="switch" /></div
+              ><p class="portable-description settings-note"
+                >Store settings and playlists beside the app.</p
+              ><div class="setting-row"
+                ><span
+                  >Old app data<button
+                    type="button"
+                    class="setting-help-trigger"
+                    data-settings-help="cleanup-external-data"
+                    ><span aria-hidden="true">?</span></button
+                  ></span
+                ><div class="setting-actions"
+                  ><button type="button" id="cleanup-external-data" class="chip"
+                    >Remove…</button
+                  ></div
+                ></div
+              ><div class="setting-row"
+                ><span
+                  >Cache<button
+                    type="button"
+                    class="setting-help-trigger"
+                    data-settings-help="clean-cache"
+                    ><span aria-hidden="true">?</span></button
+                  ></span
+                ><div class="setting-actions"
+                  ><button type="button" id="clean-cache" class="chip dialog-button"
+                    >Clean unused</button
+                  ></div
+                ></div
+              ><p id="cache-status" class="settings-note" role="status"></p
+              ><p id="cleanup-status" class="settings-note" role="status"></p
+              ><p id="portable-note" class="settings-note" hidden=""
+                >Restart Localtone to apply the storage change.</p
+              ></div
+            ></section
+          ></section
+        ><section
+          id="settings-panel-appearance"
+          class="settings-panel"
+          role="tabpanel"
+          aria-labelledby="settings-tab-appearance"
+          hidden=""
+          ><section class="preference-group"
+            ><h3>Colors</h3
+            ><div class="settings-fields"
+              ><div class="setting-row"
+                ><span><label for="setting-accentColor">Accent</label></span
+                ><div class="color-control"
+                  ><input id="setting-accentColor" type="color" /><output
+                    id="setting-accentColor-value"
+                    for="setting-accentColor"
+                  ></output></div></div
+              ><div class="setting-row"
+                ><span><label for="setting-backgroundHue">Background hue</label></span
+                ><div class="range-control"
+                  ><input
+                    id="setting-backgroundHue"
+                    type="range"
+                    min="0"
+                    max="360"
+                    step="1"
+                    aria-label="Background hue in degrees" /><output
+                    id="setting-backgroundHue-value"
+                    for="setting-backgroundHue"
+                  ></output></div></div
+              ><div class="setting-row"
+                ><span><label for="setting-backgroundSaturation">Background saturation</label></span
+                ><div class="range-control"
+                  ><input
+                    id="setting-backgroundSaturation"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    aria-label="Background saturation" /><output
+                    id="setting-backgroundSaturation-value"
+                    for="setting-backgroundSaturation"
+                  ></output></div></div
+              ><div class="setting-row"
+                ><span><label for="setting-backgroundBrightness">Background brightness</label></span
+                ><div class="range-control"
+                  ><input
+                    id="setting-backgroundBrightness"
+                    type="range"
+                    min="0"
+                    max="30"
+                    step="1"
+                    aria-label="Background brightness" /><output
+                    id="setting-backgroundBrightness-value"
+                    for="setting-backgroundBrightness"
+                  ></output></div></div></div></section
+          ><section class="preference-group"
+            ><h3>Albums &amp; tracks</h3
+            ><div class="settings-fields"
+              ><div class="setting-row"
+                ><span><label for="setting-albumLayout">Album layout</label></span
+                ><select id="setting-albumLayout"
+                  ><option value="side">Cover beside tracks</option
+                  ><option value="compact">Compact</option></select
+                ></div
+              ><div class="setting-row"
+                ><span><label for="setting-coverSize">Cover size</label></span
+                ><select id="setting-coverSize"
+                  ><option value="small">Small</option
+                  ><option value="medium">Medium</option
+                  ><option value="large">Large</option></select
+                ></div
+              ><div class="setting-row"
+                ><span><label for="setting-trackNumberFormat">Track numbers</label></span
+                ><select id="setting-trackNumberFormat"
+                  ><option value="number">Number only</option
+                  ><option value="full">Number / total</option></select
+                ></div
+              ><div class="setting-row"
+                ><span><label for="setting-showColumnHeaders">Show column headings</label></span
+                ><input
+                  id="setting-showColumnHeaders"
+                  type="checkbox"
+                  role="switch" /></div></div></section
+          ><section class="preference-group"
+            ><h3>Seek bar</h3
+            ><div class="settings-fields"
+              ><div class="setting-row"
+                ><span><label for="setting-seekDisplay">Style</label></span
+                ><select id="setting-seekDisplay"
+                  ><option value="waveform">Waveform</option
+                  ><option value="line">Line</option></select
+                ></div
+              ><div class="setting-row"
+                ><span><label for="setting-waveformStyle">Waveform rendering</label></span
+                ><select id="setting-waveformStyle"
+                  ><option value="bars">Bars</option
+                  ><option value="solid">Filled</option
+                  ><option value="outline">Outline</option></select
+                ></div
+              ><div class="setting-row"
+                ><span><label for="setting-seekHeightLocked">Fixed height</label></span
+                ><input id="setting-seekHeightLocked" type="checkbox" role="switch" /></div
+              ><div class="setting-row"
+                ><span
+                  ><label for="setting-waveformNormalize">Normalize waveform</label
+                  ><button
+                    type="button"
+                    class="setting-help-trigger"
+                    data-settings-help="setting-waveformNormalize"
+                    ><span aria-hidden="true">?</span></button
+                  ></span
+                ><input
+                  id="setting-waveformNormalize"
+                  type="checkbox"
+                  role="switch" /></div></div></section
+          ><div class="settings-footer"
+            ><button type="button" id="reset-appearance" class="chip">Reset appearance</button></div
+          ></section
+        ><section
+          id="settings-panel-audio"
+          class="settings-panel"
+          role="tabpanel"
+          aria-labelledby="settings-tab-audio"
+          hidden=""
+          ><section class="preference-group"
+            ><h3>Output</h3
+            ><div class="settings-fields"
+              ><div class="setting-row"
+                ><span>Audio device</span
+                ><div class="setting-actions"
+                  ><div class="audio-device-controls"
+                    ><select id="setting-audioOutput" aria-label="Audio output device"
+                      ><option value="">System default</option></select
+                    ><button
+                      type="button"
+                      id="refresh-audio"
+                      class="chip"
+                      aria-label="Refresh audio devices"
+                      title="Refresh audio devices"
+                      >↻</button
+                    ></div
+                  ></div
+                ></div
+              ><p id="audio-output-status" class="settings-note" role="status"></p></div></section
+          ><section class="preference-group"
+            ><h3>Playback</h3
+            ><div class="settings-fields"
+              ><div class="setting-row"
+                ><span
+                  ><label for="setting-gaplessPlayback">Gapless playback</label
+                  ><button
+                    type="button"
+                    class="setting-help-trigger"
+                    data-settings-help="setting-gaplessPlayback"
+                    ><span aria-hidden="true">?</span></button
+                  ></span
+                ><input id="setting-gaplessPlayback" type="checkbox" role="switch" /></div
+              ><p id="gapless-status" class="settings-note" role="status"></p
+              ><div class="setting-row"
+                ><span><label for="setting-seekStep">Seek step (seconds)</label></span
+                ><input
+                  id="setting-seekStep"
+                  type="number"
+                  min="1"
+                  max="60"
+                  step="1" /></div></div></section></section
+        ><section
+          id="settings-panel-connections"
+          class="settings-panel"
+          role="tabpanel"
+          aria-labelledby="settings-tab-connections"
+          hidden=""
+          ><section id="lastfm-settings" class="preference-group"
+            ><div class="preference-group-heading"
+              ><h3>Last.fm</h3
+              ><p id="lastfm-status" class="settings-note" role="status">Not connected</p></div
+            ><div class="settings-fields"
+              ><div class="setting-row"
+                ><span
+                  ><label for="lastfm-enabled">Scrobbling</label
+                  ><button
+                    type="button"
+                    class="setting-help-trigger"
+                    data-settings-help="lastfm-enabled"
+                    ><span aria-hidden="true">?</span></button
+                  ></span
+                ><input id="lastfm-enabled" type="checkbox" role="switch" /></div></div
+            ><details class="credential-disclosure" open=""
+              ><summary>API credentials</summary
+              ><div class="settings-fields credential-fields"
+                ><div class="setting-row"
+                  ><span><label for="lastfm-key">API key</label></span
+                  ><input
+                    id="lastfm-key"
+                    type="password"
+                    autocomplete="off"
+                    spellcheck="false"
+                    maxlength="32" /></div
+                ><div class="setting-row"
+                  ><span><label for="lastfm-secret">Shared secret</label></span
+                  ><input
+                    id="lastfm-secret"
+                    type="password"
+                    autocomplete="off"
+                    spellcheck="false"
+                    maxlength="32" /></div></div
+              ><div class="lastfm-actions"
+                ><button type="button" id="lastfm-api" class="settings-link"
+                  >Get API credentials ↗</button
+                ><button type="button" id="lastfm-save" class="chip">Save credentials</button></div
+              ></details
+            ><div class="lastfm-connect-row"
+              ><span class="settings-note">Authorize in your browser.</span
+              ><div class="lastfm-actions"
+                ><button type="button" id="lastfm-connect" class="chip">Connect Last.fm</button
+                ><button type="button" id="lastfm-finish" class="chip" hidden=""
+                  >Finish connection</button
+                ><button type="button" id="lastfm-disconnect" class="chip" hidden=""
+                  >Disconnect</button
+                ><button type="button" id="lastfm-retry" class="chip" hidden=""
+                  >Retry queued</button
+                ></div
+              ></div
+            ><p id="lastfm-error" role="status" hidden=""></p></section></section
+        ><section
+          id="settings-panel-shortcuts"
+          class="settings-panel"
+          role="tabpanel"
+          aria-labelledby="settings-tab-shortcuts"
+          hidden=""
+          ><section class="preference-group shortcut-global"
+            ><h3>Keyboard</h3
+            ><div class="settings-fields"
+              ><div class="setting-row"
+                ><span
+                  ><label for="setting-globalPlaybackShortcuts">Global playback keys</label
+                  ><button
+                    type="button"
+                    class="setting-help-trigger"
+                    data-settings-help="setting-globalPlaybackShortcuts"
+                    ><span aria-hidden="true">?</span></button
+                  ></span
+                ><input
+                  id="setting-globalPlaybackShortcuts"
+                  type="checkbox"
+                  role="switch" /></div></div
+            ><p id="global-shortcuts-status" class="settings-note" role="status"></p></section
+          ><div class="shortcuts"></div
+          ><div class="settings-footer shortcuts-footer"
+            ><div id="shortcut-reset-slot"></div
+            ><button type="button" class="settings-link" data-settings-guide="navigation"
+              >Navigation guide…</button
+            ></div
+          ></section
+        ><section
+          id="settings-panel-about"
+          class="settings-panel"
+          role="tabpanel"
+          aria-labelledby="settings-tab-about"
+          hidden
+        >
+          <section class="preference-group"
+            ><h3>Localtone</h3
+            ><div class="settings-fields">
+              <div class="setting-row"
+                ><span>Version</span><span id="about-version" class="about-value">—</span></div
+              >
+              <div class="setting-row"
+                ><span>Build</span><span id="about-build" class="about-value">—</span></div
+              >
+              <div class="setting-row"
+                ><span>System</span><span id="about-system" class="about-value">—</span></div
+              >
+            </div></section
+          >
+          <section class="preference-group"
+            ><h3>Data</h3
+            ><div class="settings-fields">
+              <div class="setting-row"
+                ><span>Storage</span><span id="about-storage" class="about-value">—</span></div
+              >
+              <div class="setting-row"
+                ><span>Data folder</span
+                ><div class="setting-actions"
+                  ><button type="button" id="about-open-data" class="chip">Open folder</button></div
+                ></div
+              > </div
+            ><p id="about-data-folder" class="settings-note about-path"></p
+          ></section>
+          <section class="preference-group"
+            ><h3>Updates</h3
+            ><div class="settings-fields">
+              <div class="setting-row"
+                ><span>Local release</span
+                ><div class="setting-actions"
+                  ><button type="button" id="about-prepare-update" class="chip"
+                    >Prepare update…</button
+                  ></div
+                ></div
+              > </div
+            ><p class="settings-note"
+              >Select a newly extracted Localtone version. Your data is copied automatically; the
+              old version stays intact.</p
+            >
+            <p id="about-update-status" class="settings-note" role="status" hidden></p>
+            <div class="settings-footer" id="about-update-actions" hidden
+              ><button type="button" id="about-quit" class="chip">Quit Localtone</button></div
+            >
+          </section>
+          <section class="preference-group"
+            ><h3>Runtime</h3
+            ><div class="settings-fields">
+              <div class="setting-row"
+                ><span>Electron</span><span id="about-electron" class="about-value">—</span></div
+              >
+              <div class="setting-row"
+                ><span>Chromium</span><span id="about-chromium" class="about-value">—</span></div
+              >
+              <div class="setting-row"
+                ><span>Node.js</span><span id="about-node" class="about-value">—</span></div
+              >
+            </div></section
+          >
+          <p id="about-error" role="alert" class="settings-note" hidden></p> </section></div
+      ><p id="settings-error" role="alert" hidden=""></p
+      ><div
+        id="settings-help-popover"
+        popover="manual"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="settings-help-title"
+        aria-describedby="settings-help-body"
+        hidden=""
+        ><div class="help-popover-heading"
+          ><h3 id="settings-help-title"></h3
+          ><button type="button" id="settings-help-close" aria-label="Close help">×</button></div
+        ><p id="settings-help-body"></p></div
+      ><dialog id="settings-guide" aria-labelledby="settings-guide-title"
+        ><div class="guide-heading"
+          ><h2 id="settings-guide-title">Search guide</h2
+          ><button type="button" id="settings-guide-close" aria-label="Close guide">×</button></div
+        ><div class="guide-content"
+          ><section data-guide-content="search"
+            ><h3>Fields</h3
+            ><p
+              ><code>artist:</code> <code>albumartist:</code> <code>album:</code>
+              <code>title:</code> <code>genre:</code> <code>year:</code> <code>rating:</code>
+              <code>track:</code> <code>disc:</code> / <code>discnumber:</code> <code>has:</code>
+              <code>duration:</code> (seconds) <code>format:</code> / <code>codec:</code>
+              <code>folder:</code></p
+            ><h3>Operators</h3
+            ><p
+              >Quote phrases. AND combines terms; OR accepts either; NOT or EXCEPT excludes the next
+              term or parenthesized group.</p
+            ><h3>Tags present</h3
+            ><p
+              ><code>has:field</code> finds tracks with a nonempty value. Supported fields:
+              <code>title</code>, <code>artist</code>, <code>albumartist</code>, <code>album</code>,
+              <code>genre</code>, <code>year</code>, <code>rating</code>, <code>track</code>,
+              <code>disc</code> (or <code>discnumber</code>), <code>totaltracks</code>,
+              <code>duration</code>, <code>format</code> (or <code>codec</code>) and
+              <code>folder</code>.</p
+            ><p
+              ><code>has:disc</code> checks the actual disc-number tag, not the Disc 1 fallback.
+              <code>has:rating</code> means a rating above zero; numeric tags require a positive
+              value. <code>NOT has:genre</code> is equivalent to <code>missing:genre</code>.
+              Generated artist/title labels do not count as tags.</p
+            ><p
+              >Combine presence checks with AND, OR and NOT. The same syntax works in dynamic
+              playlists using Search expression. Album views show albums containing matching
+              tracks.</p
+            ><h3>Missing tags</h3
+            ><p
+              >Use <code>missing:year</code>, <code>missing:artist</code>,
+              <code>missing:albumartist</code>, <code>missing:album</code>,
+              <code>missing:title</code>, <code>missing:genre</code>, <code>missing:rating</code> or
+              another supported field. Missing artist/title tags are detected even when a folder or
+              filename is displayed instead.</p
+            ><p
+              ><code>missing:leadingzeros</code> finds unpadded single-digit numbers in the raw
+              track-number or total tag (such as 7/9). <code>missing:totaltracks</code> finds absent
+              or invalid totals. Display formatting does not affect these checks. The same syntax
+              works in dynamic playlists using Search expression.</p
+            ><p
+              ><code>has:disc</code> (or <code>has:discnumber</code>) finds tracks with a
+              disc-number tag. <code>missing:disc</code> finds tracks without it;
+              <code>disc:2</code> finds tagged Disc 2. <code>has:year</code>,
+              <code>has:genre</code> and other supported fields work too. Album views show albums
+              containing matching tracks.</p
+            ><h3>Examples</h3><pre>has:genre AND missing:year</pre
+            ><pre>has:artist AND has:albumartist</pre><pre>has:totaltracks AND NOT has:rating</pre
+            ><pre>has:disc</pre><pre>disc:2 AND has:genre</pre
+            ><pre>missing:leadingzeros OR missing:totaltracks</pre
+            ><pre>missing:genre AND NOT missing:artist</pre
+            ><pre>artist:"Nine Inch Nails" year:1990-1999</pre><pre>EXCEPT genre:"hip hop"</pre
+            ><pre>rating:&gt;=4 AND (genre:ambient OR genre:electronic)</pre></section
+          ><section data-guide-content="navigation" hidden=""
+            ><dl class="navigation-guide"
+              ><dt>Tab</dt><dd>Switch Artist / Tracks</dd><dt>Shift + Tab</dt
+              ><dd>Focus Libraries / Playlists</dd><dt>Left / Right</dt
+              ><dd>Cycle all three panes</dd><dt>Up / Down</dt
+              ><dd>Navigate items; tracks wrap at the ends</dd><dt>Shift + arrows</dt
+              ><dd>Extend selection</dd><dt>Enter</dt
+              ><dd>Open collection or album; play track; move from Artist to Tracks</dd
+              ><dt>Escape</dt><dd>Cancel search or clear selection; focus the pane to the left</dd
+              ><dt>Backspace</dt><dd>Return from album detail to covers</dd></dl
+            ><p
+              >Shortcuts are inactive while editing text. Undo / Redo keeps up to 50 playlist,
+              queue, tag and naming edits in this session; text fields use normal Undo.</p
+            ></section
+          ></div
+        ></dialog
+      ></dialog
+    >
+    <dialog id="add-to-playlist-dialog" aria-labelledby="add-to-playlist-title"
+      ><div class="settings-heading"
+        ><h2 id="add-to-playlist-title">Add to playlist</h2
+        ><button type="button" id="add-to-playlist-close" aria-label="Close add to playlist"
+          >×</button
+        ></div
+      ><div class="add-to-playlist-row"
+        ><label for="add-to-playlist-select">Playlist</label
+        ><select id="add-to-playlist-select"></select></div
+      ><p id="add-to-playlist-status" class="settings-note" role="status"></p
+      ><div class="dialog-actions"
+        ><button type="button" id="add-to-playlist-new">New playlist…</button
+        ><button type="button" id="add-to-playlist-cancel">Cancel</button
+        ><button type="button" id="add-to-playlist-apply" class="primary">Add</button></div
+      ></dialog
+    ><audio id="audio" preload="metadata"></audio
+    ><script type="module" src="renderer.js"></script>
+    <dialog id="missing-dialog" aria-labelledby="missing-heading"
+      ><div class="settings-heading"
+        ><h2>Missing files</h2
+        ><button id="missing-close" aria-label="Close missing files">×</button></div
+      ><div class="missing-toolbar"
+        ><p id="missing-status" class="settings-note" role="status"></p
+        ><button id="missing-refresh" class="chip dialog-button">Check again</button></div
+      ><div id="missing-list"></div
+      ><p class="settings-note"
+        >Unavailable files are hidden from browsing. Reconnect moved files to keep playlist
+        references, or forget obsolete entries. Music files are never moved or deleted.</p
+      ></dialog
+    >
+  </body></html
+>

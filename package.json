@@ -1,0 +1,119 @@
+{
+  "name": "localtone",
+  "version": "0.109.0",
+  "private": true,
+  "description": "A local-first desktop music player",
+  "author": "Localtone",
+  "type": "module",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "dist": "electron-builder",
+    "lint": "eslint .",
+    "format:check": "prettier --check \"*.{cjs,mjs}\" \"app/**/*.{js,css,html}\" \"build/**/*.{cjs,mjs}\"",
+    "format": "prettier --write \"*.{cjs,mjs}\" \"app/**/*.{js,css,html}\" \"build/**/*.{cjs,mjs}\"",
+    "verify": "npm run lint && npm run format:check && npm test",
+    "benchmark": "node benchmark-render.mjs",
+    "release:source": "node build/release.mjs source",
+    "release:mac": "node build/release.mjs mac",
+    "release:win": "node build/release.mjs win",
+    "release:linux": "node build/release.mjs linux",
+    "dist:dir": "electron-builder --dir --publish never",
+    "release:verify-downloads": "node build/verify-downloads.mjs"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "music-metadata": "^11.0.0",
+    "node-id3": "^0.2.9"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "^26.0.0",
+    "eslint": "10.12.0",
+    "globals": "17.13.0",
+    "jsdom": "^30.1.2",
+    "prettier": "3.9.9"
+  },
+  "build": {
+    "appId": "com.localtone.player",
+    "productName": "Localtone",
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "scanner.mjs",
+      "app/**/*",
+      "package.json",
+      "tags.cjs",
+      "preferences.cjs",
+      "media.cjs",
+      "rating-tags.cjs",
+      "columns.cjs",
+      "lastfm.cjs",
+      "waveform.cjs",
+      "portable.cjs",
+      "global-shortcuts.cjs",
+      "tag-frames.cjs",
+      "settings-transfer.cjs",
+      "queue-window.cjs",
+      "library-repair.cjs",
+      "gapless-decoder.cjs",
+      "window-motion.cjs",
+      "musicbrainz.cjs",
+      "tag-history.cjs",
+      "file-naming.cjs",
+      "duplicates.cjs",
+      "release.cjs",
+      "update-preparation.cjs",
+      "build/icon.png",
+      "browsing-session.cjs",
+      "startup-refresh.cjs",
+      "cache-cleanup.cjs",
+      "LICENSE",
+      "LICENSING.md"
+    ],
+    "mac": {
+      "target": [
+        "zip"
+      ],
+      "category": "public.app-category.music",
+      "icon": "build/icon.icns"
+    },
+    "win": {
+      "target": [
+        "zip",
+        "portable"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "zip"
+      ],
+      "category": "AudioVideo",
+      "icon": "build/icon.png"
+    },
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ],
+    "artifactName": "Localtone-${version}-${os}-${arch}.${ext}",
+    "afterPack": "build/release-hooks.cjs",
+    "afterAllArtifactBuild": "build/release-hooks.cjs",
+    "portable": {
+      "artifactName": "Localtone-${version}-windows-${arch}-portable.exe"
+    }
+  },
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shn1ggy/localtone.git"
+  },
+  "homepage": "https://github.com/shn1ggy/localtone",
+  "bugs": {
+    "url": "https://github.com/shn1ggy/localtone/issues"
+  }
+}
