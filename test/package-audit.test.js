@@ -50,3 +50,11 @@ test('download verification rejects traversal, duplicate names and empty manifes
  await fs.writeFile(path.join(dir,item.name),'x');item.sha256=createHash('sha256').update('x').digest('hex');await fs.writeFile(manifest,JSON.stringify({schema:1,artifacts:[item,{...item,name:'SAME.zip'}]}));await assert.rejects(verifyDownloads(manifest),/duplicate/);
  await fs.writeFile(manifest,JSON.stringify({schema:1,artifacts:[]}));await assert.rejects(verifyDownloads(manifest),/count/);
 }));
+test('license text embedded in an omitted README remains in shipped notices',()=>fixture(async dir=>{
+ const source=path.join(dir,'source'),pkg=path.join(source,'node_modules','legacy');await fs.mkdir(pkg,{recursive:true});
+ await fs.writeFile(path.join(pkg,'package.json'),JSON.stringify({name:'legacy',version:'1',license:'MIT'}));
+ await fs.writeFile(path.join(pkg,'index.js'),'module.exports=1;');
+ const archive=path.join(dir,'app.asar');await require('@electron/asar').createPackage(source,archive);
+ await fs.writeFile(path.join(pkg,'README.md'),'# Package\n\n## License\nCopyright (c) Example\nPermission is hereby granted to use this software.');
+ const report=await packagedNotices(archive,source);assert.match(report.text,/Copyright \(c\) Example/);assert.deepEqual(report.packages[0].additionalNotices,['node_modules/legacy/README.md (license section)']);
+}));

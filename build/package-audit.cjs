@@ -143,6 +143,44 @@ async function packagedNotices(archive, installedRoot) {
           });
         }
     }
+    // Some older packages place their complete license in README instead of
+    // LICENSE. Builder omits READMEs, so retain that text in the shipped notices.
+    if (!notices.length && !additionalNotices.length && installedRoot) {
+      const candidates = [
+        dir,
+        ...Object.entries(installedPackages)
+          .filter(
+            ([location, metadata]) =>
+              metadata.version === pkg.version &&
+              (location === 'node_modules/' + pkg.name ||
+                location.endsWith('/node_modules/' + pkg.name)),
+          )
+          .map(([location]) => location),
+      ];
+      for (const candidate of candidates) {
+        if (candidate.includes('..') || candidate.includes('\\') || path.isAbsolute(candidate))
+          continue;
+        const location = path.join(installedRoot, ...candidate.split('/'));
+        try {
+          const metadata = JSON.parse(
+            await fs.readFile(path.join(location, 'package.json'), 'utf8'),
+          );
+          if (metadata.name !== pkg.name || metadata.version !== pkg.version) continue;
+          const text = await fs.readFile(path.join(location, 'README.md'), 'utf8');
+          const match = /(?:^|\n)##?\s+Licen[cs]e\s*\r?\n([\s\S]*)/i.exec(text);
+          if (
+            match &&
+            /Copyright/i.test(match[1]) &&
+            /Permission is hereby granted/i.test(match[1])
+          ) {
+            additionalNotices.push({ path: dir + '/README.md (license section)', text: match[1] });
+            break;
+          }
+        } catch (error) {
+          if (error.code !== 'ENOENT') throw error;
+        }
+      }
+    }
     packages.push({
       name: pkg.name,
       version: pkg.version,

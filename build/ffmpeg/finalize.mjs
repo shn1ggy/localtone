@@ -51,4 +51,5 @@ const tar = path.join(root, 'dist', sourceArchive.slice(0, -3));
 run('git', ['-C', sourceRoot, 'archive', '--format=tar', '--output=' + tar, source.commit]);
 run('tar', ['-rf', tar, '-C', buildRoot, 'Localtone-build']);
 run('gzip', ['-f', tar]);
+run('gzip', ['-t', tar + '.gz']);
 console.log('Verified source-built FFmpeg:', provenance.sha256, sourceArchive);

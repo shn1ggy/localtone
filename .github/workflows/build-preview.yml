@@ -53,10 +53,15 @@ jobs:
           msystem: MINGW64
           install: mingw-w64-x86_64-gcc make nasm diffutils
           path-type: inherit
+      - uses: actions/cache@v4
+        id: decoder-cache
+        with:
+          path: ffmpeg-build
+          key: ffmpeg-9.0.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/ffmpeg/build.sh') }}
       - run: npm ci
-      - if: runner.os != 'Windows'
+      - if: runner.os != 'Windows' && steps.decoder-cache.outputs.cache-hit != 'true'
         run: bash build/ffmpeg/build.sh
-      - if: runner.os == 'Windows'
+      - if: runner.os == 'Windows' && steps.decoder-cache.outputs.cache-hit != 'true'
         shell: msys2 {0}
         run: bash build/ffmpeg/build.sh
       - if: runner.os != 'Windows'
