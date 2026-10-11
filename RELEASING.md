@@ -42,7 +42,7 @@ Source release folders are accepted, but install dependencies with `npm ci` befo
 
 Native builds contain `localtone-release.json` in resources with app.asar and FFmpeg checksums; source manifests cover shipped source files. Native release hooks also write `dist/checksums.json`. Check archive integrity, native launch and About's displayed version before distribution. Manifests/checksums catch incomplete or mixed files; they are **not** signatures. Use trusted release files.
 
-Publishing is disabled in the release command. No unconfigured “Check for updates” UI is shown. Before online updates, choose a durable release host and signing identity, publish platform/architecture artifacts, and test actual update/rollback behavior with portable and system storage. Windows portable packages use manual/local updates; do not assume installer auto-update applies to them.
+Native build commands do not publish automatically. Settings → About → Check for updates follows stable GitHub Releases and verifies the matching desktop download. Early-access pre-releases are downloaded from the Releases page. Installation remains manual, with Prepare update… for portable data transfer; the app does not overwrite itself or restart automatically. Test update/rollback with both portable and system storage before promoting a release to stable.
 
 ## Signing and platform validation
 
@@ -60,7 +60,7 @@ For every target, check launch, About/version, data location, first-run/restart,
 
 ## GitHub preparation added in 0.105
 
-The source archive includes `.github`, `.gitignore`, `.gitattributes` and `.nvmrc`. The Verify workflow runs checks and both benchmark modes on Linux, macOS and Windows, with a separate production dependency audit. The manually triggered Build unsigned test packages workflow packages on the native runner and retains artifacts for 14 days. It never publishes to Releases or uses signing secrets. Verify has run on GitHub; inspect [Actions](https://github.com/shn1ggy/localtone/actions) for the latest commit's results. The manual packaging workflow has not yet been executed there. They use current official action major tags; Dependabot tracks updates. Pin reviewed commit SHAs before adding signing credentials or publishing jobs.
+The source archive includes `.github`, `.gitignore`, `.gitattributes` and `.nvmrc`. The Verify workflow runs checks and both benchmark modes on Linux, macOS and Windows, with a separate production dependency audit. The manually triggered Build unsigned test packages workflow packages on the native runner and retains artifacts for 14 days. It never publishes to Releases or uses signing secrets. Verify has run on GitHub; inspect [Actions](https://github.com/shn1ggy/localtone/actions) for the latest commit's results. Native packaging has now passed on Apple Silicon Mac, Intel Mac, Windows x64 and Linux x64 for the first early-access release. They use current official action major tags; Dependabot tracks updates. Pin reviewed commit SHAs before adding signing credentials or publishing jobs.
 
 Create a repository with the contents of Localtone at its root (not a containing Localtone folder), review the ignored-file inventory, retain the agreed GPL-3.0-or-later license and fill in project contact metadata. Run CI on the exact intended commit. Inspect every job rather than assuming a green Linux result covers the other operating systems. Fix any platform-specific path/permission/symlink failures before publishing.
 

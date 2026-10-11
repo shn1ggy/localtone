@@ -1,6 +1,20 @@
 # Localtone
 
-A compact local music player for macOS, Windows and Linux. Source release **0.114.0**.
+A compact local music player for macOS, Windows and Linux. **0.114.0 — early access.**
+
+## Download
+
+[All downloads and release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.114.0)
+
+| System | Download |
+| --- | --- |
+| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.114.0/Localtone-0.114.0-mac-arm64.zip) |
+| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.114.0/Localtone-0.114.0-mac-x64.zip) |
+| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.114.0/Localtone-0.114.0-win-x64.zip) |
+| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v0.114.0/Localtone-0.114.0-linux-x86_64.AppImage) |
+
+These desktop packages include everything needed to run Localtone; Node.js is only needed to work with the source. Extract the complete ZIP, or make the Linux AppImage executable. Windows portable EXE and Linux ZIP are also on the release page. These early-access builds are unsigned and not notarized.
+
 
 This is an early-access development build. Native platform validation and third-party redistribution review are still pending; see [RELEASE-READINESS.md](RELEASE-READINESS.md).
 
@@ -95,7 +109,7 @@ For mixed tag values, focus the row and press Delete or Backspace to clear it fo
 
 ## Project and privacy
 
-Project repository: [shn1ggy/localtone](https://github.com/shn1ggy/localtone). Source, tests and release workflows are uploaded; an early-access release is being prepared. Published installers are not available yet. Check [GitHub Actions](https://github.com/shn1ggy/localtone/actions) for verification results.
+Project repository: [shn1ggy/localtone](https://github.com/shn1ggy/localtone). Source, tests and release workflows are public. The first verified early-access desktop downloads are available under Releases. Check [GitHub Actions](https://github.com/shn1ggy/localtone/actions) for verification results.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development and bug reports, [PRIVACY.md](PRIVACY.md) for network/data behavior, and [LICENSING.md](LICENSING.md) for the agreed GPL-3.0-or-later project license and remaining third-party distribution review.
 
@@ -107,4 +121,4 @@ Localtone-owned code and original project assets are licensed under **GPL-3.0-or
 
 Double-click a playlist to play a random song with the full collection queue and current playback mode. Ctrl/Cmd+Q quits. Backspace clears Artist/Tracks selection while keeping focus and navigation position; Delete removes tracks from regular playlists. Appearance includes shared Primary text and Secondary text colors, restored by Reset appearance.
 
-About → Check for updates checks public stable GitHub Releases and offers the matching verified desktop ZIP. After downloading, extract it and use Prepare update… to transfer portable data. The app does not replace itself or restart automatically. Until the repository has public published releases, checking reports that no public release is available. No GitHub credentials are embedded or requested.
+About → Check for updates checks public stable GitHub Releases and offers the matching verified desktop ZIP. After downloading, extract it and use Prepare update… to transfer portable data. The app does not replace itself or restart automatically. Update checks follow stable releases; early-access pre-releases are downloaded from the release page. No GitHub credentials are embedded or requested.
