@@ -63,6 +63,9 @@ async function packagedNotices(archive, installedRoot) {
   const names = asar
     .listPackage(archive)
     .map((name) => name.replaceAll('\\', '/').replace(/^\/+/, ''));
+  // ASAR's reader splits on path.sep, so extraction needs native paths even
+  // though the portable inventory and lockfile paths use forward slashes.
+  const extract = (name) => asar.extractFile(archive, path.normalize(name)).toString();
   const packages = [],
     texts = [];
   let installedPackages = {};
@@ -78,7 +81,7 @@ async function packagedNotices(archive, installedRoot) {
   for (const name of names
     .filter((name) => /(?:^|\/)node_modules\/(?:@[^/]+\/)?[^/]+\/package\.json$/.test(name))
     .sort()) {
-    const pkg = JSON.parse(asar.extractFile(archive, name).toString());
+    const pkg = JSON.parse(extract(name));
     const dir = path.posix.dirname(name);
     const notices = names.filter(
       (file) =>
@@ -153,8 +156,7 @@ async function packagedNotices(archive, installedRoot) {
     );
     for (const item of additionalNotices)
       texts.push(`\n--- Installed package notice: ${item.path} ---\n${item.text}\n`);
-    for (const file of notices)
-      texts.push(`\n--- ${file} ---\n${asar.extractFile(archive, file).toString()}\n`);
+    for (const file of notices) texts.push(`\n--- ${file} ---\n${extract(file)}\n`);
   }
   return {
     packages,
