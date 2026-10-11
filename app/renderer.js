@@ -39,6 +39,7 @@ const $ = (id) => document.getElementById(id),
   api = window.localtone;
 
 const selection = createBrowseSelection();
+const deselectedBrowsePositions = { artists: null, tracks: null };
 let recordingShortcut = null,
   searchResultIds = null;
 let pendingBrowsingRestore = null;
@@ -289,6 +290,7 @@ function changeView(next) {
     });
 }
 function setScope(next) {
+  deselectedBrowsePositions.artists = deselectedBrowsePositions.tracks = null;
   selection.resetCollection();
   searchResultIds = null;
   scope = next;
@@ -345,6 +347,13 @@ function renderSidebar() {
       button.title = `${item.name}${dynamic ? ' · Dynamic playlist' : ''}\n${tracks.length.toLocaleString()} tracks · ${minutes.toLocaleString()} minutes`;
       button.classList.toggle('active', scope.kind === kind && scope.id === item.id);
       button.onclick = () => setScope({ kind, id: item.id });
+      if (kind === 'playlist')
+        button.ondblclick = () => {
+          if (busy) return;
+          setScope({ kind, id: item.id });
+          const tracks = selectTracks(state, scope, '', 'manual');
+          if (tracks.length) playVisible(tracks[Math.floor(Math.random() * tracks.length)].id);
+        };
       bindSidebarItem(button, item, kind);
       $(container).append(button);
     }
@@ -984,6 +993,17 @@ document.onkeydown = (event) => {
   ) {
     if (
       event.key === 'Backspace' &&
+      $('context-menu').hidden &&
+      (selection.pane === 'artists' ||
+        (selection.pane === 'tracks' &&
+          !(view === 'covers' && selection.albumDetail && !selection.tracks.size)))
+    ) {
+      event.preventDefault();
+      if (!event.repeat) deselectBrowse();
+      return;
+    }
+    if (
+      event.key === 'Backspace' &&
       selection.pane === 'tracks' &&
       view === 'covers' &&
       selection.albumDetail &&
@@ -1073,6 +1093,13 @@ document.onkeydown = (event) => {
     );
   if (binding) {
     const [action] = binding;
+    if (action === 'quit') {
+      if (!event.repeat) {
+        event.preventDefault();
+        api?.windowAction?.('quit').catch((error) => toast(error.message));
+      }
+      return;
+    }
     if (globalShortcutStatus.active && ['previous', 'next', 'random'].includes(action)) return;
     if (['seekBackward', 'seekForward'].includes(action)) {
       if (!typing && !document.querySelector('dialog[open]')) {
@@ -1226,7 +1253,7 @@ document.onkeydown = (event) => {
     !editing &&
     !dialogOpen &&
     $('context-menu').hidden &&
-    ['q', 'f', 'p', 'm'].includes(event.key.toLowerCase())
+    ['f', 'p', 'm'].includes(event.key.toLowerCase())
   ) {
     event.preventDefault();
     if (event.repeat || (busy && event.key.toLowerCase() !== 'm')) return;
@@ -1235,8 +1262,7 @@ document.onkeydown = (event) => {
     if (key === 'm') {
       toggleMini();
     } else if (key === 'p') $('queue').click();
-    else
-      api?.windowAction?.(key === 'q' ? 'quit' : 'maximize').catch((error) => toast(error.message));
+    else api?.windowAction?.('maximize').catch((error) => toast(error.message));
     return;
   }
   if (
@@ -2277,6 +2303,9 @@ function applyPreferences() {
   $('setting-backgroundSaturation').value = prefs.backgroundSaturation;
   $('setting-backgroundBrightness').value = prefs.backgroundBrightness;
   $('setting-accentColor').value = accentValue();
+  $('setting-primaryTextColor').value = prefs.primaryTextColor || designDefaults.primaryTextColor;
+  $('setting-secondaryTextColor').value =
+    prefs.secondaryTextColor || designDefaults.secondaryTextColor;
   $('setting-seekHeightLocked').checked = prefs.seekHeightLocked;
   $('setting-globalPlaybackShortcuts').checked = prefs.globalPlaybackShortcuts;
   paintGlobalStatus();
@@ -2340,8 +2369,82 @@ $('about-open-data').onclick = async () => {
     $('about-error').hidden = false;
   }
 };
+let availableUpdate = null,
+  onlineUpdateBusy = false;
+const onlineStatus = (text) => {
+  $('about-online-status').hidden = false;
+  $('about-online-status').textContent = text;
+};
+api?.onUpdateProgress?.(({ received, total }) => {
+  if (!onlineUpdateBusy) return;
+  $('about-cancel-download').hidden = false;
+  onlineStatus(`Downloading… ${Math.floor((received / total) * 100)}%`);
+});
+$('about-check-update').onclick = async () => {
+  if (onlineUpdateBusy || busy) return;
+  onlineUpdateBusy = true;
+  availableUpdate = null;
+  $('about-check-update').disabled = true;
+  $('about-download-update').hidden = true;
+  $('about-release-notes').hidden = true;
+  $('about-release-notes').open = false;
+  onlineStatus('Checking GitHub releases…');
+  try {
+    const result = await api.checkUpdate();
+    if (result.cancelled) {
+      onlineStatus('Update check cancelled.');
+      return;
+    }
+    if (result.available) {
+      availableUpdate = result;
+      onlineStatus(
+        `Version ${result.version} is available · ${Math.ceil(result.size / 1024 ** 2)} MB`,
+      );
+      $('about-download-update').hidden = false;
+      $('about-release-notes').hidden = !result.notes;
+      $('about-release-notes-text').textContent = result.notes;
+    } else onlineStatus('You are up to date.');
+  } catch (error) {
+    onlineStatus(error.message.replace(/^Error invoking remote method '[^']+': Error: /, ''));
+  } finally {
+    onlineUpdateBusy = false;
+    $('about-check-update').disabled = false;
+  }
+};
+$('about-download-update').onclick = async () => {
+  if (!availableUpdate || onlineUpdateBusy || busy) return;
+  onlineUpdateBusy = true;
+  $('about-check-update').disabled = true;
+  $('about-check-update').hidden = true;
+  $('about-download-update').disabled = true;
+  $('about-prepare-update').disabled = true;
+  $('about-cancel-download').hidden = true;
+  onlineStatus('Choose where to save the update…');
+  try {
+    const result = await api.downloadUpdate(availableUpdate.name);
+    if (result.cancelled) {
+      onlineStatus('Download cancelled.');
+      return;
+    }
+    onlineStatus(
+      `Version ${result.version} downloaded and verified. Extract the archive, then use Prepare update…`,
+    );
+    $('about-download-actions').hidden = false;
+  } catch (error) {
+    onlineStatus(error.message.replace(/^Error invoking remote method '[^']+': Error: /, ''));
+  } finally {
+    onlineUpdateBusy = false;
+    $('about-check-update').disabled = false;
+    $('about-check-update').hidden = false;
+    $('about-download-update').disabled = false;
+    $('about-prepare-update').disabled = false;
+    $('about-cancel-download').hidden = true;
+  }
+};
+$('about-cancel-download').onclick = () => api.cancelUpdate();
+$('about-reveal-update').onclick = () => api.revealUpdate();
 $('about-prepare-update').onclick = async () => {
-  if (busy || !api?.prepareUpdate) return;
+  if (busy || onlineUpdateBusy || !api?.prepareUpdate) return;
   const button = $('about-prepare-update'),
     wasPlaying = !audio.paused;
   let prepared = false;
@@ -2353,6 +2456,7 @@ $('about-prepare-update').onclick = async () => {
   $('about-update-status').textContent = 'Verifying the new release and preparing data…';
   audio.pause();
   savePlayback();
+  saveBrowsingState();
   try {
     const result = await api.prepareUpdate();
     if (result.cancelled) {
@@ -2489,9 +2593,9 @@ function navigateFromPlayer(album = false, preserveView = false) {
   if (!selectTracks(state, scope, '', 'manual').some((t) => t.id === track.id))
     scope = { kind: 'library', id: track.libraryId };
   selection.artists.clear();
-  selection.artists.anchor = artistGroupKey(track, prefs.artistGrouping);
-  selection.artists.current = artistGroupKey(track, prefs.artistGrouping);
-  revealOpeningArtist = true;
+  selection.artists.anchor = preserveView ? null : artistGroupKey(track, prefs.artistGrouping);
+  selection.artists.current = preserveView ? null : artistGroupKey(track, prefs.artistGrouping);
+  revealOpeningArtist = !preserveView;
   selection.albumDetail = null;
   expandedAlbums.clear();
   changeView(album ? targetView : prefs.albumView === 'covers' ? 'covers' : 'albums');
@@ -3091,6 +3195,12 @@ document.addEventListener(
 window.addEventListener('resize', () => closeContextMenu());
 window.addEventListener('blur', () => closeContextMenu());
 $('context-menu').onkeydown = (event) => {
+  if (
+    playlistSubmenu &&
+    !document.activeElement?.closest('.playlist-submenu') &&
+    ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)
+  )
+    closePlaylistSubmenu();
   const sub =
       document.activeElement?.closest('.playlist-submenu') ||
       (playlistSubmenu && document.activeElement === playlistSubmenuTrigger
@@ -3558,10 +3668,33 @@ function applyCustomColors(
   root.style.setProperty('--background-brightness-offset', `${brightness - 11}%`);
   root.style.setProperty('--background-hue', String(hue));
   root.style.setProperty('--accent', accent);
+  applyTextColors();
   root.style.setProperty(
     '--accent-rgb',
     [1, 3, 5].map((i) => parseInt(accent.slice(i, i + 2), 16)).join(' '),
   );
+}
+function applyTextColors() {
+  const root = document.documentElement;
+  for (const [key, token] of [
+    ['primaryTextColor', '--text-primary'],
+    ['secondaryTextColor', '--text-muted'],
+  ]) {
+    const color = prefs[key] || designDefaults[key];
+    root.style.setProperty(token, color);
+    const output = $(`setting-${key}-value`);
+    if (output) output.textContent = color.toUpperCase();
+  }
+}
+for (const key of ['primaryTextColor', 'secondaryTextColor']) {
+  $(`setting-${key}`).oninput = (event) => {
+    document.documentElement.style.setProperty(
+      key === 'primaryTextColor' ? '--text-primary' : '--text-muted',
+      event.target.value,
+    );
+    $(`setting-${key}-value`).textContent = event.target.value.toUpperCase();
+  };
+  $(`setting-${key}`).onchange = (event) => updateSettings({ [key]: event.target.value });
 }
 function paintGlobalStatus() {
   const node = $('global-shortcuts-status');
@@ -3885,11 +4018,23 @@ function focusBrowseSelection(pulse = false) {
   if (selection.pane === 'artists') {
     const node =
       [...$('artist-list').querySelectorAll('button')].find(
-        (n) => n.dataset.artistKey === selection.artists.current,
+        (n) =>
+          n.dataset.artistKey === (selection.artists.current || deselectedBrowsePositions.artists),
       ) || $('artist-list').querySelector('button');
     node?.focus({ preventScroll: true });
     node?.scrollIntoView?.({ block: 'nearest' });
   } else {
+    if (
+      !selection.tracks.current &&
+      !selection.albumFocus &&
+      !selection.coverFocus &&
+      deselectedBrowsePositions.tracks
+    ) {
+      const content = document.querySelector('.library-content');
+      content.tabIndex = -1;
+      content.focus({ preventScroll: true });
+      return;
+    }
     if (view === 'covers' && !selection.albumDetail) {
       focusCover(
         coverButtons().find((b) => b.dataset.albumKey === selection.coverFocus) ||
@@ -3991,6 +4136,37 @@ function escapeBrowse() {
   pane.scrollTop = top;
 }
 
+function deselectBrowse() {
+  const pane = document.querySelector('.content-scroll'),
+    top = pane.scrollTop;
+  if (selection.pane === 'artists') {
+    const list = $('artist-list'),
+      artistTop = list.scrollTop;
+    deselectedBrowsePositions.artists =
+      selection.artists.current || deselectedBrowsePositions.artists;
+    selection.artists.reset();
+    render();
+    list.scrollTop = artistTop;
+    list.tabIndex = -1;
+    list.focus({ preventScroll: true });
+  } else {
+    deselectedBrowsePositions.tracks = selection.tracks.current
+      ? { id: selection.tracks.current }
+      : selection.albumFocus || selection.coverFocus
+        ? { key: selection.albumFocus || selection.coverFocus }
+        : deselectedBrowsePositions.tracks;
+    selection.tracks.reset();
+    selection.albums.reset();
+    selection.albumFocus = selection.coverFocus = null;
+    paintSelection();
+    paintAlbumSelection();
+    const content = document.querySelector('.library-content');
+    content.tabIndex = -1;
+    content.focus({ preventScroll: true });
+  }
+  pane.scrollTop = top;
+}
+
 function navigateBrowse(step, extend = false) {
   if (selection.pane === 'sidebar') {
     const nodes = sidebarNodes(),
@@ -4005,7 +4181,7 @@ function navigateBrowse(step, extend = false) {
     searchResultIds = null;
     const keys = artistsFor(folderTracks, 'name', prefs.artistGrouping);
     if (!keys.length) return;
-    const i = keys.indexOf(selection.artists.current),
+    const i = keys.indexOf(selection.artists.current || deselectedBrowsePositions.artists),
       next =
         keys[i < 0 ? (step > 0 ? 0 : keys.length - 1) : (i + step + keys.length) % keys.length];
     if (extend) {
@@ -4017,6 +4193,7 @@ function navigateBrowse(step, extend = false) {
       selection.artists.anchor = next;
     }
     selection.artists.current = next;
+    deselectedBrowsePositions.artists = null;
     selection.tracks.current = null;
     selection.tracks.clear();
     expandedAlbums.clear();
@@ -4031,7 +4208,7 @@ function navigateBrowse(step, extend = false) {
     const tracks = displayedTracks();
     if (!tracks.length) return;
     const ids = tracks.map((t) => t.id),
-      i = ids.indexOf(selection.tracks.current),
+      i = ids.indexOf(selection.tracks.current || deselectedBrowsePositions.tracks?.id),
       next = ids[i < 0 ? (step > 0 ? 0 : ids.length - 1) : (i + step + ids.length) % ids.length];
     if (extend) {
       if (!selection.tracks.anchor || !ids.includes(selection.tracks.anchor))
@@ -4040,6 +4217,7 @@ function navigateBrowse(step, extend = false) {
       selection.tracks.current = next;
       paintSelection();
     } else selectTrack(next);
+    deselectedBrowsePositions.tracks = null;
     revealSelectedRow();
   }
 }
@@ -4086,6 +4264,9 @@ function paintPaneFocus(pulse = true) {
         ? $('artist-pane')
         : document.querySelector('.library-content');
   if (pulse) {
+    const padding = getComputedStyle(node);
+    node.style.setProperty('--pane-focus-left', padding.paddingLeft);
+    node.style.setProperty('--pane-focus-right', padding.paddingRight);
     void node.offsetWidth;
     node.classList.add('pane-focus-pulse');
   }
@@ -4252,10 +4433,10 @@ function focusSidebar(node) {
 function addToQueue(ids) {
   ids = ids.filter((id) => trackLookup.has(id));
   if (!ids.length) return;
+  animateQueuedTracks(ids);
   const before = captureQueue();
   playback.insert(ids, scope);
   renderQueue();
-  animateQueuedTracks(ids);
   rememberQueueEdit(
     before,
     `Added ${ids.length === 1 ? '1 track' : ids.length + ' tracks'} to queue`,
@@ -4361,11 +4542,12 @@ function animateQueuedTracks(ids) {
       if (row.animate) {
         row.dataset.webAnimation = 'true';
         const options = { duration: 650, delay, fill: 'both' },
-          ease = 'cubic-bezier(.65,0,.35,1)';
+          ease = 'cubic-bezier(.2,.45,.3,1)',
+          settle = 'cubic-bezier(.4,0,.2,1)';
         const animation = row.animate(
           [
             { transform: 'translateX(0)', easing: ease },
-            { transform: 'translateX(8px)', offset: 0.48, easing: ease },
+            { transform: 'translateX(8px)', offset: 0.42, easing: settle },
             { transform: 'translateX(0)' },
           ],
           options,
@@ -4374,7 +4556,7 @@ function animateQueuedTracks(ids) {
         row._queueGlowAnimation = glow.animate?.(
           [
             { opacity: 0, easing: ease },
-            { opacity: 1, offset: 0.48, easing: ease },
+            { opacity: 1, offset: 0.42, easing: settle },
             { opacity: 0 },
           ],
           options,
@@ -4444,7 +4626,10 @@ function focusCover(button, extend = false, preserve = false) {
 function navigateCovers(key, extend = false) {
   const buttons = coverButtons();
   if (!buttons.length) return;
-  let i = buttons.findIndex((b) => b.dataset.albumKey === selection.coverFocus);
+  let i = buttons.findIndex(
+    (b) => b.dataset.albumKey === (selection.coverFocus || deselectedBrowsePositions.tracks?.key),
+  );
+  deselectedBrowsePositions.tracks = null;
   if (i < 0) {
     focusCover(buttons[0]);
     return;
@@ -4848,19 +5033,21 @@ function navigateAlbumEntries(step, extend = false) {
       : [{ key: a.key }],
   );
   if (!entries.length) return;
+  const trackCursor =
+      selection.tracks.current || (!selection.albumFocus && deselectedBrowsePositions.tracks?.id),
+    albumCursor = selection.albumFocus || (!trackCursor && deselectedBrowsePositions.tracks?.key);
   let i = entries.findIndex((e) =>
-    selection.tracks.current
-      ? e.id === selection.tracks.current
-      : !e.id && e.key === selection.albumFocus,
+    trackCursor ? e.id === trackCursor : !e.id && e.key === albumCursor,
   );
-  if (i < 0 && selection.albumFocus) {
-    const first = entries.findIndex((e) => e.key === selection.albumFocus);
+  if (i < 0 && albumCursor) {
+    const first = entries.findIndex((e) => e.key === albumCursor);
     if (first >= 0) i = step > 0 ? first - 1 : first;
   }
   const next =
     entries[
       i < 0 ? (step > 0 ? 0 : entries.length - 1) : (i + step + entries.length) % entries.length
     ];
+  deselectedBrowsePositions.tracks = null;
   if (next.id) {
     selection.albumFocus = null;
     selection.albums.clear();

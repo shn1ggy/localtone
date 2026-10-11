@@ -1,3 +1,26 @@
+# 0.112.0
+
+- Up/Down closes playlist submenu previews and continues through the parent context menu, including empty destinations.
+- Now-playing artwork clears the artist filter while retaining the viewing tab and playing collection.
+- Align pane-focus feedback with content edges instead of highlighting inter-pane padding.
+- Start queue feedback before queue rendering; use immediate outward easing and a separate smooth return, retaining the 300ms stagger and reduced-motion support.
+- Release extended queue spacing and the frozen layout together to avoid a transient waveform width change.
+
+# 0.111.0
+
+- Add About → Check for updates using the fixed GitHub Releases feed, matching stable desktop ZIPs to the current OS and processor.
+- Show release notes, download progress and cancellation; verify byte count and SHA-256 before publishing the downloaded file. Preserve existing downloads and remove temporary files on failure, cancellation or normal exit.
+- Keep extraction and launch explicit through the existing Prepare update workflow. Automatic replacement/restart is not enabled; the private repository currently has no public release feed.
+- Include the browsing session in portable update preparation and save it before transferring data.
+
+# 0.110.0
+
+- Double-click a sidebar playlist to start a random song, retaining its complete queue, sorting and shuffle/repeat mode.
+- Use Ctrl/Cmd+Q to quit; migrate the previous default without colliding with custom shortcuts.
+- Backspace clears artist/track/album selection while preserving pane focus, scroll and the last navigation position. Delete retains playlist removal; unselected cover detail retains Backspace as Back.
+- Add Primary text and Secondary text appearance colors, shared across browsing and every dialog, with existing neutral defaults, derived dim details, live preview, saved preferences and appearance reset.
+- Document the GitHub-hosted update path and its portable/native packaging requirements. No online updater or public release is enabled.
+
 # 0.109.0
 
 - Fix Windows ASAR path normalization in the packaged dependency/notices audit, found by the first GitHub verification run. Cover Windows-style archive listings on every test host.

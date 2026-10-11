@@ -8,6 +8,15 @@ contextBridge.exposeInMainWorld('localtone', {
   },
   appInfo: () => ipcRenderer.invoke('app-info'),
   aboutAction: (action) => ipcRenderer.invoke('about-action', action),
+  checkUpdate: () => ipcRenderer.invoke('check-update'),
+  downloadUpdate: (name) => ipcRenderer.invoke('download-update', name),
+  cancelUpdate: () => ipcRenderer.invoke('cancel-update'),
+  revealUpdate: () => ipcRenderer.invoke('reveal-update'),
+  onUpdateProgress: (callback) => {
+    const listener = (_event, value) => callback(value);
+    ipcRenderer.on('update-progress', listener);
+    return () => ipcRenderer.removeListener('update-progress', listener);
+  },
   prepareUpdate: () => ipcRenderer.invoke('prepare-update'),
   uiReady: () => ipcRenderer.send('ui-ready'),
   windowAction: (action, size) => ipcRenderer.invoke('window-action', action, size),

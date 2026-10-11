@@ -664,6 +664,20 @@
                     for="setting-accentColor"
                   ></output></div></div
               ><div class="setting-row"
+                ><span><label for="setting-primaryTextColor">Primary text</label></span
+                ><div class="color-control"
+                  ><input id="setting-primaryTextColor" type="color" /><output
+                    id="setting-primaryTextColor-value"
+                    for="setting-primaryTextColor"
+                  ></output></div></div
+              ><div class="setting-row"
+                ><span><label for="setting-secondaryTextColor">Secondary text</label></span
+                ><div class="color-control"
+                  ><input id="setting-secondaryTextColor" type="color" /><output
+                    id="setting-secondaryTextColor-value"
+                    for="setting-secondaryTextColor"
+                  ></output></div></div
+              ><div class="setting-row"
                 ><span><label for="setting-backgroundHue">Background hue</label></span
                 ><div class="range-control"
                   ><input
@@ -940,6 +954,33 @@
             ><h3>Updates</h3
             ><div class="settings-fields">
               <div class="setting-row"
+                ><span>GitHub releases</span
+                ><div class="setting-actions">
+                  <button type="button" id="about-check-update" class="chip"
+                    >Check for updates</button
+                  >
+                  <button type="button" id="about-download-update" class="chip" hidden
+                    >Download…</button
+                  >
+                  <button type="button" id="about-cancel-download" class="chip" hidden
+                    >Cancel</button
+                  >
+                </div></div
+              >
+              <p id="about-online-status" class="settings-note" role="status" hidden></p>
+              <div class="setting-row" id="about-download-actions" hidden
+                ><span>Verified download</span
+                ><div class="setting-actions"
+                  ><button type="button" id="about-reveal-update" class="chip"
+                    >Show in folder</button
+                  ></div
+                ></div
+              >
+              <details id="about-release-notes" hidden
+                ><summary class="settings-link">Release notes</summary
+                ><p id="about-release-notes-text" class="settings-note"></p
+              ></details>
+              <div class="setting-row"
                 ><span>Local release</span
                 ><div class="setting-actions"
                   ><button type="button" id="about-prepare-update" class="chip"
@@ -1052,7 +1093,11 @@
               ><dd>Extend selection</dd><dt>Enter</dt
               ><dd>Open collection or album; play track; move from Artist to Tracks</dd
               ><dt>Escape</dt><dd>Cancel search or clear selection; focus the pane to the left</dd
-              ><dt>Backspace</dt><dd>Return from album detail to covers</dd></dl
+              ><dt>Backspace</dt
+              ><dd
+                >Clear selection in Artist / Tracks, keeping focus and navigation position. With no
+                selected tracks, return from album detail to covers.</dd
+              ><dt>Delete</dt><dd>Remove selected tracks from a regular playlist</dd></dl
             ><p
               >Shortcuts are inactive while editing text. Undo / Redo keeps up to 50 playlist,
               queue, tag and naming edits in this session; text fields use normal Undo.</p

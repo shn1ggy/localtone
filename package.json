@@ -1,6 +1,6 @@
 {
   "name": "localtone",
-  "version": "0.109.0",
+  "version": "0.112.0",
   "private": true,
   "description": "A local-first desktop music player",
   "author": "Localtone",
@@ -70,7 +70,8 @@
       "startup-refresh.cjs",
       "cache-cleanup.cjs",
       "LICENSE",
-      "LICENSING.md"
+      "LICENSING.md",
+      "online-updates.cjs"
     ],
     "mac": {
       "target": [

@@ -74,3 +74,17 @@ test('rename shortcut uses F2 and restores the v0.92 repeat default without chan
  const older={...preferences.defaults.shortcuts};delete older.rename;
  assert.equal(preferences.normalizeSettings({shortcuts:older}).shortcuts.rename,'F2');
 });
+
+test('quit default migrates without colliding with a custom action; text colors validate and persist',()=>{
+ assert.equal(preferences.defaults.shortcuts.quit,'Mod+q');
+ const legacy={...preferences.defaults.shortcuts,quit:'q'};
+ assert.equal(preferences.normalizeSettings({shortcuts:legacy}).shortcuts.quit,'Mod+q');
+ const custom={...legacy,tags:'Mod+q'};
+ assert.equal(preferences.normalizeSettings({shortcuts:custom}).shortcuts.quit,'q');
+ assert.equal(preferences.normalizeSettings({shortcuts:{...legacy,quit:'F9'}}).shortcuts.quit,'F9');
+ const colors={primaryTextColor:'#FFEEDD',secondaryTextColor:'#778899'};
+ assert.deepEqual(preferences.validateSettings(colors),colors);
+ assert.equal(preferences.normalizeSettings(colors).secondaryTextColor,colors.secondaryTextColor);
+ assert.equal(preferences.normalizeSettings().primaryTextColor,'#e0e4e7');
+ for(const value of ['red','#123',null,'url(file:///bad)'])assert.throws(()=>preferences.validateSettings({primaryTextColor:value}));
+});

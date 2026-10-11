@@ -61,8 +61,9 @@ export function createWindowPresentation({
     document.body.classList.add('window-transition');
     if (player) document.body.classList.add('player-transition');
   }
-  async function finishLayout() {
+  async function finishLayout(commit = () => {}) {
     await paintFrame();
+    commit();
     document.body.classList.remove('window-transition', 'player-transition');
     windowTransition = false;
     syncPaneBounds();
@@ -156,6 +157,10 @@ export function createWindowPresentation({
           document.body.classList.add('queue-extended');
           $('queue-panel').hidden = false;
           await paintFrame();
+          let commit = () => {
+            document.body.classList.toggle('queue-extended', wasDocked);
+            $('queue-panel').hidden = !wasDocked;
+          };
           try {
             const result = await api.windowAction?.(extend ? 'queue-open' : 'queue-close', {
               animate: motionEnabled(),
@@ -163,10 +168,12 @@ export function createWindowPresentation({
             });
             await waitForViewport(result);
             const docked = extend && motionValue(result);
-            document.body.classList.toggle('queue-extended', !!docked && show);
-            $('queue-panel').hidden = !show;
+            commit = () => {
+              document.body.classList.toggle('queue-extended', !!docked && show);
+              $('queue-panel').hidden = !show;
+            };
           } finally {
-            await finishLayout();
+            await finishLayout(commit);
           }
         } else {
           $('queue-panel').hidden = !show;

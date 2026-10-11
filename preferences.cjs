@@ -25,7 +25,7 @@ const shortcutDefaults = {
   queue: 'p',
   mini: 'm',
   maximize: 'f',
-  quit: 'q',
+  quit: 'Mod+q',
   tags: 'e',
   shuffle: 's',
   repeat: 'r',
@@ -225,9 +225,9 @@ function validateSettings(patch) {
         value > (key === 'seekHeight' ? 200 : 360)
       )
         throw new Error('Invalid appearance value.');
-    } else if (key === 'accentColor') {
+    } else if (['accentColor', 'primaryTextColor', 'secondaryTextColor'].includes(key)) {
       if (value !== '' && (typeof value !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(value)))
-        throw new Error('Invalid accent color.');
+        throw new Error('Invalid appearance color.');
     } else if (key === 'volume') {
       if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1)
         throw new Error('Invalid volume.');
@@ -259,6 +259,7 @@ function validateSettings(patch) {
 }
 function upgradeShortcuts(bindings) {
   const upgraded = { ...bindings };
+  if (upgraded.quit === 'q' && !Object.values(upgraded).includes('Mod+q')) upgraded.quit = 'Mod+q';
   if (
     upgraded.rename === 'r' &&
     upgraded.repeat === 'Shift+r' &&

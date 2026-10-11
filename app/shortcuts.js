@@ -23,7 +23,7 @@ export const shortcutDefaults = {
   queue: 'p',
   mini: 'm',
   maximize: 'f',
-  quit: 'q',
+  quit: 'Mod+q',
   tags: 'e',
   shuffle: 's',
   repeat: 'r',

@@ -1,7 +1,14 @@
 name: Build unsigned test packages
-# Explicitly requested builds only; never publish a release or use signing secrets.
+# Build private test artifacts on release-related changes; never publish or use signing secrets.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'online-updates.cjs'
+      - 'build/**'
+      - '.github/workflows/build-preview.yml' 
 permissions:
   contents: read
 jobs:
@@ -14,7 +21,9 @@ jobs:
             target: linux
           - os: windows-latest
             target: win
-          - os: macos-latest
+          - os: macos-15
+            target: mac
+          - os: macos-15-intel
             target: mac
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -42,3 +51,26 @@ jobs:
             dist/*.AppImage
             dist/checksums.json
             dist/SHA256SUMS.txt
+
+  assemble:
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: unsigned-test-*
+          path: candidate-input
+      - run: node build/assemble-downloads.mjs candidate-input release-candidate
+      - uses: actions/upload-artifact@v7
+        with:
+          name: verified-release-candidate
+          retention-days: 14
+          if-no-files-found: error
+          path: release-candidate/*

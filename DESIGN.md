@@ -82,7 +82,7 @@ The General → Library leading-zero switch controls Add total tracks independen
 
 ## Queue feedback and persistent disclosures
 
-Queue-add feedback lasts 650ms per selected row, artist or album, with eased outward/return motion. Stagger each pane from first to last over 300ms total, independent of selection count. Draw a restrained accent glow once and animate its opacity; never animate blur, shadow radius or filters, and never force a layout read for each row. Reuse glow elements, cancel earlier feedback safely, remove animation layers when finished and honor reduced motion. Feedback must not create horizontal scrollbars.
+Queue-add feedback lasts 650ms per selected row, artist or album, with immediate outward motion and a separately eased return. Stagger each pane from first to last over 300ms total, independent of selection count. Draw a restrained accent glow once and animate its opacity; never animate blur, shadow radius or filters, and never force a layout read for each row. Reuse glow elements, cancel earlier feedback safely, remove animation layers when finished and honor reduced motion. Feedback must not create horizontal scrollbars.
 
 Edit tags uses independent Tags and Track numbers disclosures, initially expanded. Store their open states with the other preferences; closing a section must retain pending edits and proposal choices. In extended queue mode, the queue spans the complete right edge, including waveform height. Reserve 224px at the waveform's right edge so its original width stays stable; overlay mode retains its original bottom clearance.
 
@@ -99,7 +99,7 @@ Edit tags uses independent Tags and Track numbers disclosures, initially expande
 
 About uses the same Settings header, 80vh body, 36px rows and right-aligned text-fit chip buttons. Show the version from the native app, not hard-coded renderer text. Keep runtime information secondary, show the actual storage mode and let users select the data-folder path. Use the normal error/status area for update preparation; no new toast style or modal design.
 
-Update preparation is explicit and local: verify the chosen release, confirm data copying, stage persistent data and preserve the old version. Never replace another destination's existing data. Keep source versus desktop builds visible; do not show online-update controls before a trusted release feed exists.
+Update preparation is explicit and local: verify the chosen release, confirm data copying, stage persistent data and preserve the old version. Never replace another destination's existing data. Keep source versus desktop builds visible; online checking uses only the fixed project GitHub release feed and must distinguish unavailable releases from an up-to-date app. Never imply that a download installs or restarts the app.
 
 ## Shared text buttons — required
 
@@ -197,3 +197,15 @@ Do not add new one-off colors or sizes to repair a single dialog. Measure the sh
 ## Revealing the playing song
 
 Clicking the now-playing artwork keeps the active Albums, Covers or Tracks tab while returning to the playing song’s original library/playlist and selecting/revealing that song. Covers opens the song’s album detail within the Covers tab; Back returns to the cover grid and its saved position. Transport navigation that requests view preservation follows the same rule. Do not force the Albums tab to reveal a song.
+
+## Text roles and selection clearing
+
+Appearance → Colors has Primary text and Secondary text, using the existing shared 28px color control. Defaults are `#e0e4e7` and `#a1a5a8`. Save, export/import and Reset appearance use the same validated preferences as other appearance controls. Primary text covers track/album titles, artist-pane names, main labels, editable values and dialog titles. Secondary text covers metadata, descriptions, section headings, placeholders and inactive secondary actions. Track numbers, durations and empty rating stars retain a darker shade derived from secondary text (`--text-dim`). Use these tokens throughout the app; no separate hard-coded green/blue text palettes. Interactive accent, selection, error and on-accent contrast colors remain semantic roles rather than font-color overrides.
+
+Backspace clears the focused Artist/Tracks selection without changing panes, applying a focus pulse, scrolling or deleting music/playlist membership. Remember the last navigation item independently of selection so arrows resume from it, including collapsed albums and covers. Returning through Tab must not select the first item after this clearing action. Delete still removes selected tracks from a regular playlist. With no selected tracks in a cover album detail, retain Backspace as Back.
+
+Double-clicking a sidebar playlist chooses a random available song and seeds its complete collection queue in the current view's sorting order, retaining shuffle/repeat mode. Empty playlists leave playback intact. Quit defaults to Ctrl/Cmd+Q, including while editing a field. Migrate the former Q default without overriding other custom shortcuts or creating collisions.
+
+Online updates reuse About's normal setting rows, text-fit chip buttons and neutral status area. Release notes stay closed initially and render as plain text in a bounded scroll area. Check/download operations are explicit, cancellable during transfer and never modify playback or preferences. Show compatible version and download size; reveal only successfully verified files. Hide the Check button during downloads to retain the 245px action-column geometry. Extract → Prepare update remains the installation path until native replacement/restart is validated.
+
+Pane-focus pulses are noninteractive overlays inset to each pane's actual content edges: artist search right edge and browsing toolbar left edge. Do not pulse the inter-pane padding. A playlist submenu preview does not capture Up/Down/Home/End until focus enters its items with Right; these keys close the preview and continue the parent menu. Clicking now-playing artwork clears the artist filter while preserving the active browsing tab and playing collection. Extended queue closing keeps the queue width reservation until the frozen layout is released; commit both class changes in the same task to prevent a one-frame waveform stretch.

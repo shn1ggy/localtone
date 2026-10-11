@@ -42,6 +42,16 @@ const { WaveformService } = require('./waveform.cjs');
 const portableStorage = require('./portable.cjs');
 const releaseInfo = require('./release.cjs');
 const { prepareUpdate } = require('./update-preparation.cjs');
+const onlineUpdates = require('./online-updates.cjs').createOnlineUpdates({
+  fetch: (...args) => net.fetch(...args),
+  version: app.getVersion(),
+  platform: process.platform,
+  arch: process.arch,
+  progress: (value) => {
+    if (win && !win.isDestroyed()) win.webContents.send('update-progress', value);
+  },
+});
+let updateDownload = null;
 const { PlaybackShortcuts } = require('./global-shortcuts.cjs');
 const playbackShortcuts = new PlaybackShortcuts(globalShortcut, (action) => {
   if (win && !win.isDestroyed()) win.webContents.send('global-playback', action);
@@ -446,6 +456,35 @@ app.whenReady().then(async () => {
     if (action !== 'open-data') throw new Error('Unknown About action.');
     const error = await shell.openPath(app.getPath('userData'));
     if (error) throw new Error(error);
+  });
+  ipcMain.handle('check-update', async (event) => {
+    check(event);
+    return onlineUpdates.check();
+  });
+  ipcMain.handle('cancel-update', (event) => {
+    check(event);
+    onlineUpdates.cancel();
+  });
+  ipcMain.handle('download-update', async (event, name) => {
+    check(event);
+    if (
+      typeof name !== 'string' ||
+      !/^Localtone-[0-9.]+-(mac|win|linux)-(x64|arm64)\.zip$/.test(name)
+    )
+      throw new Error('Invalid update filename.');
+    const choice = await dialog.showSaveDialog(win, {
+      title: 'Save Localtone update',
+      defaultPath: path.join(app.getPath('downloads'), name),
+      filters: [{ name: 'Desktop archive', extensions: ['zip'] }],
+    });
+    if (choice.canceled || !choice.filePath) return { cancelled: true };
+    const result = await onlineUpdates.download(choice.filePath, name);
+    if (!result.cancelled) updateDownload = result.file;
+    return result;
+  });
+  ipcMain.handle('reveal-update', (event) => {
+    check(event);
+    if (updateDownload) shell.showItemInFolder(updateDownload);
   });
   handle('prepare-update', async () => {
     portableStorage.assertUpdateReady(app);
@@ -1687,6 +1726,7 @@ app.on('before-quit', (event) => {
     event.preventDefault();
     quitting = true;
     Promise.allSettled([
+      onlineUpdates.shutdown(),
       historyWrites,
       lastfm?.close(),
       (async () => {

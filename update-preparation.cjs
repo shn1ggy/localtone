@@ -8,6 +8,7 @@ const persistentNames = [
   'collection.json',
   'playback-history.json',
   'playback-session.json',
+  'browsing-session.json',
   'lastfm.enc',
   'settings-backups',
   'covers',

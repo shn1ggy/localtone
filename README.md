@@ -1,6 +1,6 @@
 # Localtone
 
-A compact local music player for macOS, Windows and Linux. Source release **0.109.0**.
+A compact local music player for macOS, Windows and Linux. Source release **0.112.0**.
 
 This is an early-access development build. Native platform validation and third-party redistribution review are still pending; see [RELEASE-READINESS.md](RELEASE-READINESS.md).
 
@@ -103,3 +103,7 @@ Native releases verify the application and FFmpeg processor and include a packag
 ## License
 
 Localtone-owned code and original project assets are licensed under **GPL-3.0-or-later**. See [LICENSE](LICENSE) for the license text and [LICENSING.md](LICENSING.md) for the application notice and third-party redistribution checklist.
+
+Double-click a playlist to play a random song with the full collection queue and current playback mode. Ctrl/Cmd+Q quits. Backspace clears Artist/Tracks selection while keeping focus and navigation position; Delete removes tracks from regular playlists. Appearance includes shared Primary text and Secondary text colors, restored by Reset appearance.
+
+About → Check for updates checks public stable GitHub Releases and offers the matching verified desktop ZIP. After downloading, extract it and use Prepare update… to transfer portable data. The app does not replace itself or restart automatically. Until the repository has public published releases, checking reports that no public release is available. No GitHub credentials are embedded or requested.

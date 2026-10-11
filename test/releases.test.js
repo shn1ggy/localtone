@@ -49,6 +49,7 @@ test('portable preparation preserves settings, collection, credentials and backu
   const data = JSON.stringify({libraries:[{id:'l',root:'/music'}],playlists:[{id:'p',trackIds:['t']}],settings:{accentColor:'#abcdef',sidebarWidth:242},tracks:[{id:'t'}]});
   await writeFile(path.join(source,'collection.json'),data);
   await writeFile(path.join(source,'lastfm.enc'),'Encrypted credentials',{mode:0o600});
+  await writeFile(path.join(source,'browsing-session.json'),'Saved browsing position');
   await mkdir(path.join(source,'settings-backups'));await writeFile(path.join(source,'settings-backups','before.json'),'Backup');
   await mkdir(path.join(source,'tag-backups'));await writeFile(path.join(source,'tag-backups','undo'),'Temporary');
   await mkdir(path.join(source,'session'));await writeFile(path.join(source,'session','lock'),'Runtime');
@@ -58,6 +59,7 @@ test('portable preparation preserves settings, collection, credentials and backu
   assert.equal(await readFile(path.join(result.target,'lastfm.enc'),'utf8'),'Encrypted credentials');
   assert.equal(await readFile(path.join(result.target,'settings-backups','before.json'),'utf8'),'Backup');
   assert.equal(JSON.parse(await readFile(path.join(result.target,'storage-mode.json'))).active,true);
+  assert.equal(await readFile(path.join(result.target,'browsing-session.json'),'utf8'),'Saved browsing position');
   const names = await readdir(result.target);assert.ok(!names.includes('tag-backups'));assert.ok(!names.includes('session'));
   await assert.rejects(prepareUpdate({source,targetRoot:target,portable:true,version:'0.91.0'}),/already has/);
 }));

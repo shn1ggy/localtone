@@ -120,3 +120,21 @@ The repository now exists. No published release, signing identity or cross-platf
 The owner supplied https://github.com/shn1ggy/localtone. Repository, homepage and issue metadata now point there. Version 0.109.0 was uploaded to `main` at commit `a8351514ed585bd5e5b814a1518d1a6064064816`; its complete Git tree hash matches the tested local source, including the binary icons and generated test fixtures. No user data was included. [Initial verification run](https://github.com/shn1ggy/localtone/actions/runs/38132531466).
 
 The repository is currently private. Make the project/contact route public before distributing an app that relies on this URL for its MusicBrainz identification. Passing source CI does not replace native packaging, signing or real-device audio tests.
+
+## In-app update checks and downloads (0.111)
+
+About → Check for updates requests `https://api.github.com/repos/shn1ggy/localtone/releases/latest` without authentication. Only public stable releases with numeric tags (`v0.112.0` or `0.112.0`) are eligible. Drafts/pre-releases are not this channel. The currently private repository has no publicly accessible releases, so the UI reports an unavailable public feed instead of claiming to be up to date. Never bundle a maintainer token or ask listeners for one.
+
+Attach each supported desktop archive named `Localtone-VERSION-mac-ARCH.zip`, `Localtone-VERSION-win-ARCH.zip` or `Localtone-VERSION-linux-ARCH.zip`, with `ARCH` equal to `arm64` or `x64`. Source archives, portable EXEs and AppImages are not selected by this first download workflow. Attach one `checksums.json` with schema 1 and artifacts containing exact `name`, byte `size` and lowercase `sha256`. When assembling artifacts from multiple OS builds, merge their artifact records into a single manifest; do not overwrite one OS's checksums with another's. Recompute/verify checksums after signing and all final artifact modifications.
+
+The app bounds metadata/download sizes, restricts HTTPS redirect hosts, streams downloads to temporary files and validates SHA-256/byte count before exposing them. Cancellation, failure and normal shutdown remove temporary download files. Existing destination files are preserved. These checks establish integrity relative to the GitHub feed; they are not an independent developer signature or Apple notarization.
+
+Installation is still explicit: download, reveal, extract, then Prepare update… and launch the new version. Preparation verifies the extracted release and copies persistent portable data, including the browsing session, while keeping the old app/data intact. System data mode remains system data. Extraction, replacement and Restart to update are not implemented. Test real old-version → new-version transfers before publishing.
+
+Automatic native installation remains a later stage. Standard electron-updater supports Windows NSIS, signed macOS builds with update ZIP metadata, and supported Linux targets. Windows portable EXE/ZIP needs a separate replacement helper or an installer distribution. Native signing/notarization and real cross-platform tests remain release requirements; do not treat this manual download flow as a signed automatic updater.
+
+References: https://docs.github.com/en/rest/releases/releases#get-the-latest-release and https://www.electron.build/v26/docs/features/auto-update/
+
+## Private release candidates
+
+Build unsigned test packages now runs when release-related files change on main, or manually. It builds Linux x64, Windows x64, macOS arm64 and macOS x64 on matching native runners. The final job verifies each platform manifest and assembles one `verified-release-candidate` artifact with combined checksums. Extract this workflow artifact to obtain the actual app downloads. Jobs have read-only repository permissions; they do not create or publish releases. Publish the verified inner ZIPs and combined checksums only after native testing and redistribution review. Repository visibility is a separate owner decision.
