@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "0.117.0",
-  "commit": "53b7adfceb2686dea9465774f08c4de84df593e2",
-  "buildRun": 38152401267,
-  "tag": "v0.117.0",
+  "version": "0.118.0",
+  "commit": "ba4caa359156c46bd24753dc54863755b77349b2",
+  "buildRun": 38154206129,
+  "tag": "v0.118.0",
   "attempt": 1,
-  "title": "Localtone 0.117.0 — Three-bar playback markers"
+  "title": "Localtone 0.118.0 — Update redirects and library-only dynamic playlists"
 }
