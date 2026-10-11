@@ -256,7 +256,15 @@ const dialogs = createDialogCoordinator({
 const nameDialog = createNameDialog(document, (dialog) => dialogs.open(dialog));
 window.addEventListener('beforeunload', () => dialogs.dispose());
 function setBusy(value) {
-  for (const id of ['add-library', 'empty-add', 'add-playlist']) $(id).disabled = value;
+  for (const id of [
+    'add-library',
+    'empty-add',
+    'empty-import',
+    'add-playlist',
+    'settings-import',
+    'settings-export',
+  ])
+    $(id).disabled = value || (id === 'empty-import' && !api?.settingsTransfer);
 }
 async function operation(fn, message = 'Saving…') {
   if (busy) {
@@ -383,6 +391,13 @@ function syncPlaybackMarkers() {
     }
   }
 }
+function isFirstLaunch() {
+  return (
+    !state.libraries.some((library) => !library.importedFiles) &&
+    !state.playlists.length &&
+    !state.tracks.some((track) => !track.missing)
+  );
+}
 function render() {
   syncSearchClear();
   trackLookup = new Map(state.tracks.filter((t) => !t.missing).map((track) => [track.id, track]));
@@ -431,18 +446,28 @@ function render() {
   if (view === 'tracks') buildTrackTable(table, visible, visible, playlist);
   else $('tracks').replaceChildren();
   $('empty').hidden = visible.length > 0;
-  if (!state.tracks.some((t) => !t.missing) && !playlist) {
-    $('empty').querySelector('h2').textContent = 'No tracks';
-    $('empty').querySelector('p').textContent = 'Add a folder to get started.';
+  const firstLaunch = isFirstLaunch() && !query;
+  $('empty').classList.toggle('first-launch', firstLaunch);
+  $('empty-import').hidden = !firstLaunch;
+  $('empty-import').disabled = busy || !api?.settingsTransfer;
+  if (firstLaunch) {
+    $('empty-title').textContent = 'Add a library';
+    $('empty').querySelector('p').textContent =
+      'Choose a music folder, or import a Localtone settings backup.';
     $('empty-add').hidden = false;
   } else {
-    $('empty').querySelector('h2').textContent = query ? 'No matching tracks.' : 'No tracks';
+    $('empty-title').textContent = query ? 'No matching tracks' : 'No tracks';
+    const needsLibrary =
+      scope.kind === 'all' && !query && !state.libraries.some((l) => !l.importedFiles);
     $('empty').querySelector('p').textContent = query
       ? 'Try another artist, album, year, or genre.'
       : playlist
-        ? 'Drag tracks, albums, or artists here from your collection.'
-        : 'Add audio files to this folder, then rescan it.';
-    $('empty-add').hidden = true;
+        ? 'Drag audio files, tracks, albums, or artists here.'
+        : needsLibrary
+          ? 'Add a library to show music here.'
+          : 'Add audio files to this folder, then rescan it.';
+    $('empty-add').hidden = !needsLibrary;
+    $('empty-status').hidden = true;
   }
   renderBrowser();
   syncPlaybackMarkers();
@@ -958,6 +983,27 @@ audio.onerror = () =>
   toast('Unable to play this file. It may be missing or use an unsupported codec.');
 document.onkeydown = (event) => {
   if (event.isComposing) return;
+  if (!document.querySelector('dialog[open]') && event.target.closest?.('.empty-actions')) {
+    if (['Enter', ' '].includes(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey)
+      return;
+    if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      if (event.shiftKey) {
+        selection.pane = 'sidebar';
+        focusBrowseSelection(true);
+      } else if (
+        event.target.id === 'empty-add' &&
+        !$('empty-import').hidden &&
+        !$('empty-import').disabled
+      ) {
+        $('empty-import').focus({ preventScroll: true });
+      } else {
+        selection.pane = 'artists';
+        focusBrowseSelection(true);
+      }
+      return;
+    }
+  }
   if (recordingShortcut) {
     event.preventDefault();
     event.stopPropagation();
@@ -4089,8 +4135,13 @@ function focusBrowseSelection(pulse = false) {
         (n) =>
           n.dataset.artistKey === (selection.artists.current || deselectedBrowsePositions.artists),
       ) || $('artist-list').querySelector('button');
-    node?.focus({ preventScroll: true });
-    node?.scrollIntoView?.({ block: 'nearest' });
+    if (node) {
+      node.focus({ preventScroll: true });
+      node.scrollIntoView?.({ block: 'nearest' });
+    } else {
+      $('artist-list').tabIndex = -1;
+      $('artist-list').focus({ preventScroll: true });
+    }
   } else {
     if (
       !selection.tracks.current &&
@@ -4101,6 +4152,10 @@ function focusBrowseSelection(pulse = false) {
       const content = document.querySelector('.library-content');
       content.tabIndex = -1;
       content.focus({ preventScroll: true });
+      return;
+    }
+    if (!$('empty').hidden && !$('empty-add').hidden && !$('empty-add').disabled) {
+      $('empty-add').focus({ preventScroll: true });
       return;
     }
     if (view === 'covers' && !selection.albumDetail) {
@@ -4314,7 +4369,7 @@ $('artist-list').addEventListener('focusin', () => {
   document.body.dataset.browseFocus = selection.pane;
 });
 document.querySelector('.library-content').addEventListener('focusin', (event) => {
-  if (event.target.closest('[data-track-id],[data-album-key],.album-expand')) {
+  if (event.target.closest('[data-track-id],[data-album-key],.album-expand,.empty-actions')) {
     selection.pane = 'tracks';
     document.body.dataset.browseFocus = selection.pane;
   }
@@ -4780,34 +4835,60 @@ $('clean-cache').onclick = async () => {
     button.disabled = false;
   }
 };
-for (const action of ['import', 'export'])
-  $('settings-' + action).onclick = async () => {
-    const status = $('transfer-status');
-    try {
-      await preferenceWrites;
-      const result = await api.settingsTransfer(action);
-      if (result.cancelled) return;
-      if (result.state) {
-        state = result.state;
-      }
-      if (result.settings) {
-        prefs = { ...prefs, ...result.settings };
-        state.settings = prefs;
-        shuffle = prefs.shuffle;
-        repeat = prefs.repeat;
-        applyPreferences();
-        render();
-        renderShortcutEditor();
-        if (!$('queue-panel').hidden) setQueueVisible(true);
-      }
-      status.textContent =
-        action === 'import'
-          ? 'Settings imported. Previous preferences backed up.'
-          : 'Settings exported.';
-    } catch (error) {
-      status.textContent = error.message;
+async function transferSettings(action, status = $('transfer-status')) {
+  if (busy) return;
+  const firstLaunch = isFirstLaunch();
+  busy = true;
+  setBusy(true);
+  status.hidden = false;
+  status.textContent =
+    action === 'import' ? 'Choose a settings backup…' : 'Choose where to save settings…';
+  try {
+    await preferenceWrites;
+    const result = await api.settingsTransfer(action);
+    if (result.cancelled) {
+      status.textContent = '';
+      status.hidden = true;
+      return;
     }
-  };
+    if (result.state) state = result.state;
+    if (result.settings) {
+      prefs = { ...prefs, ...result.settings };
+      state.settings = prefs;
+      shuffle = prefs.shuffle;
+      repeat = prefs.repeat;
+      if (firstLaunch) {
+        changeView(prefs.lastView);
+        sort = prefs.defaultSort;
+        $('sort').value = sort;
+        direction = 1;
+      }
+      applyPreferences();
+      render();
+      renderShortcutEditor();
+      if (!$('queue-panel').hidden) setQueueVisible(true);
+    }
+    status.textContent =
+      action === 'import'
+        ? 'Settings imported. Previous preferences backed up.'
+        : 'Settings exported.';
+    if (firstLaunch && !isFirstLaunch() && status.id === 'empty-status') {
+      selection.pane = 'artists';
+      focusBrowseSelection(false);
+    }
+  } catch (error) {
+    status.textContent = error.message.replace(
+      /^Error invoking remote method '[^']+': (?:Error: )?/,
+      '',
+    );
+  } finally {
+    busy = false;
+    setBusy(false);
+  }
+}
+for (const action of ['import', 'export'])
+  $('settings-' + action).onclick = () => transferSettings(action);
+$('empty-import').onclick = () => transferSettings('import', $('empty-status'));
 const undoHistory = [],
   redoHistory = [];
 let undoBusy = false;

@@ -149,13 +149,16 @@
                           ><th></th></tr></thead
                       ><tbody id="tracks"></tbody></table
                   ></div>
-                  <div id="empty"
-                    ><h2>No tracks</h2><p>Add a folder to get started.</p
-                    ><button id="empty-add" class="primary">Add folder</button></div
-                  >
-                </div></section
-              ></div
-            ></main
+                  <div id="empty" aria-labelledby="empty-title"
+                    ><h2 id="empty-title">Add a library</h2
+                    ><p>Choose a music folder, or import a Localtone settings backup.</p
+                    ><div class="empty-actions"
+                      ><button type="button" id="empty-add" class="primary">Add library…</button
+                      ><button type="button" id="empty-import" class="chip"
+                        >Import settings…</button
+                      ></div
+                    ><p id="empty-status" role="status" hidden></p
+                  ></div> </div></section></div></main
           ><aside id="queue-panel" hidden
             ><div class="section-label"
               >PLAY QUEUE<button id="close-queue" aria-label="Close queue">×</button></div

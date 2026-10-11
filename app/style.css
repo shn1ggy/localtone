@@ -8030,12 +8030,47 @@ dialog button.dialog-close:focus-visible,
 dialog input[type='checkbox']:focus-visible {
   border-color: var(--text-primary);
 }
-#empty-add {
+#empty .empty-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#empty .empty-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 28px;
   padding: 0 10px;
   border-radius: 5px;
   font: inherit;
   font-size: 13px;
+}
+
+#empty-import {
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  background: transparent;
+}
+#empty-import:hover,
+#empty .empty-actions button:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+#empty-add {
+  color: var(--text-on-accent);
+  background: var(--accent);
+  font-weight: 600;
+}
+#empty-add:hover {
+  background: color-mix(in srgb, var(--accent), white 15%);
+}
+#empty-add:focus-visible {
+  color: var(--text-on-accent);
+}
+#empty #empty-status {
+  margin: 12px 0 0;
+  font-size: 12px;
 }
 
 #about-release-notes-text {
