@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "0.121.0",
-  "commit": "ce944ecf65bb86eaf5974276e694c42f231c5718",
-  "buildRun": 38169569092,
-  "tag": "v0.121.0",
+  "version": "0.122.0",
+  "commit": "bcc25d6e4504688bf0d43435d833220666f88e90",
+  "buildRun": 38179189923,
+  "tag": "v0.122.0",
   "attempt": 1,
-  "title": "Localtone 0.121.0 — A cleaner first launch"
+  "title": "Localtone 0.122.0 — Stable rating scroll and album selection"
 }
