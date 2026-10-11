@@ -21,7 +21,7 @@
       ids = new Set(tracks.map((t) => t.id));
     return peers.length === ids.size && peers.every((t) => !t.missing && ids.has(t.id));
   }
-  function folderNumbers(tracks) {
+  function folderNumbers(tracks, ignoreDiscs = false) {
     const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
     const parts = (track) =>
       String(track.artistPath ?? track.relativePath ?? track.path ?? track.title ?? '')
@@ -39,7 +39,7 @@
     const counts = new Map(),
       numbers = new Map();
     for (const track of ordered) {
-      const disc = Number(track.disc) || 1,
+      const disc = ignoreDiscs ? 1 : Number(track.disc) || 1,
         number = (counts.get(disc) || 0) + 1;
       counts.set(disc, number);
       numbers.set(track.id, number);

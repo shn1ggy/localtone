@@ -88,3 +88,5 @@ test('quit default migrates without colliding with a custom action; text colors 
  assert.equal(preferences.normalizeSettings().primaryTextColor,'#e0e4e7');
  for(const value of ['red','#123',null,'url(file:///bad)'])assert.throws(()=>preferences.validateSettings({primaryTextColor:value}));
 });
+
+test('ignoring discs for renumbering is opt-in and validated',()=>{assert.equal(preferences.defaults.renumberIgnoreDiscs,false);assert.equal(preferences.normalizeSettings({renumberIgnoreDiscs:true}).renumberIgnoreDiscs,true);assert.throws(()=>preferences.validateSettings({renumberIgnoreDiscs:'yes'}));});

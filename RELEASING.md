@@ -138,3 +138,9 @@ References: https://docs.github.com/en/rest/releases/releases#get-the-latest-rel
 ## Private release candidates
 
 Build unsigned test packages now runs when release-related files change on main, or manually. It builds Linux x64, Windows x64, macOS arm64 and macOS x64 on matching native runners. The final job verifies each platform manifest and assembles one `verified-release-candidate` artifact with combined checksums. Extract this workflow artifact to obtain the actual app downloads. Jobs have read-only repository permissions; they do not create or publish releases. Publish the verified inner ZIPs and combined checksums only after native testing and redistribution review. Repository visibility is a separate owner decision.
+
+## 0.113 interaction candidate
+
+This candidate fixes sidebar focus feedback, keeps confirmed searches in the current tab and preserves their static-playlist action across tabs. Album title clicks select the album's tracks; artwork clicks expand/collapse. General → Library adds opt-in continuous renumbering across discs. Source collections and playing tracks share a subtle playback marker. All existing appearance preferences are preserved.
+
+Before publishing a release, confirm repository visibility with the owner, finish the FFmpeg corresponding-source/provenance review, and test downloaded native builds. Private Actions artifacts are temporary test downloads, not public Releases and not an update feed. The in-app updater reads public stable releases only; marking a release as prerelease intentionally keeps it out of that feed. Do not silently mark an untested alpha as stable to make updates work.

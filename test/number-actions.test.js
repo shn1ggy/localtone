@@ -17,3 +17,5 @@ test('natural folder order renumbers each tagged disc independently, ignoring me
  const a={...track('a'),artistPath:'Album/CD1/10 Song.mp3'},b={...track('b'),artistPath:'Album/CD1/2 Song.mp3'},c={...track('c'),disc:2,artistPath:'Album/CD2/1 Song.mp3'};
  assert.deepEqual([...folderNumbers([a,c,b])],[['b',1],['a',2],['c',1]]);
 });
+
+test('ignore discs creates one continuous folder sequence without mutating disc metadata',()=>{const tracks=[{...track('a'),artistPath:'CD1/1.mp3'},{...track('b'),disc:2,artistPath:'CD2/1.mp3'}];assert.deepEqual([...folderNumbers(tracks,true)],[['a',1],['b',2]]);assert.equal(tracks[1].disc,2);});

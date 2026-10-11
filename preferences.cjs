@@ -49,6 +49,7 @@ const defaults = Object.freeze({
   exportCollections: false,
   confirmMultiFileTags: true,
   totalLeadingZeros: false,
+  renumberIgnoreDiscs: false,
   lookupLeadingZeros: false,
   artistGrouping: 'albumArtist',
   defaultSort: 'year',
@@ -235,6 +236,7 @@ function validateSettings(patch) {
       key === 'animateLogo' ||
       key === 'exportCollections' ||
       key === 'confirmMultiFileTags' ||
+      key === 'renumberIgnoreDiscs' ||
       key === 'tagFieldsExpanded' ||
       key === 'tagNumbersExpanded' ||
       key === 'totalLeadingZeros' ||

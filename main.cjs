@@ -963,7 +963,10 @@ app.whenReady().then(async () => {
     const selected = targets.map((t) => presentedLookup.get(t.id));
     if (mode === 'renumber' && !numberActions.canRenumber(selected, presented))
       throw Error('Select all tracks from exactly one available album to renumber.');
-    const numbers = mode === 'renumber' ? numberActions.folderNumbers(selected) : null;
+    const numbers =
+      mode === 'renumber'
+        ? numberActions.folderNumbers(selected, db.settings.renumberIgnoreDiscs)
+        : null;
     for (const track of targets) {
       const tags = await tagEditor.readTags(track.path),
         raw = tags.values.track;

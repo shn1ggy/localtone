@@ -281,7 +281,6 @@ async function operation(fn, message = 'Saving…') {
   }
 }
 function changeView(next) {
-  if (next !== view) searchResultIds = null;
   view = next;
   if (prefs.lastView !== next)
     updateSettings({
@@ -326,6 +325,7 @@ function chooseOpeningArtist() {
 function renderSidebar() {
   const all = $('all');
   all.classList.toggle('active', scope.kind === 'all');
+  all.classList.toggle('playing-source', !!currentTrack() && playingOrigin?.kind === 'all');
   for (const [container, items, kind] of [
     ['libraries', state.libraries.filter((l) => !l.importedFiles), 'library'],
     ['playlists', state.playlists, 'playlist'],
@@ -333,11 +333,17 @@ function renderSidebar() {
     $(container).replaceChildren();
     for (const item of items) {
       const button = el('button', null, 'nav');
+      button.dataset.sourceKind = kind;
+      button.dataset.sourceId = item.id;
       const dynamic = kind === 'playlist' && item.dynamic?.enabled;
       const mark = el('span');
       mark.append(icon(kind === 'library' ? 'folder' : dynamic ? 'dynamic' : 'playlist'));
       button.append(mark, document.createTextNode(item.name));
       button.classList.toggle('dynamic-playlist', !!dynamic);
+      button.classList.toggle(
+        'playing-source',
+        !!currentTrack() && playingOrigin?.kind === kind && playingOrigin.id === item.id,
+      );
       button.setAttribute('aria-label', dynamic ? `${item.name}, dynamic playlist` : item.name);
       const tracks =
         kind === 'playlist'
@@ -527,6 +533,13 @@ async function startTrack(resume = null, scheduled = false) {
   document
     .querySelectorAll('.track-table tr[data-track-id]')
     .forEach((row) => row.classList.toggle('current', row.dataset.trackId === track.id));
+  $('all').classList.toggle('playing-source', playingOrigin.kind === 'all');
+  for (const button of document.querySelectorAll('[data-source-kind]'))
+    button.classList.toggle(
+      'playing-source',
+      button.dataset.sourceKind === playingOrigin.kind &&
+        button.dataset.sourceId === playingOrigin.id,
+    );
   renderQueue();
   renderPlayerRating();
   if (resume !== null) {
@@ -751,7 +764,6 @@ $('search').onkeydown = (event) => {
     event.preventDefault();
     clearTimeout(searchTimer);
     query = $('search').value;
-    changeView('tracks');
     selection.albumDetail = null;
     selection.tracks.current = null;
     selection.tracks.clear();
@@ -1493,7 +1505,6 @@ function renderArtistPane() {
     );
     button.dataset.artistKey = key;
     button.ondblclick = () => {
-      searchResultIds = null;
       selection.artists.clear();
       selection.artists.anchor = key;
       selection.artists.current = key;
@@ -1509,7 +1520,7 @@ function renderArtistPane() {
       selection.albumFocus = null;
       selection.albums.clear();
       selection.coverFocus = null;
-      searchResultIds = null;
+
       if (event.ctrlKey || event.metaKey || event.shiftKey) {
         selection.pane = 'artists';
         if (!selection.artists.size && selection.artists.current)
@@ -1603,16 +1614,14 @@ function renderBrowser() {
     note.setAttribute('role', 'status');
     nav.append(note);
   }
-  if (view === 'tracks') {
-    if (searchResultIds) {
-      const button = el('button', 'Create playlist from results', 'chip browse-action');
-      button.id = 'create-search-playlist';
-      button.disabled = !searchResultIds.length;
-      button.onclick = () => openPlaylistSettings(null, [...searchResultIds]);
-      nav.append(button);
-    }
-    return;
+  if (searchResultIds) {
+    const button = el('button', 'Create playlist from results', 'chip browse-action');
+    button.id = 'create-search-playlist';
+    button.disabled = !searchResultIds.length;
+    button.onclick = () => openPlaylistSettings(null, [...searchResultIds]);
+    nav.append(button);
   }
+  if (view === 'tracks') return;
   const breadcrumb = (label, handler) => {
     const button = el('button', null, 'chip browse-action');
     button.append(icon('back'), el('span', 'Back'));
@@ -1710,6 +1719,10 @@ function renderBrowser() {
     section._trackIds = album.tracks.map((t) => t.id);
     section.classList.toggle('album-selected', selection.albums.has(album.key));
     section.classList.toggle('album-open', open);
+    section.classList.toggle(
+      'album-has-selection',
+      album.tracks.some((t) => selection.tracks.has(t.id)),
+    );
     section.style.minHeight = `${height}px`;
     section._mountAlbum = () => {
       if (section.dataset.mounted) return;
@@ -1740,7 +1753,7 @@ function renderBrowser() {
         ),
       );
       toggle.append(info);
-      toggle.onclick = (event) => {
+      const toggleAlbum = (event) => {
         if (selectAlbumWithModifier(event, album.key)) return;
         selection.albums.clear();
         const returnToCovers = view === 'covers' && !!selection.albumDetail,
@@ -1765,11 +1778,27 @@ function renderBrowser() {
         art.append(cover(album.cover));
         art.setAttribute('aria-label', `${open ? 'Collapse' : 'Expand'} ${album.name}`);
         art.setAttribute('aria-expanded', String(open));
-        art.onclick = toggle.onclick;
+        art.onclick = toggleAlbum;
         bindFolderMenu(art, () => album.tracks[0]?.id, 'album');
         makeDraggable(art, () => ({ ids: album.tracks.map((t) => t.id) }));
         section.append(art);
       }
+      toggle.onclick = (event) => {
+        if (event.target.closest('.cover')) {
+          toggleAlbum(event);
+          return;
+        }
+        if (selectAlbumWithModifier(event, album.key)) return;
+        selection.pane = 'tracks';
+        selection.albumFocus = album.key;
+        selection.albums.select(album.key);
+        selection.tracks.reset();
+        for (const track of album.tracks) selection.tracks.add(track.id);
+        selection.tracks.current = album.tracks[0]?.id ?? null;
+        paintSelection();
+        paintAlbumSelection();
+        toggle.focus({ preventScroll: true });
+      };
       bindFolderMenu(toggle, () => album.tracks[0]?.id, 'album');
       makeDraggable(toggle, () => ({ ids: album.tracks.map((track) => track.id) }));
       heading.append(toggle);
@@ -1963,6 +1992,11 @@ window.addEventListener('beforeunload', () => {
 });
 
 function paintSelection() {
+  for (const section of document.querySelectorAll('.album-section'))
+    section.classList.toggle(
+      'album-has-selection',
+      section._trackIds?.some((id) => selection.tracks.has(id)) ?? false,
+    );
   document.querySelectorAll('[data-track-id]').forEach((row) => {
     const selected = selection.tracks.has(row.dataset.trackId);
     row.classList.toggle('selected', selected);
@@ -2244,6 +2278,7 @@ function applyPreferences() {
   $('setting-exportCollections').checked = !!prefs.exportCollections;
   $('setting-confirmMultiFileTags').checked = prefs.confirmMultiFileTags !== false;
   $('setting-totalLeadingZeros').checked = !!prefs.totalLeadingZeros;
+  $('setting-renumberIgnoreDiscs').checked = !!prefs.renumberIgnoreDiscs;
   $('setting-queueDisplayCount').value = prefs.queueDisplayCount;
   $('setting-seekStep').value = prefs.seekStep;
   document.documentElement.dataset.theme = prefs.theme;
@@ -4125,7 +4160,6 @@ function escapeBrowse() {
   for (const node of document.querySelectorAll('.album-selected'))
     node.classList.remove('album-selected');
   if (selection.pane === 'artists') {
-    searchResultIds = null;
     selection.artists.clear();
     selection.artists.current = null;
     selection.artists.anchor = null;
@@ -4178,7 +4212,7 @@ function navigateBrowse(step, extend = false) {
     selection.albumFocus = null;
     selection.albums.clear();
     selection.coverFocus = null;
-    searchResultIds = null;
+
     const keys = artistsFor(folderTracks, 'name', prefs.artistGrouping);
     if (!keys.length) return;
     const i = keys.indexOf(selection.artists.current || deselectedBrowsePositions.artists),
@@ -4272,6 +4306,11 @@ function paintPaneFocus(pulse = true) {
   }
 }
 function paintAlbumSelection() {
+  for (const section of document.querySelectorAll('.album-section'))
+    section.classList.toggle(
+      'album-has-selection',
+      section._trackIds?.some((id) => selection.tracks.has(id)) ?? false,
+    );
   $('browser').classList.toggle('album-multi-selection', selection.albums.size > 1);
   for (const node of document.querySelectorAll('[data-album-key]')) {
     const selected = selection.albums.has(node.dataset.albumKey);
@@ -4987,6 +5026,8 @@ $('setting-exportCollections').onchange = (event) =>
   updateSettings({ exportCollections: event.target.checked });
 $('setting-confirmMultiFileTags').onchange = (event) =>
   updateSettings({ confirmMultiFileTags: event.target.checked });
+$('setting-renumberIgnoreDiscs').onchange = (event) =>
+  updateSettings({ renumberIgnoreDiscs: event.target.checked });
 $('setting-totalLeadingZeros').onchange = (event) =>
   updateSettings({ totalLeadingZeros: event.target.checked });
 $('setting-gaplessPlayback').onchange = (event) =>

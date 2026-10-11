@@ -8036,3 +8036,44 @@ dialog input[type='checkbox']:focus-visible {
   max-height: 160px;
   overflow-y: auto;
 }
+
+/* Pane feedback is contained by its own positioned pane. */
+.sidebar {
+  position: relative;
+}
+
+/* A shared playback mark distinguishes playback from browsing selection. */
+.playing-source::after,
+.track-table tr.current .track-name::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 12px;
+  flex: 0 0 10px;
+  background:
+    linear-gradient(var(--accent), var(--accent)) 0 4px / 2px 6px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) 4px 0 / 2px 12px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) 8px 2px / 2px 8px no-repeat;
+}
+.playing-source::after {
+  margin-left: auto;
+}
+.track-table tr.current .track-name::before {
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+.track-table tr.current {
+  background: transparent;
+}
+.track-table tr.current td.title-cell {
+  color: var(--text-primary);
+}
+.track-table tr.current.selected {
+  background: rgb(var(--accent-rgb) / 0.09);
+}
+.album-heading .album-expand:hover .album-info,
+.album-selected .album-heading .album-info,
+.album-navigation-focus .album-heading .album-info,
+.album-has-selection .album-heading .album-info {
+  color: var(--accent);
+}

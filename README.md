@@ -1,6 +1,6 @@
 # Localtone
 
-A compact local music player for macOS, Windows and Linux. Source release **0.112.0**.
+A compact local music player for macOS, Windows and Linux. Source release **0.113.0**.
 
 This is an early-access development build. Native platform validation and third-party redistribution review are still pending; see [RELEASE-READINESS.md](RELEASE-READINESS.md).
 
