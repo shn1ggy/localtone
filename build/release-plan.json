@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "0.119.0",
-  "commit": "50e6875e6496f85247e04f92dd7adfb1f10ad615",
-  "buildRun": 38158737650,
-  "tag": "v0.119.0",
+  "version": "0.120.0",
+  "commit": "c273c26dcda53d7bcb4fdbc292d827feab385412",
+  "buildRun": 38163400576,
+  "tag": "v0.120.0",
   "attempt": 1,
-  "title": "Localtone 0.119.0 — Safe quitting and batch tag improvements"
+  "title": "Localtone 0.120.0 — Playback scrolling and disc-number display"
 }
