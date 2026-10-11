@@ -76,3 +76,7 @@ test('legacy ID3v1 and APE metadata blocks are visible and explicitly removable 
  await editor.writeTags({file,backupDir,token:tags.token,patch:{},remove:tags.extras.filter(e=>['ID3v1','APEv2'].includes(e.id)).map(e=>e.key)});
  const after=await readFile(file);assert.equal(frames.tails(after).items.length,0);assert.deepEqual(frames.parse(after).audio,frames.parse(fixture).audio);
 }));
+
+test('batch processing bounds concurrency, preserves input order and drains pending tasks before error',async()=>{
+ let active=0,max=0;const order=await editor.mapTagFiles([0,1,2,3,4],async n=>{active++;max=Math.max(max,active);await new Promise(r=>setTimeout(r,n%2?2:10));active--;return n*2;});assert.deepEqual(order,[0,2,4,6,8]);assert.equal(max,2);let finished=false;await assert.rejects(editor.mapTagFiles([0,1,2],async n=>{if(n===0){await new Promise(r=>setTimeout(r,2));throw Error('Invalid edit');}await new Promise(r=>setTimeout(r,15));finished=true;}),/Invalid edit/);assert.equal(finished,true);
+});

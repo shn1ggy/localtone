@@ -19,3 +19,8 @@ test('natural folder order renumbers each tagged disc independently, ignoring me
 });
 
 test('ignore discs creates one continuous folder sequence without mutating disc metadata',()=>{const tracks=[{...track('a'),artistPath:'CD1/1.mp3'},{...track('b'),disc:2,artistPath:'CD2/1.mp3'}];assert.deepEqual([...folderNumbers(tracks,true)],[['a',1],['b',2]]);assert.equal(tracks[1].disc,2);});
+
+test('renumber repairs totals per disc and applies the shared leading-zero preference',()=>{
+ const tracks=[{...track('a'),disc:1,artistPath:'CD1/2.mp3',trackRaw:'7/99'},{...track('b'),disc:1,artistPath:'CD1/1.mp3',trackRaw:'4/9'},{...track('c'),disc:2,artistPath:'CD2/1.mp3',trackRaw:''}];
+ const tags=globalThis.LocaltoneNumbers.folderNumberTags;assert.deepEqual([...tags(tracks,{leadingZeros:true})],[['a','02/02'],['b','01/02'],['c','01/01']]);assert.deepEqual([...tags(tracks,{ignoreDiscs:true,leadingZeros:true})],[['a','02/03'],['b','01/03'],['c','03/03']]);assert.equal(tags(tracks).get('a'),'2/2');assert.equal(tags([{...tracks[0],trackRaw:'007/009'}]).get('a'),'001/001');assert.equal(tracks[0].trackRaw,'7/99');
+});

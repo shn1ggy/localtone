@@ -165,7 +165,8 @@ function check(event) {
 function handle(name, fn) {
   ipcMain.handle(name, async (event, ...args) => {
     check(event);
-    if (busy || quitting) throw new Error('Please wait for the current operation to finish.');
+    if (busy || quitting)
+      throw new Error('Localtone is updating your music or saving changes. Please wait a moment.');
     busy = true;
     let before;
     try {
@@ -653,11 +654,12 @@ app.whenReady().then(async () => {
       }
       return miniMode;
     }
-    if (busy) throw new Error('Wait for the current operation to finish.');
     if (action === 'quit') {
       app.quit();
       return;
     }
+    if (busy)
+      throw new Error('Localtone is updating your music or saving changes. Please wait a moment.');
     if (action === 'maximize') {
       if (miniMode) return;
       if (win.isMaximized() || maximizeRestore) {
@@ -964,7 +966,10 @@ app.whenReady().then(async () => {
       throw Error('Select all tracks from exactly one available album to renumber.');
     const numbers =
       mode === 'renumber'
-        ? numberActions.folderNumbers(selected, db.settings.renumberIgnoreDiscs)
+        ? numberActions.folderNumberTags(selected, {
+            ignoreDiscs: db.settings.renumberIgnoreDiscs,
+            leadingZeros: db.settings.totalLeadingZeros,
+          })
         : null;
     for (const track of targets) {
       const tags = await tagEditor.readTags(track.path),
@@ -973,10 +978,7 @@ app.whenReady().then(async () => {
       const [number, total] = raw.split('/');
       let value = raw;
       if (mode === 'renumber') {
-        const width = /^0\d+$/.test(number || '') ? number.length : 1;
-        value =
-          String(numbers.get(track.id)).padStart(width, '0') +
-          (total !== undefined && /^\d+$/.test(total) && Number(total) > 0 ? '/' + total : '');
+        value = numbers.get(track.id);
       } else if (mode === 'pad')
         value = number.padStart(2, '0') + (total !== undefined ? '/' + total.padStart(2, '0') : '');
       else if (mode === 'unpad')
@@ -1091,7 +1093,7 @@ app.whenReady().then(async () => {
     const targets = tagTracks(entries.map((e) => e.id)),
       entriesById = new Map(entries.map((e) => [e.id, e]));
     // Validate all files and edits before writing any. Recheck tokens again at commit.
-    for (const track of targets) {
+    await tagEditor.mapTagFiles(targets, async (track) => {
       const entry = entriesById.get(track.id);
       await tagEditor.prepareTags({
         file: track.path,
@@ -1099,12 +1101,12 @@ app.whenReady().then(async () => {
         remove: remove.filter((k) => (entry.extraKeys || []).includes(k)),
         token: entry.token,
       });
-    }
+    });
     const saved = [],
       failures = [],
       libraries = new Set(),
       records = [];
-    for (const track of targets) {
+    const outcomes = await tagEditor.mapTagFiles(targets, async (track) => {
       const entry = entriesById.get(track.id);
       try {
         const written = await tagEditor.writeTags({
@@ -1114,12 +1116,20 @@ app.whenReady().then(async () => {
           token: entry.token,
           backupStore: tagHistory.store,
         });
-        records.push({ id: track.id, backup: written.backup });
         track.mtime = -1;
-        saved.push(track.id);
-        libraries.add(track.libraryId);
+        return { track, backup: written.backup };
       } catch (error) {
-        failures.push({ id: track.id, name: path.basename(track.path), message: error.message });
+        return {
+          failure: { id: track.id, name: path.basename(track.path), message: error.message },
+        };
+      }
+    });
+    for (const outcome of outcomes) {
+      if (outcome.failure) failures.push(outcome.failure);
+      else {
+        records.push({ id: outcome.track.id, backup: outcome.backup });
+        saved.push(outcome.track.id);
+        libraries.add(outcome.track.libraryId);
       }
     }
     for (const id of libraries) {

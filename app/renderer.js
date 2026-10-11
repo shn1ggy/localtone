@@ -182,7 +182,10 @@ const { toggleMini, setQueueVisible, revealPlayingQueueItem } = windowPresentati
 window.addEventListener('beforeunload', () => windowPresentation.dispose());
 function toast(message, persistent = false) {
   clearTimeout(toastTimer);
-  $('toast').textContent = message;
+  $('toast').textContent = String(message).replace(
+    /^Error invoking remote method '[^']+': (?:Error: )?/,
+    '',
+  );
   $('toast').hidden = false;
   positionNotice();
   if (!persistent) toastTimer = setTimeout(() => ($('toast').hidden = true), 5500);
@@ -4326,7 +4329,7 @@ function paintPaneFocus(pulse = true) {
   overlay.classList.remove('pane-focus-pulse');
   if (pulse) {
     const bounds = node.getBoundingClientRect(),
-      tracks = document.querySelector('.library-content').getBoundingClientRect(),
+      tracks = document.querySelector('.library-content > .view-toolbar').getBoundingClientRect(),
       queue = $('queue-panel'),
       queueLeft = queue.hidden ? window.innerWidth : queue.getBoundingClientRect().left,
       left =
@@ -4343,6 +4346,7 @@ function paintPaneFocus(pulse = true) {
             : Math.min(window.innerWidth, queueLeft);
     overlay.style.left = `${left}px`;
     overlay.style.width = `${Math.max(0, right - left)}px`;
+    overlay.style.height = `${selection.pane === 'sidebar' ? window.innerHeight : document.querySelector('.waveform-dock').getBoundingClientRect().top}px`;
     void overlay.offsetWidth;
     overlay.classList.add('pane-focus-pulse');
   }

@@ -1,17 +1,17 @@
 # Localtone
 
-A compact local music player for macOS, Windows and Linux. **0.118.0 — early access.**
+A compact local music player for macOS, Windows and Linux. **0.119.0 — early access.**
 
 ## Download
 
-[All downloads and release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.118.0)
+[All downloads and release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.119.0)
 
 | System | Download |
 | --- | --- |
-| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.118.0/Localtone-0.118.0-mac-arm64.zip) |
-| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.118.0/Localtone-0.118.0-mac-x64.zip) |
-| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.118.0/Localtone-0.118.0-win-x64.zip) |
-| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v0.118.0/Localtone-0.118.0-linux-x86_64.AppImage) |
+| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.119.0/Localtone-0.119.0-mac-arm64.zip) |
+| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.119.0/Localtone-0.119.0-mac-x64.zip) |
+| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.119.0/Localtone-0.119.0-win-x64.zip) |
+| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v0.119.0/Localtone-0.119.0-linux-x86_64.AppImage) |
 
 These desktop packages include everything needed to run Localtone; Node.js is only needed to work with the source. Extract the complete ZIP, or make the Linux AppImage executable. Windows portable EXE and Linux ZIP are also on the release page. These early-access builds have no verified publisher identity. Mac bundles are ad-hoc signed for integrity but are not Apple notarized; macOS may require approval in Privacy & Security. Version 0.115 fixed Mac bundle signing; 0.118 fixes early-access update discovery and Electron redirect handling. Versions 0.117 and earlier need one manual download.
 
@@ -123,4 +123,4 @@ Double-click a playlist to play a random song with the full collection queue and
 
 About → Check for updates offers the matching verified desktop ZIP from public GitHub Releases. Starting with 0.118, early-access versions (0.x) also check published pre-releases; stable versions (1.x and later) follow stable releases. After downloading, extract it and use Prepare update… to transfer portable data. The app does not replace itself or restart automatically. No GitHub credentials are embedded or requested.
 
-**Updater correction:** Versions 0.116–0.117 can fail with “Redirect was cancelled” while fetching release checksums. Download 0.118 manually once; its updater uses Node networking inside Electron and retains redirect-host validation and SHA-256 checks.
+**Updater correction:** Versions 0.116–0.117 can fail with “Redirect was cancelled” while fetching release checksums. Download the current version manually once; its updater uses Node networking inside Electron and retains redirect-host validation and SHA-256 checks.

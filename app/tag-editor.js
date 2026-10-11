@@ -217,13 +217,30 @@ export function createTagEditor({
         : await write();
       if (disposed) return;
       onSaved(result);
-      applyTagState(result.state);
+
       if (result.failures?.length) {
         $('tag-error').textContent =
           `${result.saved.length} files saved. ${result.failures.map((f) => `${f.name}: ${f.message}`).join(' ')} Close and reopen the editor before retrying.`;
         $('tag-error').hidden = false;
         editingTag = null;
-      } else $('tag-dialog').close();
+      } else {
+        $('tag-dialog').close();
+        // Let the dialog disappear before a large library view is rebuilt.
+        const view = document.defaultView,
+          frame = view?.requestAnimationFrame;
+        if (frame && document.visibilityState !== 'hidden')
+          await new Promise((resolve) => {
+            // A minimized/background window may stop animation frames mid-save.
+            const timer = view.setTimeout(resolve, 50);
+            frame.call(view, () =>
+              frame.call(view, () => {
+                view.clearTimeout(timer);
+                resolve();
+              }),
+            );
+          });
+      }
+      applyTagState(result.state);
       if (active) {
         $('now-title').textContent = getTrack(activeId)?.title || '';
         $('now-artist').textContent = getTrack(activeId)?.artist || '';

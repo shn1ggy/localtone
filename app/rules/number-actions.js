@@ -46,7 +46,35 @@
     }
     return numbers;
   }
-  const api = { canRenumber, numberActionNeeded, folderNumbers };
+  function folderNumberTags(tracks, { ignoreDiscs = false, leadingZeros = false } = {}) {
+    const numbers = folderNumbers(tracks, ignoreDiscs),
+      totals = new Map();
+    const group = (track) => (ignoreDiscs ? 1 : Number(track.disc) || 1);
+    for (const track of tracks) totals.set(group(track), (totals.get(group(track)) || 0) + 1);
+    return new Map(
+      tracks.map((track) => {
+        const total = String(totals.get(group(track))),
+          original = rawNumber(track).split('/');
+        const width = leadingZeros
+          ? Math.max(2, total.length)
+          : /^0\d+$/.test(original[0])
+            ? original[0].length
+            : 1;
+        const totalWidth = leadingZeros
+          ? Math.max(2, total.length)
+          : /^0\d+$/.test(original[1] || '')
+            ? original[1].length
+            : 1;
+        return [
+          track.id,
+          String(numbers.get(track.id)).padStart(width, '0') +
+            '/' +
+            total.padStart(totalWidth, '0'),
+        ];
+      }),
+    );
+  }
+  const api = { canRenumber, numberActionNeeded, folderNumbers, folderNumberTags };
   root.LocaltoneNumbers = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(globalThis);

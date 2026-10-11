@@ -153,4 +153,23 @@ async function commitTags({
     await fs.rm(temporary, { force: true });
   }
 }
-module.exports = { readTags, writeTags, prepareTags, commitTags };
+// Bound MP3 buffers and simultaneous disk work; drain active tasks before rejecting.
+async function mapTagFiles(items, work) {
+  const results = new Array(items.length);
+  let next = 0,
+    failure;
+  async function worker() {
+    while (!failure && next < items.length) {
+      const index = next++;
+      try {
+        results[index] = await work(items[index], index);
+      } catch (error) {
+        failure ||= error;
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(2, items.length) }, worker));
+  if (failure) throw failure;
+  return results;
+}
+module.exports = { readTags, writeTags, prepareTags, commitTags, mapTagFiles };
