@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "0.116.0",
-  "commit": "10c68969039ffa9d476b1a8a047da5370c7f4a82",
-  "buildRun": 38151067454,
-  "tag": "v0.116.0",
+  "version": "0.117.0",
+  "commit": "53b7adfceb2686dea9465774f08c4de84df593e2",
+  "buildRun": 38152401267,
+  "tag": "v0.117.0",
   "attempt": 1,
-  "title": "Localtone 0.116.0 — Playback feedback and early-access updates"
+  "title": "Localtone 0.117.0 — Three-bar playback markers"
 }
