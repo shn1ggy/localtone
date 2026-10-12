@@ -8,3 +8,5 @@
 - Windows queue/mini transitions use one native resize with actual content bounds and shorter frame waits; round-trip geometry is checked in native Windows verification.
 
 This candidate is for testing before publication. No GitHub release is published by this change.
+
+Windows validation requires one resize in each direction and exact restored bounds; animated platforms retain intermediate-frame checks.
