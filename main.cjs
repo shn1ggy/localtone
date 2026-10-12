@@ -1698,7 +1698,7 @@ app.whenReady().then(async () => {
   if (browsingSession?.window?.maximized) win.maximize();
   // Keep Windows frame styles unchanged: toggling resizable changes its native border geometry.
   win.on?.('will-resize', (event) => {
-    if (miniMode) event.preventDefault();
+    if (miniMode && !motionActive) event.preventDefault();
   });
   // Never expose fallback markup or colors before saved preferences are applied.
   ipcMain.on('ui-ready', (event) => {

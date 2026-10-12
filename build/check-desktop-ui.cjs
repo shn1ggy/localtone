@@ -99,7 +99,7 @@ app.on('browser-window-created', (_event, win) => {
         for (const key of ['x', 'y', 'width', 'height'])
           assert.ok(
             Math.abs(actual[key] - bounds[key]) <= 1,
-            `Window ${key} drifted: ${bounds[key]} → ${actual[key]}`,
+            `Window ${key} drifted: ${JSON.stringify(bounds)} → ${JSON.stringify(actual)}`,
           );
       };
       await js(
