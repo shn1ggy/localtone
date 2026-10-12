@@ -39,6 +39,11 @@ app.on('browser-window-created', (_event, win) => {
     try {
       win.setContentSize(1440, 1000);
       win.webContents.setZoomFactor(1);
+      // Windows hosted runners disable OS animations. Exercise the animated branch explicitly.
+      win.webContents.debugger.attach('1.3');
+      await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', {
+        features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }],
+      });
       await delay(100);
       const js = (code) => win.webContents.executeJavaScript(code);
       const geometry = () =>
