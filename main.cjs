@@ -14,14 +14,14 @@ const {
 const { animateBounds } = require('./window-motion.cjs');
 let motionJobs = Promise.resolve(),
   motionActive = false,
-  normalVisualBounds = null,
-  motionContentSize = null;
+  normalVisualBounds = null;
 const gaplessDecoder = new (require('./gapless-decoder.cjs').GaplessDecoder)(
   require('ffmpeg-static'),
 );
 const duplicates = require('./duplicates.cjs').createDuplicates();
 const numberActions = require('./app/rules/number-actions.js');
 const libraryRepair = require('./library-repair.cjs');
+const { validateFilters, compileFilters } = require('./library-filters.cjs');
 const { deleteSelectedFiles } = require('./delete-files.cjs');
 const fileNaming = require('./file-naming.cjs'),
   naming = fileNaming.createFileNaming();
@@ -197,6 +197,7 @@ function scan(
         files,
         root: library.root,
         libraryId: library.id,
+        filters: library.filters,
         covers,
         previous,
       },
@@ -223,10 +224,15 @@ async function importLibrary(library, files = null, preserveRatings = false, qui
     const updates = new Map(result.tracks.map((t) => [t.id, t]));
     db.tracks = db.tracks.map((t) => updates.get(t.id) || t);
   } else {
+    const excluded = compileFilters(library.root, library.filters);
     const found = new Set(result.tracks.map((t) => t.id)),
       missing = db.tracks
         .filter((t) => t.libraryId === library.id && !found.has(t.id))
-        .map((t) => ({ ...t, missing: true }));
+        .map((t) => ({
+          ...t,
+          excluded: excluded(t.path),
+          missing: excluded(t.path) ? false : true,
+        }));
     db.tracks = db.tracks.filter((t) => t.libraryId !== library.id).concat(result.tracks, missing);
   }
   const valid = new Set(db.tracks.map((t) => t.id));
@@ -597,12 +603,8 @@ app.whenReady().then(async () => {
     return { ...playbackHistory };
   });
   const runWindowAction = async (action, size) => {
-    const animated = size?.animate === true;
-    motionContentSize = null;
+    const animated = size?.animate === true && process.platform !== 'win32';
     const resize = (target) => {
-      const [ow, oh] = win.getSize(),
-        [cw, ch] = win.getContentSize();
-      motionContentSize = [target.width - (ow - cw), target.height - (oh - ch)];
       return animated ? animateBounds(win, target) : win.setBounds(target);
     };
     if (action === 'queue-open') return !miniMode && queueWindow.open(win, screen, 224, resize);
@@ -682,9 +684,7 @@ app.whenReady().then(async () => {
       motionActive = true;
       try {
         const value = await runWindowAction(action, size);
-        return size?.report
-          ? { value, contentSize: motionContentSize || win.getContentSize() }
-          : value;
+        return size?.report ? { value, contentSize: win.getContentSize() } : value;
       } finally {
         motionActive = false;
       }
@@ -1497,6 +1497,12 @@ app.whenReady().then(async () => {
     index();
     await save();
     return snapshot();
+  });
+  handle('configure-library', async (id, filters) => {
+    const library = db.libraries.find((item) => item.id === id && !item.importedFiles);
+    if (!library) throw Error('Library not found.');
+    library.filters = validateFilters(filters);
+    return importLibrary(library);
   });
   handle('rename-library', async (id, name) => {
     const library = db.libraries.find((l) => l.id === id);

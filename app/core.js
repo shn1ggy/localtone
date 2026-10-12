@@ -73,6 +73,7 @@ export function selectTracks(
       : state.tracks.filter(
           (t) =>
             !t.missing &&
+            !t.excluded &&
             !importedLibraries.has(t.libraryId) &&
             (scope.kind !== 'library' || t.libraryId === scope.id),
         );

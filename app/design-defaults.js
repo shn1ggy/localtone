@@ -29,7 +29,7 @@ export const designDefaults = {
   sidebarWidth: 242,
   artistWidth: 288,
   artistSort: 'name',
-  albumExpansion: 'collapsed',
+  albumExpansion: 'expanded',
   columns: [
     {
       key: 'number',

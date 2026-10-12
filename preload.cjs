@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('localtone', {
+  platform: process.platform,
   onGlobalPlayback: (callback) => {
     ipcRenderer.on('global-playback', (_event, action) => callback(action));
   },
@@ -64,6 +65,7 @@ contextBridge.exposeInMainWorld('localtone', {
   rescan: (id) => ipcRenderer.invoke('rescan', id),
   deleteLibrary: (id) => ipcRenderer.invoke('delete-library', id),
   deleteFiles: (ids) => ipcRenderer.invoke('delete-files', ids),
+  configureLibrary: (id, filters) => ipcRenderer.invoke('configure-library', id, filters),
   renameLibrary: (id, name) => ipcRenderer.invoke('rename-library', id, name),
   filePath: (file) => webUtils.getPathForFile(file),
   importPlaylistFiles: (id, paths) => ipcRenderer.invoke('import-playlist-files', id, paths),

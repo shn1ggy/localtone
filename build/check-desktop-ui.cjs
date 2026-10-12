@@ -1,0 +1,228 @@
+// Real Chromium/native-window regression checks. Isolated data, never user music.
+const electron = require('electron');
+const { app, BrowserWindow, screen } = electron;
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
+const assert = require('node:assert/strict');
+const root = path.resolve(__dirname, '..');
+const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'localtone-ui-'));
+app.setPath('userData', temporary);
+// The check uses an isolated instance; no OS singleton socket is required.
+app.requestSingleInstanceLock = () => true;
+app.on('quit', () => {
+  fs.rmSync(temporary, { recursive: true, force: true });
+});
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const fail = (error) => {
+  console.error(error);
+  app.exit(1);
+};
+setTimeout(() => fail(Error('Native UI check timed out.')), 60000).unref();
+app.on('browser-window-created', (_event, win) => {
+  win.webContents.once('did-finish-load', async () => {
+    try {
+      win.setContentSize(1440, 1000);
+      win.webContents.setZoomFactor(1);
+      await delay(100);
+      const js = (code) => win.webContents.executeJavaScript(code);
+      const geometry = () =>
+        js(
+          `(()=>{const result={};for(const id of ['empty-add','empty-import','view-albums','view-covers','view-tracks','sort','volume','queue']){const b=document.getElementById(id),r=b.getBoundingClientRect(),s=getComputedStyle(b);result[id]={x:r.x,y:r.y,width:r.width,height:r.height,font:s.fontSize,line:s.lineHeight,padding:s.padding,color:s.color,background:s.backgroundColor,text:b.textContent};}return result;})()`,
+        );
+      const before = await geometry();
+      for (const id of ['empty-add', 'empty-import']) {
+        assert.equal(before[id].height, 28);
+        assert.equal(before[id].font, '13px');
+        assert.equal(before[id].line, '20px');
+      }
+      await js("document.getElementById('empty-add').click()");
+      win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'ESC' });
+      await delay(60);
+      assert.equal(await js("document.getElementById('name-dialog').open"), false);
+      const cancelled = await geometry();
+      assert.equal(cancelled['empty-add'].text, 'Add library…');
+      assert.notEqual(cancelled['empty-add'].color, cancelled['empty-add'].background);
+      await js(
+        "document.getElementById('view-tracks').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:600,clientY:40}))",
+      );
+      const menu = await js(
+        "(()=>{const b=document.querySelector('#track-actions button'),m=document.getElementById('track-actions');return {height:b.getBoundingClientRect().height,font:getComputedStyle(b).fontSize,scroll:m.scrollHeight>m.clientHeight}})()",
+      );
+      assert.equal(menu.height, 28);
+      assert.equal(menu.font, '12px');
+      assert.equal(menu.scroll, false);
+      await js("document.querySelector('#track-actions button').click()");
+      assert.equal(await js("document.getElementById('context-menu').hidden"), true);
+      const bounds = win.getBounds();
+      const start = Date.now();
+      await js("document.getElementById('queue').click()");
+      await delay(350);
+      assert.equal(await js("document.body.classList.contains('queue-extended')"), true);
+      await js("document.getElementById('queue').click()");
+      await delay(350);
+      const after = await geometry();
+      for (const id of ['view-albums', 'view-covers', 'view-tracks', 'sort', 'volume', 'queue'])
+        for (const key of ['x', 'y', 'width', 'height'])
+          assert.ok(Math.abs(before[id][key] - after[id][key]) <= 1, `${id} ${key} shifted`);
+      assert.deepEqual(win.getBounds(), bounds);
+      await js(
+        "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true}))",
+      );
+      await delay(250);
+      assert.equal(await js("document.body.classList.contains('mini-player')"), true);
+      await js(
+        "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true}))",
+      );
+      await delay(250);
+      assert.equal(await js("document.body.classList.contains('mini-player')"), false);
+      assert.deepEqual(win.getBounds(), bounds);
+      assert.equal(await js("document.body.classList.contains('window-transition')"), false);
+      const music = path.join(temporary, 'Music');
+      fs.mkdirSync(music);
+      for (const name of ['song.mp3', 'preview.mp3'])
+        fs.copyFileSync(path.join(root, 'test', 'fixtures', 'tone.mp3'), path.join(music, name));
+      electron.dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [music] });
+      await js(
+        "document.getElementById('empty-add').click();document.getElementById('name-form').requestSubmit(document.getElementById('name-save'))",
+      );
+      for (let i = 0; i < 100; i++) {
+        if (
+          await js(
+            "!!document.querySelector('#libraries [data-source-kind]') && !document.getElementById('add-library').disabled",
+          )
+        )
+          break;
+        await delay(50);
+      }
+      await js(
+        "document.querySelector('#libraries [data-source-kind]').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:120,clientY:120}));[...document.querySelectorAll('#track-actions button')].find(b=>b.textContent==='Library settings…').click()",
+      );
+      if (process.env.UI_CHECK_CAPTURE) {
+        await delay(100);
+        win.webContents.invalidate();
+        fs.writeFileSync(
+          process.env.UI_CHECK_CAPTURE.replace('.png', '-library.png'),
+          (await win.webContents.capturePage()).toPNG(),
+        );
+      }
+      assert.equal(
+        await js(
+          "getComputedStyle(document.querySelector('#library-settings-dialog h2')).fontSize",
+        ),
+        '18px',
+      );
+      assert.equal(
+        await js(
+          "getComputedStyle(document.querySelector('#library-settings-dialog h3')).fontSize",
+        ),
+        '13px',
+      );
+      const centers = await js(
+        "[...document.querySelectorAll('#library-settings-dialog .setting-row')].map(row=>{const l=row.querySelector('label').getBoundingClientRect(),c=row.querySelector('input').getBoundingClientRect();return Math.abs(l.top+l.height/2-c.top-c.height/2);})",
+      );
+      assert.ok(centers.every((value) => value <= 0.5));
+      const rows = await js(
+        "[...document.querySelectorAll('#library-settings-dialog .setting-row input')].map(b=>({width:b.getBoundingClientRect().width,height:b.getBoundingClientRect().height,font:getComputedStyle(b).fontSize,type:b.type}))",
+      );
+      for (const row of rows) {
+        assert.equal(row.width, row.type === 'checkbox' ? 30 : 245);
+        assert.equal(row.height, row.type === 'checkbox' ? 17 : 28);
+        if (row.type !== 'checkbox') assert.equal(row.font, '13px');
+      }
+      assert.equal(
+        await js("document.getElementById('library-settings-close').getBoundingClientRect().width"),
+        28,
+      );
+      await js(
+        "document.getElementById('library-exclude-names').value='*preview*';document.getElementById('library-settings-form').requestSubmit(document.getElementById('library-settings-save'))",
+      );
+      for (let i = 0; i < 100; i++) {
+        if (!(await js("document.getElementById('library-settings-dialog').open"))) break;
+        await delay(50);
+      }
+      assert.equal(
+        await js(
+          '(async()=>{const s=await localtone.load();return s.tracks.filter(t=>!t.excluded&&!t.missing).length})()',
+        ),
+        1,
+      );
+      await js(
+        "HTMLMediaElement.prototype.play=async()=>{};document.getElementById('audio').onerror=null;document.getElementById('view-albums').click();document.querySelector('#libraries [data-source-kind]').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));void 0",
+      );
+      assert.equal(
+        await js("!!document.querySelector('.album-section.album-playing .album-info')"),
+        true,
+      );
+      const titleColor = await js(
+        "getComputedStyle(document.querySelector('.album-playing .album-info')).color",
+      );
+      await js("document.querySelector('.album-side-cover, .album-expand .cover').click()");
+      assert.equal(
+        await js("getComputedStyle(document.querySelector('.album-playing .album-info')).color"),
+        titleColor,
+      );
+      const menuMetrics = await js(
+        "(()=>{document.querySelector('.album-expand').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:600,clientY:120}));const m=document.getElementById('context-menu'),a=document.getElementById('track-actions');return {outer:m.scrollHeight>m.clientHeight,inner:a.scrollHeight>a.clientHeight,height:m.getBoundingClientRect().height}})()",
+      );
+      assert.equal(menuMetrics.outer, false);
+      assert.equal(menuMetrics.inner, false);
+      await js(
+        "[...document.querySelectorAll('#track-actions button')].find(b=>b.dataset.playlistSubmenu).click()",
+      );
+      const fonts = await js(
+        "({main:getComputedStyle(document.querySelector('#track-actions button')).fontSize,sub:getComputedStyle(document.querySelector('.playlist-submenu button')).fontSize})",
+      );
+      assert.equal(fonts.main, fonts.sub);
+      await delay(100);
+      if (process.env.UI_CHECK_CAPTURE)
+        fs.writeFileSync(
+          process.env.UI_CHECK_CAPTURE,
+          (await win.webContents.capturePage()).toPNG(),
+        );
+      console.log(
+        JSON.stringify({
+          platform: process.platform,
+          zoom: 1,
+          queueRoundTripAndMiniChecks: true,
+          milliseconds: Date.now() - start,
+        }),
+      );
+      BrowserWindow.getAllWindows().forEach((window) => window.hide());
+      app.quit();
+    } catch (error) {
+      fail(error);
+    }
+  });
+});
+const Module = require('node:module');
+const load = Module._load;
+Module._load = function (name, ...args) {
+  if (name === './portable.cjs')
+    return { ...load.call(this, name, ...args), configurePortable() {} };
+  if (name !== 'electron') return load.call(this, name, ...args);
+  const desktopScreen = Object.create(screen);
+  Object.defineProperty(desktopScreen, 'getDisplayMatching', {
+    value: (bounds) => ({
+      ...screen.getDisplayMatching(bounds),
+      workArea: { x: 0, y: 0, width: 4000, height: 2200 },
+    }),
+  });
+  return {
+    ...electron,
+    screen: desktopScreen,
+    BrowserWindow:
+      process.platform === 'linux'
+        ? class extends BrowserWindow {
+            constructor(options) {
+              super({
+                ...options,
+                webPreferences: { ...options.webPreferences, offscreen: true, sandbox: false },
+              });
+            }
+          }
+        : BrowserWindow,
+  };
+};
+require('../main.cjs');
+Module._load = load;

@@ -93,7 +93,7 @@ const defaults = Object.freeze({
   shuffle: false,
   repeat: 0,
   artistSort: 'name',
-  albumExpansion: 'collapsed',
+  albumExpansion: 'expanded',
   columns: columns.defaults,
   columnsByView: Object.fromEntries(
     ['tracks', 'playlists', 'albums'].map((key) => [key, columns.defaults.map((c) => ({ ...c }))]),

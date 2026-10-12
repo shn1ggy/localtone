@@ -7,6 +7,7 @@ export function createWindowPresentation({
   syncPaneBounds,
   toast,
 }) {
+  const fastNativeResize = api.platform === 'win32';
   const $ = (id) => document.getElementById(id);
   let windowTransition = false,
     normalLayout = null,
@@ -33,7 +34,9 @@ export function createWindowPresentation({
   function paintFrame() {
     return new Promise((resolve) =>
       typeof window.requestAnimationFrame === 'function'
-        ? window.requestAnimationFrame(() => window.requestAnimationFrame(resolve))
+        ? window.requestAnimationFrame(() =>
+            fastNativeResize ? resolve() : window.requestAnimationFrame(resolve),
+          )
         : resolve(),
     );
   }
@@ -43,7 +46,7 @@ export function createWindowPresentation({
       start = Date.now();
     while (
       (Math.abs(window.innerWidth - width) > 1 || Math.abs(window.innerHeight - height) > 1) &&
-      Date.now() - start < 500
+      Date.now() - start < (fastNativeResize ? 120 : 500)
     )
       await new Promise((resolve) => window.requestAnimationFrame(resolve));
   }
@@ -51,7 +54,7 @@ export function createWindowPresentation({
     return result && typeof result === 'object' && 'value' in result ? result.value : result;
   }
   function motionEnabled() {
-    return !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    return !fastNativeResize && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   }
   function freezeLayout(width, height, { player = false } = {}) {
     windowTransition = true;

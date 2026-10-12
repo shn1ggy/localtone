@@ -1,6 +1,8 @@
 import { parentPort, workerData } from 'node:worker_threads';
 import { readdir, stat, mkdir, writeFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import libraryFilters from './library-filters.cjs';
+const excluded = libraryFilters.compileFilters(workerData.root, workerData.filters);
 import { createHash } from 'node:crypto';
 import NodeID3 from 'node-id3';
 import ratingTags from './rating-tags.cjs';
@@ -17,7 +19,9 @@ const extensions = new Set([
   '.aif',
 ]);
 const hash = (value) => createHash('sha256').update(value).digest('hex');
-const old = new Map(workerData.previous.map((t) => [t.path, t]));
+const old = new Map(
+  workerData.previous.map((t) => [t.path, t.excluded ? { ...t, excluded: false } : t]),
+);
 let scanned = 0,
   warnings = 0;
 async function walk(folder) {
@@ -28,6 +32,7 @@ async function walk(folder) {
   const output = [];
   for (const entry of entries) {
     const filename = workerData.files ? entry.name : path.join(folder, entry.name);
+    if (excluded(filename, entry.isDirectory())) continue;
     if (entry.isDirectory()) output.push(...(await walk(filename)));
     else if (entry.isFile() && extensions.has(path.extname(filename).toLowerCase())) {
       const info = await stat(filename);

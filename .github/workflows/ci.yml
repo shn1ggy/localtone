@@ -26,6 +26,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verify
+      - name: Native Windows UI and window transitions
+        if: runner.os == 'Windows'
+        run: npm run verify:desktop-ui
       - run: npm run benchmark
       - name: Album and queue benchmark
         run: npm run benchmark

@@ -1,6 +1,6 @@
 {
   "name": "localtone",
-  "version": "0.125.0",
+  "version": "0.126.0",
   "private": true,
   "description": "A local-first desktop music player",
   "author": "Localtone",
@@ -15,6 +15,7 @@
     "format": "prettier --write \"*.{cjs,mjs}\" \"app/**/*.{js,css,html}\" \"build/**/*.{cjs,mjs}\"",
     "verify": "npm run lint && npm run format:check && npm test",
     "benchmark": "node benchmark-render.mjs",
+    "verify:desktop-ui": "electron build/check-desktop-ui.cjs",
     "release:source": "node build/release.mjs source",
     "release:mac": "node build/release.mjs mac",
     "release:win": "node build/release.mjs win",
@@ -57,6 +58,7 @@
       "settings-transfer.cjs",
       "queue-window.cjs",
       "library-repair.cjs",
+      "library-filters.cjs",
       "delete-files.cjs",
       "gapless-decoder.cjs",
       "window-motion.cjs",

@@ -99,7 +99,7 @@ let prefs = {
   shuffle: false,
   repeat: 0,
   artistSort: 'name',
-  albumExpansion: 'collapsed',
+  albumExpansion: 'expanded',
   columns: columnDefaults,
 };
 prefs = { ...prefs, ...structuredClone(designDefaults) };
@@ -360,7 +360,7 @@ function renderSidebar() {
       const tracks =
         kind === 'playlist'
           ? playlistTracks(state, item)
-          : state.tracks.filter((t) => !t.missing && t.libraryId === item.id);
+          : state.tracks.filter((t) => !t.missing && !t.excluded && t.libraryId === item.id);
       const minutes = Math.round(tracks.reduce((n, t) => n + (Number(t.duration) || 0), 0) / 60);
       button.title = `${item.name}${dynamic ? ' · Dynamic playlist' : ''}\n${tracks.length.toLocaleString()} tracks · ${minutes.toLocaleString()} minutes`;
       button.classList.toggle('active', scope.kind === kind && scope.id === item.id);
@@ -374,9 +374,15 @@ function renderSidebar() {
   syncPlaybackMarkers();
 }
 function syncPlaybackMarkers() {
+  const playing = currentTrack()?.id;
+  for (const section of document.querySelectorAll('.album-section'))
+    section.classList.toggle('album-playing', section._trackIds?.includes(playing) || false);
   for (const marker of document.querySelectorAll('.playback-marker')) {
     if (!marker.closest('.playing-source, tr.current')) marker.remove();
   }
+  const playingAlbum = currentTrack() ? albumKey(currentTrack()) : null;
+  for (const button of document.querySelectorAll('.album-cover-button'))
+    button.classList.toggle('album-playing', button.dataset.albumKey === playingAlbum);
   for (const node of document.querySelectorAll('.playing-source, tr.current .track-name')) {
     if (!node.querySelector('.playback-marker')) {
       const marker = icon('playback');
@@ -455,12 +461,12 @@ function render({ preserveScroll = false } = {}) {
   $('empty-import').hidden = !firstLaunch;
   $('empty-import').disabled = busy || !api?.settingsTransfer;
   if (firstLaunch) {
-    $('empty-title').textContent = 'Add a library';
+    $('empty-title').textContent = 'Add a library.';
     $('empty').querySelector('p').textContent =
       'Choose a music folder, or import a Localtone settings backup.';
     $('empty-add').hidden = false;
   } else {
-    $('empty-title').textContent = query ? 'No matching tracks' : 'No tracks';
+    $('empty-title').textContent = query ? 'No matching tracks.' : 'No tracks.';
     const needsLibrary =
       scope.kind === 'all' && !query && !state.libraries.some((l) => !l.importedFiles);
     $('empty').querySelector('p').textContent = query
@@ -1768,6 +1774,10 @@ function renderBrowser(viewportTop = document.querySelector('.content-scroll').s
       makeDraggable(button, () => ({ ids: album.tracks.map((track) => track.id) }));
       button.append(cover(album.cover));
       button.dataset.albumKey = album.key;
+      button.classList.toggle(
+        'album-playing',
+        album.tracks.some((track) => track.id === currentTrack()?.id),
+      );
       button.onpointermove = () => button.classList.add('cover-hover');
       button.onpointerleave = () => button.classList.remove('cover-hover');
       button.classList.toggle(
@@ -1835,6 +1845,10 @@ function renderBrowser(viewportTop = document.querySelector('.content-scroll').s
     section._trackIds = album.tracks.map((t) => t.id);
     section.classList.toggle('album-selected', selection.albums.has(album.key));
     section.classList.toggle('album-open', open);
+    section.classList.toggle(
+      'album-playing',
+      album.tracks.some((track) => track.id === currentTrack()?.id),
+    );
     section.classList.toggle(
       'album-has-selection',
       album.tracks.some((t) => selection.tracks.has(t.id)),
@@ -2386,6 +2400,7 @@ function showCollectionActions(item, kind, event) {
       );
   });
   if (kind === 'library') {
+    add('Library settings…', () => openLibrarySettings(item));
     add('Reconnect folder…', () =>
       operation(() => api.reconnectLibrary(item.id), 'Checking the new folder…'),
     );
@@ -5788,3 +5803,58 @@ if (api.refreshLibraries) {
     window.removeEventListener('focus', focused);
   });
 }
+
+let editingLibrary = null;
+function openLibrarySettings(library) {
+  editingLibrary = library.id;
+  $('library-settings-name').textContent = library.name;
+  const filters = library.filters || {};
+  for (const [field, key] of [
+    ['folders', 'folders'],
+    ['types', 'fileTypes'],
+    ['names', 'fileNames'],
+  ])
+    $('library-exclude-' + field).value = (filters[key] || []).join(', ');
+  $('library-exclude-hidden').checked = !!filters.hiddenFolders;
+  $('library-settings-error').hidden = true;
+  dialogs.open($('library-settings-dialog'));
+  $('library-exclude-folders').focus();
+}
+setIcon($('library-settings-close'), 'close');
+$('library-settings-close').onclick = $('library-settings-cancel').onclick = () => {
+  if (!busy) $('library-settings-dialog').close();
+};
+$('library-settings-dialog').addEventListener('cancel', (event) => {
+  if (busy) event.preventDefault();
+});
+$('library-settings-form').onsubmit = async (event) => {
+  event.preventDefault();
+  if (busy || !editingLibrary) return;
+  const filters = { hiddenFolders: $('library-exclude-hidden').checked };
+  for (const [field, key] of [
+    ['folders', 'folders'],
+    ['types', 'fileTypes'],
+    ['names', 'fileNames'],
+  ])
+    filters[key] = $('library-exclude-' + field)
+      .value.split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+  const controls = [...$('library-settings-form').querySelectorAll('input,button')];
+  controls.forEach((control) => (control.disabled = true));
+  try {
+    const result = await operation(
+      () => api.configureLibrary(editingLibrary, filters),
+      'Checking your library…',
+    );
+    if (result) {
+      $('library-settings-dialog').close();
+      render({ preserveScroll: true });
+    } else {
+      $('library-settings-error').textContent = $('toast').textContent;
+      $('library-settings-error').hidden = false;
+    }
+  } finally {
+    controls.forEach((control) => (control.disabled = false));
+  }
+};

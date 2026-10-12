@@ -150,11 +150,12 @@
                       ><tbody id="tracks"></tbody></table
                   ></div>
                   <div id="empty" aria-labelledby="empty-title"
-                    ><h2 id="empty-title">Add a library</h2
+                    ><h2 id="empty-title">Add a library.</h2
                     ><p>Choose a music folder, or import a Localtone settings backup.</p
                     ><div class="empty-actions"
-                      ><button type="button" id="empty-add" class="primary">Add library…</button
-                      ><button type="button" id="empty-import" class="chip"
+                      ><button type="button" id="empty-add" class="primary dialog-button"
+                        >Add library…</button
+                      ><button type="button" id="empty-import" class="chip dialog-button"
                         >Import settings…</button
                       ></div
                     ><p id="empty-status" role="status" hidden></p
@@ -213,6 +214,57 @@
         ></form
       ></dialog
     >
+    <dialog id="library-settings-dialog" class="library-settings-dialog">
+      <form id="library-settings-form">
+        <div class="settings-heading"
+          ><h2>Library settings</h2
+          ><button
+            type="button"
+            id="library-settings-close"
+            class="dialog-close"
+            aria-label="Close library settings"
+          ></button
+        ></div>
+        <div class="library-settings-content">
+          <p id="library-settings-name" class="settings-note"></p>
+          <section class="preference-group"
+            ><h3>Exclusions</h3>
+            <div class="setting-row"
+              ><label for="library-exclude-folders">Folder names</label
+              ><input id="library-exclude-folders" placeholder="Demos, Temp"
+            /></div>
+            <div class="setting-row"
+              ><label for="library-exclude-types">File types</label
+              ><input id="library-exclude-types" placeholder="wav, aiff"
+            /></div>
+            <div class="setting-row"
+              ><label for="library-exclude-names">Filename patterns</label
+              ><input id="library-exclude-names" placeholder="*demo*, preview*"
+            /></div>
+            <div class="setting-row"
+              ><label for="library-exclude-hidden">Dot-prefixed folders</label
+              ><input
+                id="library-exclude-hidden"
+                type="checkbox"
+                role="switch"
+                class="preference-switch"
+            /></div>
+          </section>
+          <p class="settings-note"
+            >Separate entries with commas. Folder names match at any depth; filename patterns
+            support * and ?. Music files and existing playlists stay intact.</p
+          >
+          <p id="library-settings-error" class="settings-note" role="alert" hidden></p>
+        </div>
+        <div class="dialog-actions"
+          ><button type="button" id="library-settings-cancel" class="chip dialog-button"
+            >Cancel</button
+          ><button type="submit" id="library-settings-save" class="primary dialog-button"
+            >Save and rescan</button
+          ></div
+        >
+      </form>
+    </dialog>
     <div id="context-menu" role="menu" aria-label="Actions" hidden
       ><div id="track-actions"></div
     ></div>

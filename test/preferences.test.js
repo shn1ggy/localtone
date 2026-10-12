@@ -100,3 +100,5 @@ test('disc-number display is off by default and persists only boolean preference
 
 
 test('new heading and confirmed removal bindings migrate without overwriting custom shortcuts',()=>{const old={...preferences.defaults.shortcuts};delete old.columnHeadings;delete old.deleteSelection;old.tags='Shift+x';const next=preferences.normalizeSettings({shortcuts:old}).shortcuts;assert.equal(next.tags,'Shift+x');assert.notEqual(next.columnHeadings,'Shift+x');assert.equal(next.deleteSelection,'Shift+Backspace');assert.equal(new Set(Object.values(next)).size,Object.keys(next).length);});
+
+test('new installs expand albums but explicitly saved collapsed preference remains collapsed',()=>{assert.equal(preferences.defaults.albumExpansion,'expanded');assert.equal(preferences.normalizeSettings({albumExpansion:'collapsed'}).albumExpansion,'collapsed');});

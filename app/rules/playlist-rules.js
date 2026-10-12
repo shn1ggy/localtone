@@ -228,6 +228,7 @@
   function matchesTrack(state, dynamic, track, now = Date.now()) {
     return (
       !track.missing &&
+      !track.excluded &&
       sourceLibraries(state, dynamic).has(track.libraryId) &&
       matcher(dynamic)(track, state, now)
     );
@@ -236,7 +237,11 @@
     const test = matcher(dynamic),
       libraries = sourceLibraries(state, dynamic);
     return state.tracks.filter(
-      (track) => !track.missing && libraries.has(track.libraryId) && test(track, state, now),
+      (track) =>
+        !track.missing &&
+        !track.excluded &&
+        libraries.has(track.libraryId) &&
+        test(track, state, now),
     );
   }
 

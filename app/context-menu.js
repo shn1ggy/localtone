@@ -1,7 +1,7 @@
 // Ellipses indicate actions that ask for additional input in a dialog.
 export function menuLabel(value) {
   const plain = value.trim().replace(/(?:\.\.\.|…)$/, '');
-  return /^(Edit tags|Rename|Rename files and folders|Playlist settings|Reconnect folder|Create playlist from selection|Delete files permanently)$/.test(
+  return /^(Edit tags|Rename|Rename files and folders|Playlist settings|Library settings|Reconnect folder|Create playlist from selection|Delete files permanently)$/.test(
     plain,
   )
     ? plain + '…'
@@ -31,10 +31,12 @@ export function normalizeMenu(menu) {
     tail = boundary < 0 ? [] : children.slice(boundary);
   const rank = (node) => {
     const t = node.textContent.trim();
-    if (/^Delete files permanently/.test(t)) return 7;
+    if (/^Delete files permanently/.test(t)) return 1;
     return /^(Add to play queue|Add to playlist|Create playlist from selection)/.test(t)
       ? 0
-      : /^(Edit tags|Rename|Rename files and folders|Playlist settings|Settings)/.test(t)
+      : /^(Edit tags|Rename|Rename files and folders|Playlist settings|Library settings|Settings)/.test(
+            t,
+          )
         ? 1
         : /^(Renumber|Add leading|Remove leading|Add.*total|Leading|Track numbers)/.test(t)
           ? 2
@@ -56,12 +58,21 @@ export function normalizeMenu(menu) {
           : /^Remove leading/.test(text)
             ? 2
             : 3;
+  const editOrder = (text) =>
+    /^Edit tags/.test(text)
+      ? 0
+      : /^Rename/.test(text)
+        ? 1
+        : /^(Delete files permanently|Library settings)/.test(text)
+          ? 2
+          : 3;
   const queueOrder = (text) =>
     /^Add to play queue/.test(text) ? 0 : /^Add to playlist/.test(text) ? 1 : 2;
   main.sort(
     (a, b) =>
       rank(a) - rank(b) ||
       (rank(a) === 0 ? queueOrder(a.textContent) - queueOrder(b.textContent) : 0) ||
+      (rank(a) === 1 ? editOrder(a.textContent) - editOrder(b.textContent) : 0) ||
       (rank(a) === 2 ? numberOrder(a.textContent) - numberOrder(b.textContent) : 0) ||
       (/^Edit tags/.test(a.textContent) ? -1 : /^Edit tags/.test(b.textContent) ? 1 : 0) ||
       (/^(Open folder)/.test(a.textContent) ? -1 : /^(Open folder)/.test(b.textContent) ? 1 : 0),

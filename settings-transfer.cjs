@@ -62,9 +62,15 @@ function validateCollections(value) {
     trackIds = ids(value.tracks);
   ids(value.playlists);
   const text = (v) => typeof v === 'string' && v.length <= 32768 && !v.includes('\0');
-  const libraries = value.libraries.map(({ id, name, root }) => {
+  const libraries = value.libraries.map(({ id, name, root, filters, importedFiles }) => {
     if (!text(name) || !name.trim() || !text(root) || !root) throw Error('Invalid library backup.');
-    return { id, name, root };
+    return {
+      id,
+      name,
+      root,
+      ...(filters ? { filters: require('./library-filters.cjs').validateFilters(filters) } : {}),
+      ...(importedFiles === true ? { importedFiles: true } : {}),
+    };
   });
   const tracks = value.tracks.map((item) => {
     if (!text(item.path) || !item.path || !libraryIds.has(item.libraryId))
@@ -77,6 +83,7 @@ function validateCollections(value) {
       mtime: 0,
       size: Number.isSafeInteger(item.size) && item.size >= 0 ? item.size : 0,
       missing: false,
+      excluded: item.excluded === true,
     };
     if (item.size != null && (!Number.isSafeInteger(item.size) || item.size < 0))
       throw Error('Invalid file size in collection backup.');
