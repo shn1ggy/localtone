@@ -37,7 +37,15 @@ setTimeout(() => fail(Error('Native UI check timed out.')), 60000).unref();
 app.on('browser-window-created', (_event, win) => {
   win.webContents.once('did-finish-load', async () => {
     try {
-      win.setContentSize(1440, 1000);
+      const area = screen.getPrimaryDisplay().workArea;
+      const viewport =
+        process.platform === 'win32'
+          ? [
+              Math.max(1200, Math.min(1440, area.width - 320)),
+              Math.max(740, Math.min(1000, area.height - 80)),
+            ]
+          : [1440, 1000];
+      win.setContentSize(...viewport);
       win.webContents.setZoomFactor(1);
       // Windows hosted runners disable OS animations. Exercise the animated branch explicitly.
       win.webContents.debugger.attach('1.3');
@@ -92,6 +100,19 @@ app.on('browser-window-created', (_event, win) => {
       await js("document.querySelector('#track-actions button').click()");
       assert.equal(await js("document.getElementById('context-menu').hidden"), true);
       console.log('UI_CHECK cancellation and menus passed');
+      const settled = async (mini = false) => {
+        const deadline = Date.now() + 2500;
+        do {
+          await delay(20);
+          if (
+            await js(
+              `!document.body.classList.contains('window-transition') && document.body.classList.contains('mini-player') === ${mini}`,
+            )
+          )
+            return;
+        } while (Date.now() < deadline);
+        throw Error('Window presentation did not settle.');
+      };
       const bounds = win.getBounds();
       const start = Date.now();
       const stableBounds = () => {
@@ -107,7 +128,7 @@ app.on('browser-window-created', (_event, win) => {
       );
       for (let cycle = 0; cycle < 10; cycle++) {
         await js("document.getElementById('queue').click()");
-        await delay(350);
+        await settled();
         if (process.platform === 'win32')
           assert.equal(
             await js('window.__queueRevealCalls'),
@@ -116,17 +137,17 @@ app.on('browser-window-created', (_event, win) => {
           );
         assert.equal(await js("document.body.classList.contains('queue-extended')"), true);
         await js("document.getElementById('queue').click()");
-        await delay(350);
+        await settled();
         stableBounds();
         await js(
           "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true}))",
         );
-        await delay(250);
+        await settled(true);
         assert.equal(await js("document.body.classList.contains('mini-player')"), true);
         await js(
           "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true}))",
         );
-        await delay(250);
+        await settled();
         assert.equal(await js("document.body.classList.contains('mini-player')"), false);
         stableBounds();
       }
@@ -184,7 +205,7 @@ app.on('browser-window-created', (_event, win) => {
         ),
         '13px',
       );
-      win.setContentSize(1440, 800);
+      win.setContentSize(viewport[0], Math.min(800, viewport[1]));
       await delay(60);
       assert.equal(
         await js(
@@ -192,7 +213,7 @@ app.on('browser-window-created', (_event, win) => {
         ),
         true,
       );
-      win.setContentSize(1440, 1000);
+      win.setContentSize(...viewport);
       await delay(60);
       const centers = await js(
         "[...document.querySelectorAll('#library-settings-dialog .setting-row')].filter(row=>!row.hidden).map(row=>{const l=row.querySelector('label').getBoundingClientRect(),c=row.querySelector('input').getBoundingClientRect();return Math.abs(l.top+l.height/2-c.top-c.height/2);})",

@@ -32,13 +32,25 @@ export function createWindowPresentation({
   };
   window.addEventListener('resize', onResize);
   function paintFrame() {
-    return new Promise((resolve) =>
-      typeof window.requestAnimationFrame === 'function'
-        ? window.requestAnimationFrame(() =>
-            fastNativeResize ? resolve() : window.requestAnimationFrame(resolve),
-          )
-        : resolve(),
-    );
+    return new Promise((resolve) => {
+      if (typeof window.requestAnimationFrame !== 'function') {
+        resolve();
+        return;
+      }
+      let frame, timer;
+      const finish = () => {
+        if (timer) window.clearTimeout(timer);
+        if (frame) window.cancelAnimationFrame?.(frame);
+        resolve();
+      };
+      // A partially offscreen/native-resizing Windows surface can throttle Chromium frames.
+      // Give it one paint opportunity, without letting that throttle block window restoration.
+      if (fastNativeResize) timer = window.setTimeout(finish, 32);
+      frame = window.requestAnimationFrame(() => {
+        if (fastNativeResize) finish();
+        else frame = window.requestAnimationFrame(finish);
+      });
+    });
   }
   async function waitForViewport(result) {
     if (!result?.contentSize || typeof window.requestAnimationFrame !== 'function') return;
@@ -48,7 +60,7 @@ export function createWindowPresentation({
       (Math.abs(window.innerWidth - width) > 1 || Math.abs(window.innerHeight - height) > 1) &&
       Date.now() - start < (fastNativeResize ? 120 : 500)
     )
-      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      await paintFrame();
   }
   function motionValue(result) {
     return result && typeof result === 'object' && 'value' in result ? result.value : result;

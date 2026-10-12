@@ -34,3 +34,9 @@ test('Windows queue reveal respects reduced motion',async()=>{
  const presentation=createWindowPresentation({window:w,document:d,api:{platform:'win32',windowAction:async action=>({value:action==='queue-open'})},getPreferences:()=>({queuePresentation:'extend'}),syncPaneBounds(){},toast(message){throw Error(message);}});
  try{await presentation.setQueueVisible(true);await presentation.setQueueVisible(false);assert.equal(animated,0);assert.equal(d.getElementById('queue-panel').style.transform,'');assert.equal(d.body.classList.contains('window-transition'),false);}finally{presentation.dispose();w.close();}
 });
+
+test('Windows transitions finish even when Chromium animation frames stop arriving',{timeout:1500},async()=>{
+ const dom=new JSDOM('<body><button id="queue"></button><section id="queue-panel" hidden><button id="close-queue"></button><div id="queue-list"></div></section></body>'),w=dom.window,d=w.document;w.requestAnimationFrame=()=>1;w.cancelAnimationFrame=()=>{};
+ const presentation=createWindowPresentation({window:w,document:d,api:{platform:'win32',windowAction:async action=>({value:action==='queue-open',contentSize:[w.innerWidth+2,w.innerHeight]})},getPreferences:()=>({queuePresentation:'extend'}),syncPaneBounds(){},toast(message){throw Error(message);}});
+ try{const started=Date.now();await presentation.setQueueVisible(true);await presentation.setQueueVisible(false);assert.ok(Date.now()-started<1000);assert.equal(d.body.classList.contains('window-transition'),false);}finally{presentation.dispose();w.close();}
+});
