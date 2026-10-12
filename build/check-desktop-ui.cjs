@@ -42,7 +42,7 @@ app.on('browser-window-created', (_event, win) => {
         process.platform === 'win32'
           ? [
               Math.max(1200, Math.min(1440, area.width - 320)),
-              Math.max(740, Math.min(1000, area.height - 80)),
+              Math.max(760, Math.min(1000, area.height - 80)),
             ]
           : [1440, 1000];
       win.setContentSize(...viewport);
@@ -53,6 +53,17 @@ app.on('browser-window-created', (_event, win) => {
         features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }],
       });
       await delay(100);
+      // setContentSize can bypass the app's computed minimum; do not use an invalid baseline.
+      const initial = win.getBounds(),
+        minimum = win.getMinimumSize();
+      if (initial.width < minimum[0] || initial.height < minimum[1]) {
+        win.setBounds({
+          ...initial,
+          width: Math.max(initial.width, minimum[0]),
+          height: Math.max(initial.height, minimum[1]),
+        });
+        await delay(60);
+      }
       const js = (code) => win.webContents.executeJavaScript(code);
       const geometry = () =>
         js(
@@ -114,13 +125,22 @@ app.on('browser-window-created', (_event, win) => {
         throw Error('Window presentation did not settle.');
       };
       const bounds = win.getBounds();
+      console.log(
+        'UI_WINDOW',
+        JSON.stringify({
+          bounds,
+          minimum: win.getMinimumSize(),
+          content: win.getContentSize(),
+          viewport: await js('[innerWidth,innerHeight]'),
+        }),
+      );
       const start = Date.now();
       const stableBounds = () => {
         const actual = win.getBounds();
         for (const key of ['x', 'y', 'width', 'height'])
           assert.ok(
             Math.abs(actual[key] - bounds[key]) <= 1,
-            `Window ${key} drifted: ${JSON.stringify(bounds)} → ${JSON.stringify(actual)}`,
+            `Window ${key} drifted: ${JSON.stringify(bounds)} → ${JSON.stringify(actual)}; minimum=${win.getMinimumSize()} content=${win.getContentSize()}`,
           );
       };
       await js(

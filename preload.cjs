@@ -21,7 +21,8 @@ contextBridge.exposeInMainWorld('localtone', {
   prepareUpdate: () => ipcRenderer.invoke('prepare-update'),
   uiReady: () => ipcRenderer.send('ui-ready'),
   windowAction: (action, size) => ipcRenderer.invoke('window-action', action, size),
-  layoutMinimum: (width, height) => ipcRenderer.send('layout-minimum', width, height),
+  layoutMinimum: (width, height, viewport) =>
+    ipcRenderer.send('layout-minimum', width, height, viewport),
   saveBrowsing: (value) => ipcRenderer.sendSync('save-browsing', value),
   savePlayback: (value) => ipcRenderer.sendSync('save-playback', value),
   rememberPlayed: (id) => ipcRenderer.invoke('remember-played', id),

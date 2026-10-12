@@ -20,7 +20,7 @@ These rules describe the current preferences language. They apply to new functio
 | Input, select and button | 28px high, 5px corner radius |
 | Context-menu command | Existing compact 12px text, 28px row; shared menu styling and checkmarks |
 | Standard dropdown | 245px wide; numeric input 72px |
-| Button width | Fit text; icon-only close/action 28px square |
+| Button width | Fit text; paired startup actions share the longest-label width; icon-only close/action 28px square |
 | Enable switch | 30 × 17px with 11px thumb |
 | Section separation | 16px total, one subtle 1px divider |
 | Heading to first row | 8px |
@@ -284,3 +284,5 @@ Windows extended queue uses one native resize plus a compositor-driven 180ms pan
 Track requested and actual settled native bounds separately. Preserve the original normal-window target across round trips; do not mistake up to 2px DPI/frame rounding for a deliberate user resize or add that rounding to the next target. Preserve genuine manual resizing. Keep Windows frame styles unchanged in mini mode; reject user resize gestures without toggling the resizable native frame. Never block programmatic resizing during an active window operation, including Windows DPI restoration events. Cache normal decoration extents per display/scaling rather than recalculating minimum sizes from transient frame rounding. Verify at least ten interleaved queue/mini round trips at 100% app zoom and both 100% and 125% Windows display scaling, comparing x/y/width/height and toolbar geometry.
 
 Give Windows transitions one paint opportunity with a 32ms fallback when Chromium throttles requestAnimationFrame. Viewport-settle waits must use the same bounded frame helper; never await a throttled frame indefinitely. Native regression checks wait for the transition to finish before comparing geometry, and choose a viewport that fits the runner's actual scaled desktop.
+
+Minimum-size IPC includes the renderer's actual inner viewport. Use it to measure normal decoration extents when it agrees with native content bounds within 2px; do not let later integer-DIP rounding increase the cached frame or minimum height on the same display.

@@ -1706,7 +1706,7 @@ app.whenReady().then(async () => {
     if (!win.isDestroyed()) win.show();
   });
   // Content-driven desktop minimum, including platform window decorations.
-  ipcMain.on?.('layout-minimum', (event, width, height = 740) => {
+  ipcMain.on?.('layout-minimum', (event, width, height = 740, viewport) => {
     check(event);
     if (
       !Number.isInteger(width) ||
@@ -1722,14 +1722,25 @@ app.whenReady().then(async () => {
     if (miniMode || motionActive) return;
     const display = screen?.getDisplayMatching(win.getBounds());
     const frameKey = `${display?.id ?? 'default'}:${display?.scaleFactor ?? 1}`;
+    const renderedViewport =
+      Array.isArray(viewport) &&
+      viewport.length === 2 &&
+      viewport.every((value) => Number.isInteger(value) && value > 0 && value <= 10000) &&
+      Math.abs(viewport[0] - contentWidth) <= 2 &&
+      Math.abs(viewport[1] - contentHeight) <= 2;
     const currentFrame = {
       key: frameKey,
-      width: Math.max(0, outerWidth - contentWidth),
-      height: Math.max(0, outerHeight - contentHeight),
+      width: Math.max(0, outerWidth - (renderedViewport ? viewport[0] : contentWidth)),
+      height: Math.max(0, outerHeight - (renderedViewport ? viewport[1] : contentHeight)),
     };
     // Maximized windows can report zero invisible-border extents; never cache those as normal chrome.
     if ((!normalFrame || normalFrame.key !== frameKey) && !win.isMaximized())
       normalFrame = currentFrame;
+    else if (renderedViewport && normalFrame?.key === frameKey && !win.isMaximized()) {
+      // Integer DIP rounding must never inflate the cached decoration/minimum on a later cycle.
+      normalFrame.width = Math.min(normalFrame.width, currentFrame.width);
+      normalFrame.height = Math.min(normalFrame.height, currentFrame.height);
+    }
     const frame = normalFrame?.key === frameKey ? normalFrame : currentFrame;
     const minimum = width + frame.width;
     const minimumHeight = height + frame.height;

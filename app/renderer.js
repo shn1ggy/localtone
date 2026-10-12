@@ -3571,6 +3571,7 @@ function syncPaneBounds(sidebar = prefs.sidebarWidth, artist = prefs.artistWidth
       width + artist + 648 + (document.body.classList.contains('queue-extended') ? 224 : 0),
     ),
     Math.max(740, Math.ceil(needed)),
+    [window.innerWidth, window.innerHeight],
   );
 }
 window.addEventListener('resize', () => syncPaneBounds());

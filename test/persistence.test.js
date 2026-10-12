@@ -469,3 +469,10 @@ test('creating a library applies exclusions before the initial scan and retains 
  await assert.rejects(invoke('add-library','Invalid',{fileTypes:['a/b']}),/comma-separated names or patterns/i);assert.equal((await invoke('load')).libraries.length,1);
  }finally{await rm(dir,{recursive:true,force:true});}
 });
+
+test('renderer viewport prevents native DPI rounding from inflating minimum height',async()=>{
+ const dir=await realpath(await mkdtemp(path.join(tmpdir(),'localtone-frame-')));
+ try{const invoke=await launch(path.join(dir,'data'),dir),win=invoke.window;win.setBounds({x:20,y:20,width:1300,height:1000});win.getContentSize=()=>[win.size[0]-16,win.size[1]-34];
+ for(let i=0;i<20;i++){await invoke('layout-minimum',1044,740,[win.size[0]-16,win.size[1]-32]);assert.equal(win.minimum[1],772);assert.deepEqual(win.getBounds(),{x:20,y:20,width:1300,height:1000});}
+ }finally{await rm(dir,{recursive:true,force:true});}
+});
