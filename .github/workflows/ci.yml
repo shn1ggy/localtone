@@ -30,6 +30,12 @@ jobs:
         timeout-minutes: 2
         if: runner.os == 'Windows'
         run: npm run verify:desktop-ui
+      - name: Native Windows UI at 125% display scaling
+        timeout-minutes: 2
+        if: runner.os == 'Windows'
+        run: npm run verify:desktop-ui
+        env:
+          UI_CHECK_SCALE: '1.25'
       - run: npm run benchmark
       - name: Album and queue benchmark
         run: npm run benchmark

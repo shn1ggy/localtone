@@ -20,9 +20,9 @@ export function createWindowPresentation({
     panel.style.setProperty('--queue-heading-top', `${Math.max(0, button.top - bounds.top)}px`);
     panel.style.setProperty('--queue-heading-height', `${button.height || 30}px`);
     Object.assign(close.style, {
-      position: 'fixed',
-      left: `${document.body.classList.contains('queue-extended') ? bounds.right - 12 - button.width : button.left}px`,
-      top: `${button.top}px`,
+      position: document.body.classList.contains('queue-extended') ? 'absolute' : 'fixed',
+      left: `${document.body.classList.contains('queue-extended') ? bounds.width - 12 - button.width : button.left}px`,
+      top: `${document.body.classList.contains('queue-extended') ? button.top - bounds.top : button.top}px`,
       width: `${button.width}px`,
       height: `${button.height}px`,
     });
@@ -55,6 +55,25 @@ export function createWindowPresentation({
   }
   function motionEnabled() {
     return !fastNativeResize && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  }
+  function queueRevealEnabled() {
+    return fastNativeResize && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  }
+  async function animateQueue(show) {
+    const panel = $('queue-panel');
+    if (!queueRevealEnabled() || typeof panel.animate !== 'function') return;
+    const animation = panel.animate(
+      show
+        ? [{ transform: 'translateX(224px)' }, { transform: 'translateX(0)' }]
+        : [{ transform: 'translateX(0)' }, { transform: 'translateX(224px)' }],
+      { duration: show ? 180 : 140, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' },
+    );
+    try {
+      await animation.finished;
+    } finally {
+      animation.cancel();
+    }
+    panel.style.transform = show ? '' : 'translateX(224px)';
   }
   function freezeLayout(width, height, { player = false } = {}) {
     windowTransition = true;
@@ -159,24 +178,33 @@ export function createWindowPresentation({
           freezeLayout(width, window.innerHeight);
           document.body.classList.add('queue-extended');
           $('queue-panel').hidden = false;
+          if (extend && !wasDocked && queueRevealEnabled())
+            $('queue-panel').style.transform = 'translateX(224px)';
+          alignQueueClose();
           await paintFrame();
           let commit = () => {
             document.body.classList.toggle('queue-extended', wasDocked);
             $('queue-panel').hidden = !wasDocked;
           };
           try {
+            if (!extend && wasDocked) await animateQueue(false);
             const result = await api.windowAction?.(extend ? 'queue-open' : 'queue-close', {
               animate: motionEnabled(),
               report: true,
             });
             await waitForViewport(result);
             const docked = extend && motionValue(result);
+            alignQueueClose();
+            if (docked && !wasDocked) await animateQueue(true);
             commit = () => {
               document.body.classList.toggle('queue-extended', !!docked && show);
               $('queue-panel').hidden = !show;
             };
           } finally {
-            await finishLayout(commit);
+            await finishLayout(() => {
+              commit();
+              $('queue-panel').style.transform = '';
+            });
           }
         } else {
           $('queue-panel').hidden = !show;

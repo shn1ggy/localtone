@@ -510,16 +510,8 @@ function render({ preserveScroll = false } = {}) {
     artists.scrollTop = position.artists;
   }
 }
-async function addLibrary() {
-  if (busy) return;
-  const name = await nameDialog('Add library', 'My music');
-  if (!name) return;
-  const before = new Set(state.libraries.map((library) => library.id));
-  const result = await operation(() => api.addLibrary(name), 'Choose a music folder…');
-  if (result) {
-    const added = state.libraries.find((library) => !before.has(library.id));
-    if (added) setScope({ kind: 'library', id: added.id });
-  }
+function addLibrary() {
+  if (!busy) openLibrarySettings();
 }
 function createPlaylist() {
   if (!busy) openPlaylistSettings();
@@ -5806,9 +5798,18 @@ if (api.refreshLibraries) {
 
 let editingLibrary = null;
 function openLibrarySettings(library) {
-  editingLibrary = library.id;
-  $('library-settings-name').textContent = library.name;
-  const filters = library.filters || {};
+  editingLibrary = library?.id || null;
+  const creating = !library;
+  $('library-settings-dialog').querySelector('h2').textContent = creating
+    ? 'Add library'
+    : 'Library settings';
+  $('library-create-name-row').hidden = !creating;
+  $('library-create-name').required = creating;
+  $('library-create-name').value = creating ? 'My music' : library.name;
+  $('library-settings-name').hidden = creating;
+  $('library-settings-save').textContent = creating ? 'Choose folder…' : 'Save and rescan';
+  $('library-settings-name').textContent = library?.name || '';
+  const filters = library?.filters || {};
   for (const [field, key] of [
     ['folders', 'folders'],
     ['types', 'fileTypes'],
@@ -5818,7 +5819,8 @@ function openLibrarySettings(library) {
   $('library-exclude-hidden').checked = !!filters.hiddenFolders;
   $('library-settings-error').hidden = true;
   dialogs.open($('library-settings-dialog'));
-  $('library-exclude-folders').focus();
+  $(creating ? 'library-create-name' : 'library-exclude-folders').focus();
+  if (creating) $('library-create-name').select();
 }
 setIcon($('library-settings-close'), 'close');
 $('library-settings-close').onclick = $('library-settings-cancel').onclick = () => {
@@ -5829,7 +5831,9 @@ $('library-settings-dialog').addEventListener('cancel', (event) => {
 });
 $('library-settings-form').onsubmit = async (event) => {
   event.preventDefault();
-  if (busy || !editingLibrary) return;
+  if (busy) return;
+  const creating = !editingLibrary;
+  const before = new Set(state.libraries.map((library) => library.id));
   const filters = { hiddenFolders: $('library-exclude-hidden').checked };
   for (const [field, key] of [
     ['folders', 'folders'],
@@ -5844,13 +5848,19 @@ $('library-settings-form').onsubmit = async (event) => {
   controls.forEach((control) => (control.disabled = true));
   try {
     const result = await operation(
-      () => api.configureLibrary(editingLibrary, filters),
-      'Checking your library…',
+      () =>
+        creating
+          ? api.addLibrary($('library-create-name').value.trim(), filters)
+          : api.configureLibrary(editingLibrary, filters),
+      creating ? 'Choose a music folder…' : 'Checking your library…',
     );
     if (result) {
       $('library-settings-dialog').close();
-      render({ preserveScroll: true });
-    } else {
+      if (creating) {
+        const added = state.libraries.find((library) => !before.has(library.id));
+        if (added) setScope({ kind: 'library', id: added.id });
+      } else render({ preserveScroll: true });
+    } else if ($('toast').textContent && !$('toast').hidden) {
       $('library-settings-error').textContent = $('toast').textContent;
       $('library-settings-error').hidden = false;
     }

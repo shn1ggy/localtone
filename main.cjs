@@ -31,7 +31,10 @@ const { cleanUnusedCache } = require('./cache-cleanup.cjs');
 let startupRefresh = { changed: 0, unavailable: 0, warnings: [] };
 const { validateSession } = require('./browsing-session.cjs');
 let browsingSession = null;
-const queueWindow = require('./queue-window.cjs').createQueueWindow();
+const { createQueueWindow, createBoundsMemory } = require('./queue-window.cjs');
+const queueWindow = createQueueWindow();
+const miniBoundsMemory = createBoundsMemory();
+let normalFrame = null;
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -619,7 +622,7 @@ app.whenReady().then(async () => {
     if (action === 'mini') {
       await queueWindow.close(win);
       if (!miniMode) {
-        const bounds = win.getBounds();
+        const bounds = miniBoundsMemory.capture(win);
         normalVisualBounds = { ...bounds };
         normalMaximized = win.isMaximized();
         normalBounds = normalMaximized
@@ -637,19 +640,20 @@ app.whenReady().then(async () => {
           win.setBounds(bounds);
         }
         win.setMinimumSize(1, 1);
-        win.setResizable(true);
+        if (process.platform !== 'win32') win.setResizable(true);
         await resize({
           x: bounds.x,
           y: bounds.y + bounds.height - height - frameH,
           width: width + frameW,
           height: height + frameH,
         });
-        win.setResizable(false);
+        if (process.platform !== 'win32') win.setResizable(false);
       } else {
-        win.setResizable(true);
+        if (process.platform !== 'win32') win.setResizable(true);
         await resize(normalMaximized ? normalVisualBounds : normalBounds);
         miniMode = false;
         win.setMinimumSize(...normalMinimum);
+        if (!normalMaximized) miniBoundsMemory.remember(win, normalBounds);
         if (normalMaximized) {
           maximizeRestore = normalBounds;
           win.maximize();
@@ -1253,8 +1257,9 @@ app.whenReady().then(async () => {
       throw error;
     }
   });
-  handle('add-library', async (name) => {
+  handle('add-library', async (name, filters) => {
     name = validName(name);
+    filters = validateFilters(filters || {});
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {
       properties: ['openDirectory'],
       title: 'Choose a music folder',
@@ -1263,7 +1268,7 @@ app.whenReady().then(async () => {
     const root = await fs.realpath(filePaths[0]);
     if (db.libraries.some((l) => l.root === root))
       throw new Error('This folder is already a library.');
-    const library = { id: randomUUID(), name, root };
+    const library = { id: randomUUID(), name, root, filters };
     db.libraries.push(library);
     return importLibrary(library);
   });
@@ -1691,6 +1696,10 @@ app.whenReady().then(async () => {
     },
   });
   if (browsingSession?.window?.maximized) win.maximize();
+  // Keep Windows frame styles unchanged: toggling resizable changes its native border geometry.
+  win.on?.('will-resize', (event) => {
+    if (miniMode) event.preventDefault();
+  });
   // Never expose fallback markup or colors before saved preferences are applied.
   ipcMain.on('ui-ready', (event) => {
     check(event);
@@ -1710,9 +1719,20 @@ app.whenReady().then(async () => {
       return;
     const [outerWidth, outerHeight] = win.getSize(),
       [contentWidth, contentHeight] = win.getContentSize();
-    const minimum = width + Math.max(0, outerWidth - contentWidth);
-    const minimumHeight = height + Math.max(0, outerHeight - contentHeight);
     if (miniMode || motionActive) return;
+    const display = screen?.getDisplayMatching(win.getBounds());
+    const frameKey = `${display?.id ?? 'default'}:${display?.scaleFactor ?? 1}`;
+    const currentFrame = {
+      key: frameKey,
+      width: Math.max(0, outerWidth - contentWidth),
+      height: Math.max(0, outerHeight - contentHeight),
+    };
+    // Maximized windows can report zero invisible-border extents; never cache those as normal chrome.
+    if ((!normalFrame || normalFrame.key !== frameKey) && !win.isMaximized())
+      normalFrame = currentFrame;
+    const frame = normalFrame?.key === frameKey ? normalFrame : currentFrame;
+    const minimum = width + frame.width;
+    const minimumHeight = height + frame.height;
     normalMinimum = [minimum, minimumHeight];
     win.setMinimumSize(minimum, minimumHeight);
     if (outerWidth < minimum || outerHeight < minimumHeight)

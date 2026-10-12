@@ -45,7 +45,7 @@ test('library and playlist creation update sidebar and selected collection throu
   d.getElementById('add-playlist').click();d.getElementById('playlist-name').value='Night';
   d.getElementById('playlist-settings-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await flush();
   assert.equal(d.getElementById('title').textContent,'Night');assert.equal(d.querySelector('#playlists button').textContent,'Night');
-  d.getElementById('add-library').click();d.getElementById('name-input').value='Records';d.getElementById('name-save').click();await flush();
+  d.getElementById('add-library').click();d.getElementById('library-create-name').value='Records';d.getElementById('library-settings-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await flush();
   assert.equal(d.getElementById('title').textContent,'Records');assert.equal(d.querySelector('#libraries button').textContent,'Records');
   assert.deepEqual(calls,[['playlist','Night'],['library','Records']]);
   assert.equal(d.getElementById('add-library').disabled,false);
@@ -55,7 +55,7 @@ test('a failed library operation shows the error and allows a retry',async()=>{
  const dom=new JSDOM(html,{runScripts:'outside-only'}),w=dom.window,d=w.document;Object.assign(w,{createDuplicatesDialog},{createSettingsHelp,createDuplicatesDialog},core,browse,interactions,{structuredClone},{designDefaults,appearanceDefaults},{createSettingsWrites},{createTagEditor,createPlaylistEditor,createLastfmSettings},{createDialogCoordinator,createSettingsTabs},{createBrowseSelection},{createPlaybackQueue},{createWindowPresentation,createAudioOutputSettings,mountVirtualTracks},{createIcons,normalizeMenu,shortcutDefaults,createQueueViewCache,queuePage},{createNameDialog,ListenTracker,waveformPath});
  for(const dialog of d.querySelectorAll('dialog')){dialog.showModal=()=>dialog.setAttribute('open','');dialog.close=()=>{dialog.removeAttribute('open');dialog.dispatchEvent(new w.Event('close'));};}
  w.localtone={load:async()=>({libraries:[],tracks:[],playlists:[]}),onProgress:()=>{},addLibrary:async()=>{throw new Error('Folder unavailable');}};
- try {w.localtone.settings??=async patch=>patch;await w.eval(`(async()=>{${source}\n})()`);d.getElementById('add-library').click();d.getElementById('name-save').click();await flush();assert.equal(d.getElementById('toast').textContent,'Folder unavailable');assert.equal(d.getElementById('add-library').disabled,false);}finally{w.close();}
+ try {w.localtone.settings??=async patch=>patch;await w.eval(`(async()=>{${source}\n})()`);d.getElementById('add-library').click();d.getElementById('library-settings-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await flush();assert.equal(d.getElementById('toast').textContent,'Folder unavailable');assert.equal(d.getElementById('add-library').disabled,false);}finally{w.close();}
 });
 test('artists hide tracks; albums expand/collapse; cover click opens an album; tag Save reaches bridge',async()=>{
  const dom=new JSDOM(html,{runScripts:'outside-only'}),w=dom.window,d=w.document;Object.assign(w,{createDuplicatesDialog},{createSettingsHelp,createDuplicatesDialog},core,browse,interactions,{structuredClone},{designDefaults,appearanceDefaults},{createSettingsWrites},{createTagEditor,createPlaylistEditor,createLastfmSettings},{createDialogCoordinator,createSettingsTabs},{createBrowseSelection},{createPlaybackQueue},{createWindowPresentation,createAudioOutputSettings,mountVirtualTracks},{createIcons,normalizeMenu,shortcutDefaults,createQueueViewCache,queuePage},{createNameDialog,ListenTracker,waveformPath});
@@ -647,7 +647,7 @@ test('track wraparound, Escape focus/scroll, folder reset and creation shortcuts
  try{await w.eval(`(async()=>{${source}\n})()`);const rows=[...d.querySelectorAll('#tracks tr')];rows[0].click();rows[0].focus();key('ArrowUp');assert.equal(d.querySelector('#tracks tr.selected').dataset.trackId,'3');key('ArrowDown');assert.equal(d.querySelector('#tracks tr.selected').dataset.trackId,'1');
  const pane=d.querySelector('.content-scroll');pane.scrollTop=245;key('Escape');assert.equal(pane.scrollTop,245);assert.equal(d.body.dataset.browseFocus,'artists');assert.equal(d.querySelectorAll('#tracks tr.selected').length,0);key('Escape');assert.equal(d.body.dataset.browseFocus,'sidebar');
  key('Tab');key('Enter');key('o');assert.notEqual(d.getElementById('sort').value,'folder');key('O',{shiftKey:true});assert.equal(d.getElementById('sort').value,'folder');
- key('n',{ctrlKey:true});assert.equal(d.getElementById('playlist-settings-dialog').hasAttribute('open'),true);d.getElementById('playlist-settings-cancel').click();d.body.focus();key('l',{metaKey:true});assert.equal(d.getElementById('name-dialog').hasAttribute('open'),true);assert.equal(d.getElementById('dialog-title').textContent,'Add library');d.getElementById('name-cancel').click();
+ key('n',{ctrlKey:true});assert.equal(d.getElementById('playlist-settings-dialog').hasAttribute('open'),true);d.getElementById('playlist-settings-cancel').click();d.body.focus();key('l',{metaKey:true});assert.equal(d.getElementById('library-settings-dialog').hasAttribute('open'),true);assert.equal(d.querySelector('#library-settings-dialog h2').textContent,'Add library');d.getElementById('library-settings-cancel').click();
  }finally{w.close();}
 });
 test('confirmed search creates a static snapshot and persists across views; audio outputs restore and fall back',async()=>{
@@ -959,7 +959,7 @@ test('empty collections expose Add folder in every view, shortcut edits retain f
  try{
   await w.eval(`(async()=>{${source}\n})()`);
   for(const view of ['covers','albums','tracks']){d.getElementById('view-'+view).click();assert.equal(d.getElementById('empty-add').closest('[hidden]'),null,view);assert.equal(d.querySelector('.table-wrap').hidden,true);}
-  d.getElementById('empty-add').click();assert.equal(d.getElementById('name-dialog').open,true);d.getElementById('name-cancel').click();await flush();
+  d.getElementById('empty-add').click();assert.equal(d.getElementById('library-settings-dialog').open,true);d.getElementById('library-settings-cancel').click();await flush();
   d.getElementById('view-covers').click();const search=d.getElementById('search');search.focus();search.value='東京';key('Enter',{isComposing:true});assert.equal(d.activeElement,search);assert.equal(d.getElementById('view-covers').classList.contains('active'),true);
   d.getElementById('open-settings').click();d.getElementById('settings-tab-shortcuts').click();
   d.querySelector('[data-shortcut-action=shuffle]').click();key('z');await flush();assert.equal(d.activeElement.dataset.shortcutAction,'shuffle');assert.equal(patches.at(-1).shortcuts.shuffle,'z');

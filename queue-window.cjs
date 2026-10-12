@@ -1,47 +1,74 @@
+// Windows can round logical bounds when crossing native/DPI boundaries.
+function boundsMatch(a, b) {
+  return !!a && !!b && ['x', 'y', 'width', 'height'].every((key) => Math.abs(a[key] - b[key]) <= 2);
+}
+function createBoundsMemory() {
+  let target = null,
+    actual = null;
+  return {
+    capture(win) {
+      const now = win.getBounds();
+      return { ...(boundsMatch(now, actual) ? target : now) };
+    },
+    remember(win, bounds) {
+      target = { ...bounds };
+      actual = { ...win.getBounds() };
+    },
+  };
+}
 function createQueueWindow() {
   let prior = null,
-    expanded = null;
+    expanded = null,
+    extension = 224;
+  const normal = createBoundsMemory();
   return {
     open(win, screen, width = 224, resize = (target) => win.setBounds(target)) {
       if (prior) return true;
       if (win.isMaximized() || win.isFullScreen?.()) return false;
-      const before = win.getBounds(),
+      const before = normal.capture(win),
         area = screen?.getDisplayMatching(before)?.workArea;
       if (!area || before.width + width > area.width) return false;
-      prior = { ...before };
-      expanded = {
+      prior = before;
+      extension = width;
+      const target = {
         ...before,
         width: before.width + width,
         x: Math.max(area.x, Math.min(before.x, area.x + area.width - before.width - width)),
       };
-      const result = resize(expanded);
-      return result?.then ? result.then(() => true) : true;
+      const finished = () => {
+        expanded = { ...win.getBounds() };
+        return true;
+      };
+      const result = resize(target);
+      return result?.then ? result.then(finished) : finished();
     },
     close(win, resize = (target) => win.setBounds(target)) {
       if (!prior) return;
-      let result;
       const now = win.getBounds();
-      if (!win.isMaximized() && !win.isFullScreen?.()) {
-        const unchanged = ['x', 'y', 'width', 'height'].every((k) => now[k] === expanded[k]);
-        result = resize(
-          unchanged
-            ? prior
-            : { ...now, width: Math.max(prior.width, now.width - (expanded.width - prior.width)) },
-        );
+      if (win.isMaximized() || win.isFullScreen?.()) {
+        prior = expanded = null;
+        return;
       }
-      prior = null;
-      expanded = null;
-      return result;
+      const target = boundsMatch(now, expanded)
+        ? prior
+        : { ...now, width: Math.max(prior.width, now.width - extension) };
+      const finished = () => {
+        normal.remember(win, target);
+        prior = expanded = null;
+      };
+      const result = resize(target);
+      return result?.then ? result.then(finished) : finished();
     },
     normalBounds(win) {
       const now = win.getNormalBounds?.() || win.getBounds();
       if (!prior) return now;
-      const unchanged = ['x', 'y', 'width', 'height'].every((k) => now[k] === expanded[k]);
-      return unchanged ? { ...prior } : { ...now, width: Math.max(prior.width, now.width - 224) };
+      return boundsMatch(now, expanded)
+        ? { ...prior }
+        : { ...now, width: Math.max(prior.width, now.width - extension) };
     },
     get extended() {
       return !!prior;
     },
   };
 }
-module.exports = { createQueueWindow };
+module.exports = { createQueueWindow, createBoundsMemory };

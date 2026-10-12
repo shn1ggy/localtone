@@ -2,6 +2,8 @@
 const electron = require('electron');
 const { app, BrowserWindow, screen } = electron;
 app.disableHardwareAcceleration();
+if (process.env.UI_CHECK_SCALE)
+  app.commandLine.appendSwitch('force-device-scale-factor', process.env.UI_CHECK_SCALE);
 process.on('uncaughtException', (error) => {
   console.error(error);
   app.exit(1);
@@ -41,7 +43,7 @@ app.on('browser-window-created', (_event, win) => {
       const js = (code) => win.webContents.executeJavaScript(code);
       const geometry = () =>
         js(
-          `(()=>{const result={};for(const id of ['empty-add','empty-import','view-albums','view-covers','view-tracks','sort','volume','queue']){const b=document.getElementById(id),r=b.getBoundingClientRect(),s=getComputedStyle(b);result[id]={x:r.x,y:r.y,width:r.width,height:r.height,font:s.fontSize,line:s.lineHeight,padding:s.padding,color:s.color,background:s.backgroundColor,text:b.textContent};}return result;})()`,
+          `(()=>{const result={};for(const id of ['empty-add','empty-import','view-albums','view-covers','view-tracks','sort','volume','queue']){const b=document.getElementById(id),r=b.getBoundingClientRect(),s=getComputedStyle(b);result[id]={x:r.x,y:r.y,width:r.width,height:r.height,font:s.fontSize,line:s.lineHeight,padding:s.padding,color:s.color,background:s.backgroundColor,text:b.textContent,weight:s.fontWeight,decoration:s.textDecorationLine};}return result;})()`,
         );
       console.log('UI_CHECK loaded');
       win.focus();
@@ -51,13 +53,24 @@ app.on('browser-window-created', (_event, win) => {
         assert.equal(before[id].font, '13px');
         assert.equal(before[id].line, '20px');
       }
+      assert.equal(before['empty-add'].width, before['empty-import'].width);
+      assert.equal(before['empty-add'].weight, before['empty-import'].weight);
+      assert.equal(
+        await js(
+          "getComputedStyle(document.querySelector('#artist-list .browse-empty')).color === getComputedStyle(document.querySelector('#empty h2')).color",
+        ),
+        true,
+      );
       await js("document.getElementById('empty-add').click()");
+      assert.equal(await js("document.getElementById('library-create-name-row').hidden"), false);
+      if (process.env.UI_CHECK_CAPTURE) fs.writeFileSync(process.env.UI_CHECK_CAPTURE.replace('.png', '-create.png'), (await win.webContents.capturePage()).toPNG());
       win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'ESC' });
       await delay(60);
-      assert.equal(await js("document.getElementById('name-dialog').open"), false);
+      assert.equal(await js("document.getElementById('library-settings-dialog').open"), false);
       const cancelled = await geometry();
       assert.equal(cancelled['empty-add'].text, 'Add library…');
       assert.notEqual(cancelled['empty-add'].color, cancelled['empty-add'].background);
+      assert.equal(cancelled['empty-add'].decoration, 'none');
       await js(
         "document.getElementById('view-tracks').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:600,clientY:40}))",
       );
@@ -72,36 +85,61 @@ app.on('browser-window-created', (_event, win) => {
       console.log('UI_CHECK cancellation and menus passed');
       const bounds = win.getBounds();
       const start = Date.now();
-      await js("document.getElementById('queue').click()");
-      await delay(350);
-      assert.equal(await js("document.body.classList.contains('queue-extended')"), true);
-      await js("document.getElementById('queue').click()");
-      await delay(350);
+      const stableBounds = () => {
+        const actual = win.getBounds();
+        for (const key of ['x', 'y', 'width', 'height'])
+          assert.ok(
+            Math.abs(actual[key] - bounds[key]) <= 1,
+            `Window ${key} drifted: ${bounds[key]} → ${actual[key]}`,
+          );
+      };
+      await js(
+        "window.__queueRevealCalls=0;const panel=document.getElementById('queue-panel'),animate=panel.animate.bind(panel);panel.animate=(...args)=>{window.__queueRevealCalls++;return animate(...args)};void 0",
+      );
+      for (let cycle = 0; cycle < 10; cycle++) {
+        await js("document.getElementById('queue').click()");
+        await delay(350);
+        if (process.platform === 'win32')
+          assert.equal(
+            await js('window.__queueRevealCalls'),
+            cycle * 2 + 1,
+            'Queue reveal must animate',
+          );
+        assert.equal(await js("document.body.classList.contains('queue-extended')"), true);
+        await js("document.getElementById('queue').click()");
+        await delay(350);
+        stableBounds();
+        await js(
+          "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true}))",
+        );
+        await delay(250);
+        assert.equal(await js("document.body.classList.contains('mini-player')"), true);
+        await js(
+          "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true}))",
+        );
+        await delay(250);
+        assert.equal(await js("document.body.classList.contains('mini-player')"), false);
+        stableBounds();
+      }
       const after = await geometry();
       for (const id of ['view-albums', 'view-covers', 'view-tracks', 'sort', 'volume', 'queue'])
         for (const key of ['x', 'y', 'width', 'height'])
           assert.ok(Math.abs(before[id][key] - after[id][key]) <= 1, `${id} ${key} shifted`);
-      assert.deepEqual(win.getBounds(), bounds);
-      await js(
-        "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true}))",
-      );
-      await delay(250);
-      assert.equal(await js("document.body.classList.contains('mini-player')"), true);
-      await js(
-        "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true}))",
-      );
-      await delay(250);
-      assert.equal(await js("document.body.classList.contains('mini-player')"), false);
-      assert.deepEqual(win.getBounds(), bounds);
       assert.equal(await js("document.body.classList.contains('window-transition')"), false);
       console.log('UI_CHECK native queue and mini passed');
       const music = path.join(temporary, 'Music');
       fs.mkdirSync(music);
       for (const name of ['song.mp3', 'preview.mp3'])
         fs.copyFileSync(path.join(root, 'test', 'fixtures', 'tone.mp3'), path.join(music, name));
+      electron.dialog.showOpenDialog = async () => ({ canceled: true, filePaths: [] });
+      await js("document.getElementById('empty-add').click();document.getElementById('library-create-name').value='Music';document.getElementById('library-exclude-names').value='*preview*';document.getElementById('library-settings-form').requestSubmit(document.getElementById('library-settings-save'))");
+      await delay(100);
+      assert.equal(await js("document.getElementById('library-settings-dialog').open"), true);
+      assert.equal(await js("(async()=> (await localtone.load()).libraries.length)()"), 0);
+      assert.equal(await js("document.getElementById('library-exclude-names').value"), '*preview*');
       electron.dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [music] });
       await js(
-        "document.getElementById('empty-add').click();document.getElementById('name-form').requestSubmit(document.getElementById('name-save'))",
+        "document.getElementById('library-settings-form').requestSubmit(document.getElementById('library-settings-save'))",
       );
       for (let i = 0; i < 100; i++) {
         if (
@@ -135,12 +173,17 @@ app.on('browser-window-created', (_event, win) => {
         ),
         '13px',
       );
+      win.setContentSize(1440, 800);
+      await delay(60);
+      assert.equal(await js("document.getElementById('library-settings-dialog').getBoundingClientRect().height <= window.innerHeight * .8"), true);
+      win.setContentSize(1440, 1000);
+      await delay(60);
       const centers = await js(
-        "[...document.querySelectorAll('#library-settings-dialog .setting-row')].map(row=>{const l=row.querySelector('label').getBoundingClientRect(),c=row.querySelector('input').getBoundingClientRect();return Math.abs(l.top+l.height/2-c.top-c.height/2);})",
+        "[...document.querySelectorAll('#library-settings-dialog .setting-row')].filter(row=>!row.hidden).map(row=>{const l=row.querySelector('label').getBoundingClientRect(),c=row.querySelector('input').getBoundingClientRect();return Math.abs(l.top+l.height/2-c.top-c.height/2);})",
       );
       assert.ok(centers.every((value) => value <= 0.5));
       const rows = await js(
-        "[...document.querySelectorAll('#library-settings-dialog .setting-row input')].map(b=>({width:b.getBoundingClientRect().width,height:b.getBoundingClientRect().height,font:getComputedStyle(b).fontSize,type:b.type}))",
+        "[...document.querySelectorAll('#library-settings-dialog .setting-row input')].filter(b=>!b.closest('[hidden]')).map(b=>({width:b.getBoundingClientRect().width,height:b.getBoundingClientRect().height,font:getComputedStyle(b).fontSize,type:b.type}))",
       );
       for (const row of rows) {
         assert.equal(row.width, row.type === 'checkbox' ? 30 : 245);

@@ -8019,8 +8019,7 @@ dialog .dialog-actions button.primary {
 
 /* Keyboard focus stays visible without adding outlines or icon hover blocks. */
 dialog :is(button:not(.dialog-close):not([role='tab']), summary):focus-visible {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration: none;
 }
 dialog button.dialog-close:focus-visible,
 #settings-help-close:focus-visible {
@@ -8031,9 +8030,10 @@ dialog input[type='checkbox']:focus-visible {
   border-color: var(--text-primary);
 }
 #empty .empty-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  width: max-content;
   gap: 8px;
-  flex-wrap: wrap;
 }
 #empty .empty-actions button.primary {
   color: var(--text-on-accent);
@@ -8046,8 +8046,7 @@ dialog input[type='checkbox']:focus-visible {
   background: color-mix(in srgb, var(--accent), white 10%);
 }
 #empty .empty-actions button:focus-visible {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration: none;
 }
 #empty #empty-status {
   margin: 12px 0 0;
@@ -8133,6 +8132,7 @@ dialog input[type='checkbox']:focus-visible {
 }
 #empty h2,
 .browse-empty {
+  color: var(--text-muted);
   font-weight: 600;
 }
 #empty:not(.first-launch) h2 {
@@ -8241,4 +8241,12 @@ dialog .preference-group h3 {
 }
 #library-settings-dialog .setting-row input {
   margin: 0;
+}
+
+/* Paired startup actions share their complete geometry and text weight. */
+#empty .empty-actions button:is(.primary, .chip) {
+  font-weight: 400;
+}
+#library-create-name-row[hidden] {
+  display: none;
 }
