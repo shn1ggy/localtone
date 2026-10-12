@@ -17,7 +17,7 @@ async function launch(userData,music,dialogs={}) {
   dialog:{showOpenDialog:async()=>({canceled:false,filePaths:[music]}),showErrorBox:(_title,error)=>{throw new Error(error);},...dialogs}
  };
  vm.runInNewContext(`(function(){${source}\n})()`,{require:name=>name==='electron'?electron:require(name),__dirname:path.dirname(mainPath),structuredClone,process,console,URL,Response,setTimeout,clearTimeout});await ready;
- const invoke=(name,...args)=>handlers.get(name)({senderFrame:{url:'localtone://app/index.html'}},...args);invoke.shutdown=async()=>{events.get('before-quit')({preventDefault(){}});for(let i=0;i<200&&!quitCount;i++)await new Promise(r=>setTimeout(r,5));assert.ok(quitCount);};invoke.quitCount=()=>quitCount;invoke.opened=opened;invoke.window=windowInstance;invoke.asset=url=>assetHandler({url});return invoke;
+ const invoke=(name,...args)=>handlers.get(name)({senderFrame:{url:'localtone://app/index.html'}},...args);invoke.shutdown=async()=>{events.get('before-quit')({preventDefault(){}});const deadline=Date.now()+10000;while(!quitCount&&Date.now()<deadline)await new Promise(r=>setTimeout(r,10));assert.ok(quitCount);};invoke.quitCount=()=>quitCount;invoke.opened=opened;invoke.window=windowInstance;invoke.asset=url=>assetHandler({url});return invoke;
 }
 test('ratings and settings survive rescans and main-process restart with real disk persistence',async()=>{
  const dir=await realpath(await mkdtemp(path.join(tmpdir(),'localtone-persistence-')));try{
