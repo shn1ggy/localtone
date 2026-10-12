@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "0.123.0",
-  "commit": "975d1c3cc35f1924dd5d194befba5077aa014dc7",
-  "buildRun": 38211914492,
-  "tag": "v0.123.0",
+  "version": "0.124.0",
+  "commit": "f9e39c894c0f7c6e339d356af9513bb5c41b5ee8",
+  "buildRun": 38215516108,
+  "tag": "v0.124.0",
   "attempt": 1,
-  "title": "Localtone 0.123.0 — Library migration and top-aligned playback reveal"
+  "title": "Localtone 0.124.0 — Random library playback and shuffled album reveal"
 }
