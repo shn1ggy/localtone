@@ -63,7 +63,11 @@ app.on('browser-window-created', (_event, win) => {
       );
       await js("document.getElementById('empty-add').click()");
       assert.equal(await js("document.getElementById('library-create-name-row').hidden"), false);
-      if (process.env.UI_CHECK_CAPTURE) fs.writeFileSync(process.env.UI_CHECK_CAPTURE.replace('.png', '-create.png'), (await win.webContents.capturePage()).toPNG());
+      if (process.env.UI_CHECK_CAPTURE)
+        fs.writeFileSync(
+          process.env.UI_CHECK_CAPTURE.replace('.png', '-create.png'),
+          (await win.webContents.capturePage()).toPNG(),
+        );
       win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'ESC' });
       await delay(60);
       assert.equal(await js("document.getElementById('library-settings-dialog').open"), false);
@@ -132,10 +136,12 @@ app.on('browser-window-created', (_event, win) => {
       for (const name of ['song.mp3', 'preview.mp3'])
         fs.copyFileSync(path.join(root, 'test', 'fixtures', 'tone.mp3'), path.join(music, name));
       electron.dialog.showOpenDialog = async () => ({ canceled: true, filePaths: [] });
-      await js("document.getElementById('empty-add').click();document.getElementById('library-create-name').value='Music';document.getElementById('library-exclude-names').value='*preview*';document.getElementById('library-settings-form').requestSubmit(document.getElementById('library-settings-save'))");
+      await js(
+        "document.getElementById('empty-add').click();document.getElementById('library-create-name').value='Music';document.getElementById('library-exclude-names').value='*preview*';document.getElementById('library-settings-form').requestSubmit(document.getElementById('library-settings-save'))",
+      );
       await delay(100);
       assert.equal(await js("document.getElementById('library-settings-dialog').open"), true);
-      assert.equal(await js("(async()=> (await localtone.load()).libraries.length)()"), 0);
+      assert.equal(await js('(async()=> (await localtone.load()).libraries.length)()'), 0);
       assert.equal(await js("document.getElementById('library-exclude-names').value"), '*preview*');
       electron.dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [music] });
       await js(
@@ -175,7 +181,12 @@ app.on('browser-window-created', (_event, win) => {
       );
       win.setContentSize(1440, 800);
       await delay(60);
-      assert.equal(await js("document.getElementById('library-settings-dialog').getBoundingClientRect().height <= window.innerHeight * .8"), true);
+      assert.equal(
+        await js(
+          "document.getElementById('library-settings-dialog').getBoundingClientRect().height <= window.innerHeight * .8",
+        ),
+        true,
+      );
       win.setContentSize(1440, 1000);
       await delay(60);
       const centers = await js(
