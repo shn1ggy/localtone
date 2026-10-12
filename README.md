@@ -1,17 +1,17 @@
 # Localtone
 
-A compact local music player for macOS, Windows and Linux. **0.122.0 — early access.**
+A compact local music player for macOS, Windows and Linux. **0.123.0 — early access.**
 
 ## Download
 
-[All downloads and release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.122.0)
+[All downloads and release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.123.0)
 
 | System | Download |
 | --- | --- |
-| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.122.0/Localtone-0.122.0-mac-arm64.zip) |
-| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.122.0/Localtone-0.122.0-mac-x64.zip) |
-| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.122.0/Localtone-0.122.0-win-x64.zip) |
-| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v0.122.0/Localtone-0.122.0-linux-x86_64.AppImage) |
+| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.123.0/Localtone-0.123.0-mac-arm64.zip) |
+| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.123.0/Localtone-0.123.0-mac-x64.zip) |
+| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.123.0/Localtone-0.123.0-win-x64.zip) |
+| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v0.123.0/Localtone-0.123.0-linux-x86_64.AppImage) |
 
 These desktop packages include everything needed to run Localtone; Node.js is only needed to work with the source. Extract the complete ZIP, or make the Linux AppImage executable. Windows portable EXE and Linux ZIP are also on the release page. These early-access builds have no verified publisher identity. Mac bundles are ad-hoc signed for integrity but are not Apple notarized; macOS may require approval in Privacy & Security. Version 0.115 fixed Mac bundle signing; 0.118 fixes early-access update discovery and Electron redirect handling. Versions 0.117 and earlier need one manual download.
 
@@ -42,7 +42,16 @@ The commands run verification first and write versioned packages to `dist`: a ma
 
 Close Localtone. Extract the new version into a new folder. With portable mode enabled, copy your existing **Localtone-data** folder into the new program folder before starting. Keep the old folder until the update works. Existing settings, libraries and playlists take precedence over defaults. Never replace your data folder with an empty one.
 
-Portable mode keeps app data beside the program; otherwise the OS application-data location is used. General Settings provides settings export/import and the existing portable migration/cleanup controls. Exported preferences do not contain your music library, device-specific output choice or Last.fm credentials. Session tag/rename undo ends when the app closes; settings backups are separate.
+Portable mode keeps app data beside the program; otherwise the OS application-data location is used. General Settings provides settings export/import and the existing portable migration/cleanup controls. Settings exports can include library and playlist references when Include playlists & libraries is enabled. Audio files, device-specific output choices and Last.fm credentials are not included. Session tag/rename undo ends when the app closes; settings backups are separate.
+
+## Move a library to another computer
+
+1. In General Settings, enable **Include playlists & libraries**, then export settings.
+2. Copy/sync the music while keeping the folders and filenames inside each library unchanged.
+3. Import the settings on the other computer.
+4. Right-click each imported library → **Reconnect folder…**, choose its new root folder and confirm the matching files.
+
+Playlist membership/order and dynamic rules are preserved. Ensure cloud files are downloaded locally before reconnecting. Reconnect the imported library rather than deleting and recreating it. New backups retain file sizes; older size-less backups are verified using song details and duration.
 
 ## About and prepared updates
 

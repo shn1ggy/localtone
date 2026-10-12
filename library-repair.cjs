@@ -12,23 +12,67 @@ function relativeFile(root, file) {
     throw new Error('A track is outside its library folder. Reconnect was cancelled.');
   return relative.split(flavor.sep);
 }
+async function verifyLegacyTrack(track, filename) {
+  const { parseFile } = await import('music-metadata');
+  const { common, format } = await parseFile(filename, { duration: true, skipCovers: true });
+  const values = {
+    title: common.title || path.basename(filename, path.extname(filename)),
+    artist: common.artist || 'Unknown artist',
+    albumArtist: common.albumartist || common.artist || 'Unknown artist',
+    album: common.album || 'Unknown album',
+  };
+  const normalize = (value) =>
+    String(value || '')
+      .normalize('NFC')
+      .trim();
+  const comparable = Object.keys(values).filter(
+    (key) =>
+      normalize(track[key]) && !['Unknown artist', 'Unknown album'].includes(normalize(track[key])),
+  );
+  const durationKnown = Number.isFinite(track.duration) && track.duration > 0;
+  if (
+    (!comparable.length && !durationKnown) ||
+    format.hasAudio === false ||
+    !Number.isFinite(format.duration) ||
+    format.duration <= 0 ||
+    comparable.some((key) => normalize(track[key]) !== normalize(values[key])) ||
+    (durationKnown &&
+      (!Number.isFinite(format.duration) || Math.abs(format.duration - track.duration) > 1))
+  )
+    throw new Error('Song details do not match the older backup: ' + filename);
+}
 async function planReconnect(library, tracks, newRoot) {
-  let matches = 0;
-  const mapped = [];
-  for (const track of tracks) {
-    const filename = path.join(newRoot, ...relativeFile(library.root, track.path));
-    let missing = false;
-    try {
-      const stat = await fs.stat(filename);
-      if (!stat.isFile() || stat.size !== track.size)
-        throw new Error('File differs from the indexed track: ' + filename);
-      matches++;
-    } catch (error) {
-      if (error.code === 'ENOENT' || error.code === 'ENOTDIR') missing = true;
-      else throw error;
-    }
-    mapped.push({ ...track, path: filename, missing });
-  }
+  const mapped = new Array(tracks.length);
+  let index = 0,
+    failure;
+  await Promise.all(
+    Array.from({ length: Math.min(8, tracks.length) }, async () => {
+      while (!failure && index < tracks.length) {
+        const i = index++,
+          track = tracks[i];
+        try {
+          const filename = path.join(newRoot, ...relativeFile(library.root, track.path));
+          let missing = false,
+            size = track.size;
+          try {
+            const stat = await fs.stat(filename);
+            if (!stat.isFile() || (track.size > 0 && stat.size !== track.size))
+              throw new Error('File differs from the indexed track: ' + filename);
+            if (!(track.size > 0)) await verifyLegacyTrack(track, filename);
+            size = stat.size;
+          } catch (error) {
+            if (error.code === 'ENOENT' || error.code === 'ENOTDIR') missing = true;
+            else throw error;
+          }
+          mapped[i] = { ...track, path: filename, size, missing };
+        } catch (error) {
+          failure ||= error;
+        }
+      }
+    }),
+  );
+  if (failure) throw failure;
+  const matches = mapped.filter((track) => !track.missing).length;
   if (tracks.length && !matches)
     throw new Error(
       'No matching tracks found. Choose the folder with the same artist/album structure.',

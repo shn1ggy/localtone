@@ -17,3 +17,14 @@ test('individual reconnect validates actual absence and an available audio file 
  try{const library={id:'l',root:dir},old={id:'old',libraryId:'l',path:path.join(dir,'old.mp3')},file=path.join(dir,'new.mp3');await writeFile(file,'audio');const {realpath}=await import('node:fs/promises');const canonical=await realpath(file);const plan=await repair.planTrackReconnect(library,old,file,[{id:'new',libraryId:'l',path:canonical}]);assert.deepEqual(plan.duplicates,['new']);await assert.rejects(repair.requireMissing({...old,path:file}),/available again/);await assert.rejects(repair.planTrackReconnect(library,old,file,[{id:'other',libraryId:'different',path:canonical}]),/another library/);
  }finally{await rm(dir,{recursive:true,force:true});}
 });
+
+
+test('legacy zero-size backup reconnects across Windows/POSIX roots using real audio details and rejects wrong audio',async()=>{
+ const {copyFile,stat}=await import('node:fs/promises'),{parseFile}=await import('music-metadata');const dir=await mkdtemp(path.join(os.tmpdir(),'repair-legacy-'));
+ try{await mkdir(path.join(dir,'Artist','Album'),{recursive:true});const file=path.join(dir,'Artist','Album','song.mp3');await copyFile(new URL('./fixtures/tone.mp3',import.meta.url),file);const audio=await parseFile(file,{duration:true});const track={id:'original-id',path:'D:\\Music\\Artist\\Album\\song.mp3',size:0,title:audio.common.title||'song',artist:audio.common.artist||'Unknown artist',album:audio.common.album||'Unknown album',duration:audio.format.duration};
+ const plan=await repair.planReconnect({root:'D:\\Music'},[track],dir);assert.equal(plan.matches,1);assert.equal(plan.tracks[0].id,'original-id');assert.equal(plan.tracks[0].path,file);assert.equal(plan.tracks[0].size,(await stat(file)).size);assert.equal(track.size,0);
+ await assert.rejects(repair.planReconnect({root:'D:\\Music'},[{...track,title:'A different song'}],dir),/details.*match/);
+ await assert.rejects(repair.planReconnect({root:'D:\\Music'},[{...track,duration:track.duration+10}],dir),/details.*match/);
+ await writeFile(file,'not audio');await assert.rejects(repair.planReconnect({root:'D:\\Music'},[track],dir));
+ }finally{await rm(dir,{recursive:true,force:true});}
+});

@@ -33,3 +33,13 @@ test('new collection references get fresh IDs, ratings and no stale artwork cach
 let n=0;const result=transfer.mergeCollections({libraries:[],tracks:[],playlists:[],ratings:{}},collection,()=>String(++n));
 assert.equal(result.tracks[0].libraryId,result.libraries[0].id);assert.equal(result.ratings[result.tracks[0].id],4);assert.equal(result.tracks[0].cover,false);assert.equal(result.tracks[0].mtime,0);
 });
+
+
+test('collection backups preserve valid file sizes and raw discs while old backups remain readable',()=>{
+ const original=structuredClone(collection);original.tracks[0].size=123456;original.tracks[0].discRaw='02/03';
+ const file=transfer.exportSettings({...preferences.defaults,exportCollections:true},original);
+ assert.equal(file.collections.tracks[0].size,123456);assert.equal(file.collections.tracks[0].discRaw,'02/03');
+ assert.equal(transfer.mergeCollections({libraries:[],tracks:[],playlists:[],ratings:{}},file.collections).tracks[0].size,123456);
+ delete original.tracks[0].size;assert.equal(transfer.validateCollections(original).tracks[0].size,0);
+ for(const size of [-1,1.5,'100',Infinity,Number.MAX_SAFE_INTEGER+1]){original.tracks[0].size=size;assert.throws(()=>transfer.validateCollections(original),/size/);}
+});

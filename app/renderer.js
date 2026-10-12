@@ -399,6 +399,7 @@ function isFirstLaunch() {
   );
 }
 function render({ preserveScroll = false } = {}) {
+  if (!preserveScroll) $('playing-reveal-space')?.remove();
   const pane = document.querySelector('.content-scroll'),
     artists = $('artist-list');
   const position = preserveScroll
@@ -595,7 +596,7 @@ async function startTrack(resume = null, scheduled = false) {
   artwork.title = 'Show playing track';
   artwork.setAttribute('aria-label', 'Show playing track');
   artwork.append(...cover(track).childNodes);
-  artwork.onclick = () => navigateFromPlayer(true, true);
+  artwork.onclick = () => navigateFromPlayer(true, true, true);
   $('now-art').replaceWith(artwork);
   $('now-title').textContent = track.title;
   $('now-artist').textContent = track.artist;
@@ -2712,7 +2713,7 @@ $('setting-trackNumberFormat').onchange = async (event) => {
   trackNumberChange(event);
   await refreshTrackTotals();
 };
-function navigateFromPlayer(album = false, preserveView = false) {
+function navigateFromPlayer(album = false, preserveView = false, alignTop = false) {
   const pane = document.querySelector('.content-scroll'),
     previousScroll = pane.scrollTop;
   const previousScope = { ...scope };
@@ -2757,7 +2758,7 @@ function navigateFromPlayer(album = false, preserveView = false) {
     selection.tracks.anchor = track.id;
     selection.tracks.add(track.id);
   }
-  render();
+  render({ preserveScroll: preserveView && sameCollection && !alignTop });
   if (preserveView && sameCollection) pane.scrollTop = previousScroll;
   if (targetView === 'tracks') $('tracks').closest('table')._revealTrack?.(track.id, true);
   else {
@@ -2773,7 +2774,37 @@ function navigateFromPlayer(album = false, preserveView = false) {
     ].find((node) => node.dataset.trackId === track.id);
     if (row) {
       row.focus({ preventScroll: true });
-      row.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+      if (alignTop) {
+        const target = targetView === 'tracks' ? row : row.closest('.album-section') || row;
+        const header = targetView === 'tracks' ? row.closest('table').querySelector('thead') : null;
+        const inset =
+          (parseFloat(getComputedStyle(pane).paddingTop) || 0) +
+          (header && !header.hidden ? header.getBoundingClientRect().height : 0);
+        const top = Math.max(
+          0,
+          pane.scrollTop +
+            target.getBoundingClientRect().top -
+            pane.getBoundingClientRect().top -
+            inset,
+        );
+        const space = el('div');
+        space.id = 'playing-reveal-space';
+        space.setAttribute('aria-hidden', 'true');
+        space.style.height = '0px';
+        pane.append(space);
+        const contentEnd =
+          pane.scrollTop +
+          space.getBoundingClientRect().top -
+          pane.getBoundingClientRect().top +
+          (parseFloat(getComputedStyle(pane).paddingBottom) || 0);
+        const extra = Math.max(0, top + pane.clientHeight - contentEnd);
+        if (extra > 0) space.style.height = `${Math.ceil(extra)}px`;
+        else space.remove();
+        pane.scrollTop = top;
+        for (const table of pane.querySelectorAll('.track-table')) table._refreshVirtual?.();
+      }
+      if (!alignTop)
+        row.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
     }
   }
 }

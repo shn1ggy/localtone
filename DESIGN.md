@@ -237,3 +237,11 @@ A fresh collection shows Add a library and Import settings actions in the main p
 ## In-place browsing refreshes
 
 Ratings (optimistic, saved and failed), metadata updates/rescans, column adjustments and album-info toggles must preserve both track-pane and artist-pane scrolling. Restore the viewport and refresh virtual rows synchronously before painting; lazy album mounting uses the preserved viewport. Restore surviving track/artist/album focus with preventScroll, without a pane pulse. Collection/search/view navigation retains its intentional navigation behavior. Album title Shift/Ctrl/Cmd selection repaints all tracks belonging to the selected albums, including removing stale row highlights; collapsed albums retain the same complete logical track selection for editing, ratings and queue actions.
+
+## Direct now-playing reveal and library relocation
+
+Clicking now-playing artwork preserves the active tab and playing collection, clears artist filtering and selects the current track. Align the album heading/cover to the pane content top in Albums/cover detail, or the current row below any visible column headings in Tracks. Add only the trailing room needed for an end-of-collection target; keep it across in-place refreshes and clear it on collection/search/view changes. Next/Previous retain that room within the same collection and and shuffled-next retain nearest-edge scrolling.
+
+Collection exports preserve valid file sizes and raw disc tags. Reconnect uses paths relative to the exported library root across Windows/POSIX paths. Size-less older backups are checked against readable audio metadata and duration before confirmation; a differing, unreadable or unverifiable file cancels the plan. Reconnection preserves imported track/library IDs and playlist references, performs no music moves/deletions, and restores the previous in-memory root/tracks if rescanning fails.
+
+Reconnection refreshes MP3 ratings from the current files so stale backup metadata cannot override newer shared-folder edits. Existing pending legacy ratings and non-MP3 ratings retain their normal preservation rules.

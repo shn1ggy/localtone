@@ -1436,7 +1436,7 @@ app.whenReady().then(async () => {
       type: 'question',
       title: 'Reconnect library',
       message: `Reconnect ${library.name}?`,
-      detail: `${plan.matches} matching files; ${plan.missing} still missing. Playlists, ratings and track IDs will be preserved. Files are matched by relative path and size. No music is moved or deleted.\n\n${root}`,
+      detail: `${plan.matches} matching files; ${plan.missing} still missing. Playlists, ratings and track IDs will be preserved. Files are matched by their paths within the library. Sizes are checked when available; older backups use song details and duration. No music is moved or deleted.\n\n${root}`,
       buttons: ['Cancel', 'Reconnect'],
       defaultId: 0,
       cancelId: 0,
@@ -1444,7 +1444,7 @@ app.whenReady().then(async () => {
     if (answer.response !== 1) return null;
     library.root = root;
     db.tracks = db.tracks.filter((t) => t.libraryId !== id).concat(plan.tracks);
-    return importLibrary(library, null, true);
+    return importLibrary(library);
   });
   handle('rescan', async (id) => {
     const library = db.libraries.find((l) => l.id === id);

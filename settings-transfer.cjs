@@ -75,10 +75,21 @@ function validateCollections(value) {
       path: item.path,
       cover: false,
       mtime: 0,
-      size: 0,
+      size: Number.isSafeInteger(item.size) && item.size >= 0 ? item.size : 0,
       missing: false,
     };
-    for (const key of ['title', 'artist', 'albumArtist', 'album', 'genre', 'trackRaw', 'codec']) {
+    if (item.size != null && (!Number.isSafeInteger(item.size) || item.size < 0))
+      throw Error('Invalid file size in collection backup.');
+    for (const key of [
+      'title',
+      'artist',
+      'albumArtist',
+      'album',
+      'genre',
+      'trackRaw',
+      'discRaw',
+      'codec',
+    ]) {
       if (!text(item[key] ?? '')) throw Error('Invalid track metadata.');
       clean[key] = item[key] ?? '';
     }
