@@ -544,6 +544,7 @@ function showActions(track, event) {
   button('Add to play queue', () => addToQueue(actionIds));
   appendPlaylistActions(actionIds);
   appendWebSearch(track.id, 'track');
+  appendDeleteFilesAction(actionIds.map((id) => trackLookup.get(id)));
   const playlist = activePlaylist();
   if (playlist && !playlist.dynamic?.enabled) {
     button('Remove from this playlist', () => removePlaylistSelection(playlist, actionIds));
@@ -554,7 +555,10 @@ function playRandomCollection(source) {
   if (busy) return;
   setScope(source);
   const tracks = selectTracks(state, scope, '', 'manual');
-  if (tracks.length) playVisible(tracks[Math.floor(Math.random() * tracks.length)].id);
+  if (tracks.length) {
+    playVisible(tracks[Math.floor(Math.random() * tracks.length)].id);
+    navigateFromPlayer(true, true, true);
+  }
 }
 function playVisible(id) {
   let source = selectTracks(state, scope, '', sort, direction, null, randomSortSeed);
@@ -1105,6 +1109,7 @@ document.onkeydown = (event) => {
   ) {
     if (
       event.key === 'Backspace' &&
+      !event.shiftKey &&
       $('context-menu').hidden &&
       (selection.pane === 'artists' ||
         (selection.pane === 'tracks' &&
@@ -1116,6 +1121,7 @@ document.onkeydown = (event) => {
     }
     if (
       event.key === 'Backspace' &&
+      !event.shiftKey &&
       selection.pane === 'tracks' &&
       view === 'covers' &&
       selection.albumDetail &&
@@ -1205,6 +1211,16 @@ document.onkeydown = (event) => {
     );
   if (binding) {
     const [action] = binding;
+    if (action === 'columnHeadings' || action === 'deleteSelection') {
+      if (!typing && !document.querySelector('dialog[open]') && $('context-menu').hidden) {
+        event.preventDefault();
+        if (!event.repeat && !busy) {
+          if (action === 'columnHeadings') toggleColumnHeadings();
+          else deleteBrowsingSelection();
+        }
+      }
+      return;
+    }
     if (action === 'quit') {
       if (!event.repeat) {
         event.preventDefault();
@@ -1925,7 +1941,11 @@ function renderBrowser(viewportTop = document.querySelector('.content-scroll').s
     offset += height;
   }
 }
-for (const name of ['albums', 'covers', 'tracks'])
+for (const name of ['albums', 'covers', 'tracks']) {
+  $(`view-${name}`).oncontextmenu = showTabMenu;
+  $(`view-${name}`).addEventListener('keydown', (event) => {
+    if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) showTabMenu(event);
+  });
   $(`view-${name}`).onclick = () => {
     selection.albumFocus = null;
     selection.albums.clear();
@@ -1940,6 +1960,7 @@ for (const name of ['albums', 'covers', 'tracks'])
     render();
     focusBrowseSelection();
   };
+}
 const tagLabels = {
   title: 'Title',
   artist: 'Artist',
@@ -2232,6 +2253,118 @@ function bindSidebarItem(button, item, kind) {
     operation(() => api.playlist({ type: 'reorder', ids }), null);
   };
 }
+function cleanupRemovedPlayback() {
+  const playing = currentTrack();
+  playback.prune((id) => trackLookup.has(id));
+  if (!playing) {
+    waveformPeaks = null;
+    ++waveformGeneration;
+    api.cancelWaveform?.().catch(() => {});
+    applyWaveformAppearance();
+    listener.clear();
+    ++playGeneration;
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    playback.select(-1);
+    $('now-title').textContent = 'Nothing playing';
+    $('now-artist').textContent = '';
+    $('now-album').textContent = '';
+    $('now-artist').disabled = true;
+    $('now-album').disabled = true;
+    $('now-separator').hidden = true;
+    $('now-art').replaceChildren();
+    $('now-art').disabled = true;
+    $('seek').value = 0;
+    $('elapsed').textContent = '0:00';
+    $('duration').textContent = '0:00';
+  }
+}
+async function deleteCollection(item, kind) {
+  if (busy) return;
+  if (kind === 'library') {
+    if (
+      !confirm(
+        'Remove this library from Localtone? Its tracks will also be removed from playlists and the queue. Music files stay on disk.',
+      )
+    )
+      return;
+    const result = await operation(() => api.deleteLibrary(item.id));
+    if (!result) return;
+    cleanupRemovedPlayback();
+    if (scope.kind === 'library' && scope.id === item.id) setScope({ kind: 'all' });
+    else render();
+  } else {
+    if (confirm('Delete this playlist? Your music files will stay untouched.')) {
+      const result = await operation(() => api.playlist({ type: 'delete', id: item.id }));
+      if (result && scope.kind === 'playlist' && scope.id === item.id) setScope({ kind: 'all' });
+    }
+  }
+}
+async function deleteBrowsingSelection() {
+  if (busy) return;
+  if (selection.pane === 'sidebar') {
+    const node = document.activeElement,
+      kind = node?.dataset.sourceKind,
+      id = node?.dataset.sourceId;
+    const item = (kind === 'library' ? state.libraries : state.playlists).find(
+      (item) => item.id === id,
+    );
+    if (item && ['library', 'playlist'].includes(kind)) await deleteCollection(item, kind);
+    return;
+  }
+  const playlist = activePlaylist(),
+    tracks = selectedBrowsingTracks();
+  if (!playlist || playlist.dynamic?.enabled || !tracks.length) return;
+  if (
+    confirm(
+      `Remove ${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'} from “${playlist.name}”? Music files will stay on disk.`,
+    )
+  )
+    await removePlaylistSelection(
+      playlist,
+      tracks.map((track) => track.id),
+    );
+}
+function appendDeleteFilesAction(tracks) {
+  const ids = [...new Set(tracks.filter(Boolean).map((track) => track.id))];
+  if (!ids.length) return;
+  const button = el('button', 'Delete files permanently…');
+  button.onclick = async () => {
+    closeContextMenu();
+    if (busy) return;
+    const result = await withReleasedTrack(
+      ids.includes(currentTrack()?.id) ? currentTrack().id : null,
+      () => operation(() => api.deleteFiles(ids), 'Deleting selected files…'),
+    );
+    if (!result || result.cancelled) return;
+    cleanupRemovedPlayback();
+    for (const id of result.removed || []) selection.tracks.delete(id);
+    selection.albums.clear();
+    render({ preserveScroll: true });
+    if (result.failures?.length)
+      toast(`${result.failures.length} files could not be deleted. ${result.failures[0].message}`);
+  };
+  $('track-actions').append(button);
+}
+function toggleColumnHeadings() {
+  updateSettings({ showColumnHeaders: !prefs.showColumnHeaders });
+}
+function showTabMenu(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  const menu = $('track-actions'),
+    button = el('button', 'Show column headings');
+  button.setAttribute('role', 'menuitemcheckbox');
+  button.setAttribute('aria-checked', String(prefs.showColumnHeaders));
+  paintMenuCheck(button, prefs.showColumnHeaders);
+  button.onclick = () => {
+    closeContextMenu();
+    toggleColumnHeadings();
+  };
+  menu.replaceChildren(button);
+  openContextMenu(event);
+}
 function showCollectionActions(item, kind, event) {
   const container = $('track-actions');
   container.replaceChildren();
@@ -2259,51 +2392,10 @@ function showCollectionActions(item, kind, event) {
     add('Rescan folder', () =>
       operation(() => api.rescan(item.id), 'Checking your folder for new and changed music…'),
     );
-    add('Delete library', async () => {
-      if (
-        !confirm(
-          'Remove this library from Localtone? Its tracks will also be removed from playlists and the queue. Music files stay on disk.',
-        )
-      )
-        return;
-      const result = await operation(() => api.deleteLibrary(item.id));
-      if (!result) return;
-      const playing = currentTrack();
-      playback.prune((id) => trackLookup.has(id));
-      if (!playing) {
-        waveformPeaks = null;
-        ++waveformGeneration;
-        api.cancelWaveform?.().catch(() => {});
-        applyWaveformAppearance();
-        listener.clear();
-        ++playGeneration;
-        audio.pause();
-        audio.removeAttribute('src');
-        audio.load();
-        playback.select(-1);
-        $('now-title').textContent = 'Nothing playing';
-        $('now-artist').textContent = '';
-        $('now-album').textContent = '';
-        $('now-artist').disabled = true;
-        $('now-album').disabled = true;
-        $('now-separator').hidden = true;
-        $('now-art').replaceChildren();
-        $('now-art').disabled = true;
-        $('seek').value = 0;
-        $('elapsed').textContent = '0:00';
-        $('duration').textContent = '0:00';
-      }
-      if (scope.kind === 'library' && scope.id === item.id) setScope({ kind: 'all' });
-      else render();
-    });
+    add('Delete library', () => deleteCollection(item, kind));
   } else {
     add('Playlist settings…', () => openPlaylistSettings(item));
-    add('Delete playlist', async () => {
-      if (confirm('Delete this playlist? Your music files will stay untouched.')) {
-        const result = await operation(() => api.playlist({ type: 'delete', id: item.id }));
-        if (result && scope.kind === 'playlist' && scope.id === item.id) setScope({ kind: 'all' });
-      }
-    });
+    add('Delete playlist', () => deleteCollection(item, kind));
   }
   openContextMenu(event);
 }
@@ -3616,6 +3708,7 @@ function bindFolderMenu(node, getId, kind) {
       container.append(add);
       appendPlaylistActions(tracks.map((t) => t.id));
       appendNamingAction(tracks);
+      appendDeleteFilesAction(tracks);
       if (tracks.length && tracks.every((t) => t.codec === 'MP3')) {
         const edit = el('button', 'Edit tags…');
         edit.onclick = () => {
@@ -3641,6 +3734,7 @@ function bindFolderMenu(node, getId, kind) {
       container.append(add);
       appendPlaylistActions(tracks.map((t) => t.id));
       appendNamingAction(tracks);
+      appendDeleteFilesAction(tracks);
       if (tracks.length && tracks.every((t) => t.codec === 'MP3')) {
         const edit = el('button', 'Edit tags…');
         edit.onclick = () => {
@@ -4075,6 +4169,8 @@ function renderShortcutEditor() {
     newPlaylist: 'New playlist',
     newLibrary: 'New library',
     cycleView: 'Cycle views',
+    columnHeadings: 'Show / hide column headings',
+    deleteSelection: 'Remove selected items (confirm)',
     cycleSort: 'Cycle sorting',
     addPlaylist: 'Add to playlist',
     addQueue: 'Add to queue',
@@ -4144,6 +4240,7 @@ function renderShortcutEditor() {
         'search',
         'contextMenu',
         'cycleView',
+        'columnHeadings',
         'cycleSort',
         'resetSort',
         'collapseAlbums',
@@ -4154,7 +4251,17 @@ function renderShortcutEditor() {
     ],
     [
       'Library & editing',
-      ['newLibrary', 'newPlaylist', 'selectAll', 'tags', 'rename', 'remove', 'undo', 'redo'],
+      [
+        'newLibrary',
+        'newPlaylist',
+        'selectAll',
+        'tags',
+        'rename',
+        'remove',
+        'deleteSelection',
+        'undo',
+        'redo',
+      ],
     ],
     ['Window', ['settings', 'queue', 'mini', 'maximize', 'quit']],
   ]) {
@@ -5459,7 +5566,7 @@ function appendPlaylistActions(ids) {
   add.onpointerenter = open;
   for (const button of menu.querySelectorAll('button'))
     button.addEventListener('pointerenter', () => closePlaylistSubmenu());
-  menu.append(create, add);
+  menu.append(add, create);
 }
 async function addIdsToPlaylist(id, ids) {
   const playlist = state.playlists.find((p) => p.id === id);

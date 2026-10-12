@@ -18,6 +18,7 @@ These rules describe the current preferences language. They apply to new functio
 | Help/status text | 12px, line height 1.45 |
 | Standard row | 36px, vertically centered |
 | Input, select and button | 28px high, 5px corner radius |
+| Context-menu command | Existing compact 12px text, 28px row; shared menu styling and checkmarks |
 | Standard dropdown | 245px wide; numeric input 72px |
 | Button width | Fit text; icon-only close/action 28px square |
 | Enable switch | 30 × 17px with 11px thumb |
@@ -247,3 +248,13 @@ Collection exports preserve valid file sizes and raw disc tags. Reconnect uses p
 Reconnection refreshes MP3 ratings from the current files so stale backup metadata cannot override newer shared-folder edits. Existing pending legacy ratings and non-MP3 ratings retain their normal preservation rules.
 
 Double-clicking a library, All music or a playlist chooses a random track from that complete collection and seeds its full queue in the current sort/shuffle mode. Artist and search filtering must not restrict this queue.
+
+## Random playback, headings and deletion
+
+After sidebar double-click playback, use the explicit now-playing reveal in the current tab: show the album heading/cover at the top when applicable, with the chosen playing track selected. Do not leave the randomly chosen opening artist or old scroll position in place.
+
+Right-clicking Albums, Covers or Tracks opens one checked Show column headings command. Reuse the shared menu checkmark and close this single-option menu after activation. Shift+X toggles the same saved preference; it is editable in Shortcuts.
+
+Queue commands always appear in this order: Add to play queue, Add to playlist, Create playlist from selection…. Permanent disk deletion is a separated final media action, labelled Delete files permanently…, with a native warning defaulting to Cancel and an explicit irreversible description and file count/paths. Remove empty album/artist directories only with nonrecursive removal, never the library root or nonempty folders. Indexed IDs are resolved and checked in the main process; changed, outside-root and symlink files are rejected before any deletion. Refresh track, playlist and queue references after successful deletion, preserving the viewport and stopping playback if its file was removed. Release the active media handle before disk deletion, restoring it on cancellation.
+
+Shift+Backspace confirms removing the focused library/playlist or the selected tracks/albums/artists from a regular playlist. It never deletes music files; All music and dynamic playlist content cannot be removed with it. Plain Backspace keeps its navigation/deselection behavior. Both new shortcuts use the existing editable shortcut system and preserve custom bindings during migration.

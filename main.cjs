@@ -22,6 +22,7 @@ const gaplessDecoder = new (require('./gapless-decoder.cjs').GaplessDecoder)(
 const duplicates = require('./duplicates.cjs').createDuplicates();
 const numberActions = require('./app/rules/number-actions.js');
 const libraryRepair = require('./library-repair.cjs');
+const { deleteSelectedFiles } = require('./delete-files.cjs');
 const fileNaming = require('./file-naming.cjs'),
   naming = fileNaming.createFileNaming();
 const settingsTransfer = require('./settings-transfer.cjs');
@@ -1184,6 +1185,37 @@ app.whenReady().then(async () => {
         await save();
       },
     });
+    return { ...result, state: snapshot() };
+  });
+  handle('delete-files', async (ids) => {
+    const result = await deleteSelectedFiles(db, ids, async (files) => {
+      const answer = await dialog.showMessageBox(win, {
+        type: 'warning',
+        title: 'Delete music files permanently',
+        message: `Permanently delete ${files.length} music ${files.length === 1 ? 'file' : 'files'}?`,
+        detail:
+          'This cannot be undone. Files will not go to Trash. Their playlist and queue entries will be removed. Empty album and artist folders will also be removed; the library folder stays.\n\n' +
+          files
+            .slice(0, 20)
+            .map((file) => file.path)
+            .join('\n') +
+          (files.length > 20 ? `\n… and ${files.length - 20} more files` : ''),
+        buttons: ['Cancel', 'Delete permanently'],
+        defaultId: 0,
+        cancelId: 0,
+      });
+      return answer.response === 1;
+    });
+    if (result.removed.length) {
+      const removed = new Set(result.removed);
+      db.tracks = db.tracks.filter((track) => !removed.has(track.id));
+      libraryRepair.replaceTrackReferences(
+        db,
+        Object.fromEntries(result.removed.map((id) => [id, null])),
+      );
+      index();
+      await save();
+    }
     return { ...result, state: snapshot() };
   });
   handle('preview-file-names', async (ids, config) => naming.preview(ids, config, db));

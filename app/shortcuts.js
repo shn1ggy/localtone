@@ -12,6 +12,8 @@ export const shortcutDefaults = {
   newPlaylist: 'Mod+n',
   newLibrary: 'Mod+l',
   cycleView: 'x',
+  columnHeadings: 'Shift+x',
+  deleteSelection: 'Shift+Backspace',
   cycleSort: 'o',
   addQueue: 'a',
   settings: 'Mod+p',

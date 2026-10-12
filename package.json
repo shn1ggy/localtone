@@ -1,6 +1,6 @@
 {
   "name": "localtone",
-  "version": "0.124.0",
+  "version": "0.125.0",
   "private": true,
   "description": "A local-first desktop music player",
   "author": "Localtone",
@@ -57,6 +57,7 @@
       "settings-transfer.cjs",
       "queue-window.cjs",
       "library-repair.cjs",
+      "delete-files.cjs",
       "gapless-decoder.cjs",
       "window-motion.cjs",
       "musicbrainz.cjs",

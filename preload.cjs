@@ -63,6 +63,7 @@ contextBridge.exposeInMainWorld('localtone', {
   reconnectLibrary: (id) => ipcRenderer.invoke('reconnect-library', id),
   rescan: (id) => ipcRenderer.invoke('rescan', id),
   deleteLibrary: (id) => ipcRenderer.invoke('delete-library', id),
+  deleteFiles: (ids) => ipcRenderer.invoke('delete-files', ids),
   renameLibrary: (id, name) => ipcRenderer.invoke('rename-library', id, name),
   filePath: (file) => webUtils.getPathForFile(file),
   importPlaylistFiles: (id, paths) => ipcRenderer.invoke('import-playlist-files', id, paths),
