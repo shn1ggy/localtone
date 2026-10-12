@@ -226,7 +226,7 @@ Quit commands always enter the existing safe shutdown path, waiting for active w
 
 ## Playback reveal and track metadata display
 
-Playback navigation reveals rows with nearest-edge scrolling. Preserve the collection scroll position and expanded albums when the playing collection remains open; a visible row must not be vertically centered. Clicking blank track-pane space clears track/album selection without scrolling or changing the active pane.
+Sequential playback navigation reveals rows with nearest-edge scrolling. Shuffled-next uses the explicit artwork reveal, aligning the album heading/cover (or track row in Tracks) to the pane top. Preserve the collection scroll position and expanded albums when the playing collection remains open; a visible row must not be vertically centered. Clicking blank track-pane space clears track/album selection without scrolling or changing the active pane.
 
 Appearance → Albums & tracks offers a saved Show disc number switch, off by default. Prefix the displayed track number with the metadata disc number and a dot, preserving raw zero padding. Untagged discs display as disc 1. The number column reserves enough width for the complete displayed value. Finder/Explorer playlist imports remain playlist content and do not enter All music or dynamic playlists.
 
@@ -240,8 +240,10 @@ Ratings (optimistic, saved and failed), metadata updates/rescans, column adjustm
 
 ## Direct now-playing reveal and library relocation
 
-Clicking now-playing artwork preserves the active tab and playing collection, clears artist filtering and selects the current track. Align the album heading/cover to the pane content top in Albums/cover detail, or the current row below any visible column headings in Tracks. Add only the trailing room needed for an end-of-collection target; keep it across in-place refreshes and clear it on collection/search/view changes. Next/Previous retain that room within the same collection and and shuffled-next retain nearest-edge scrolling.
+Clicking now-playing artwork preserves the active tab and playing collection, clears artist filtering and selects the current track. Align the album heading/cover to the pane content top in Albums/cover detail, or the current row below any visible column headings in Tracks. Add only the trailing room needed for an end-of-collection target; keep it across in-place refreshes and clear it on collection/search/view changes. Sequential Next/Previous retain that room within the same collection and use nearest-edge scrolling. Dedicated shuffled-next and Next while shuffle is enabled use the same album-aware top alignment as the artwork click.
 
 Collection exports preserve valid file sizes and raw disc tags. Reconnect uses paths relative to the exported library root across Windows/POSIX paths. Size-less older backups are checked against readable audio metadata and duration before confirmation; a differing, unreadable or unverifiable file cancels the plan. Reconnection preserves imported track/library IDs and playlist references, performs no music moves/deletions, and restores the previous in-memory root/tracks if rescanning fails.
 
 Reconnection refreshes MP3 ratings from the current files so stale backup metadata cannot override newer shared-folder edits. Existing pending legacy ratings and non-MP3 ratings retain their normal preservation rules.
+
+Double-clicking a library, All music or a playlist chooses a random track from that complete collection and seeds its full queue in the current sort/shuffle mode. Artist and search filtering must not restrict this queue.

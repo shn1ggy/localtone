@@ -988,6 +988,11 @@ test('playlist double-click starts randomly in the full queue; Backspace clears 
   d.querySelector('#playlists button').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));
   assert.equal(probe().playing,'2');assert.equal(probe().cursor,0);assert.equal(probe().shuffle,true);assert.deepEqual([...probe().queue].sort(),['0','1','2','3','4','5']);
   d.querySelectorAll('#playlists button')[1].dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));assert.equal(probe().playing,'2');
+  d.getElementById('shuffle').click();await flush();
+  for(const button of [d.querySelector('#libraries button'),d.getElementById('all')]){
+   button.dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));assert.equal(probe().playing,'3');assert.deepEqual(probe().queue,['0','1','2','3','4','5']);assert.equal(probe().cursor,3);assert.equal(probe().shuffle,false);
+  }
+  d.getElementById('shuffle').click();await flush();d.getElementById('all').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));assert.equal(probe().playing,'3');assert.equal(probe().cursor,0);assert.deepEqual([...probe().queue].sort(),['0','1','2','3','4','5']);
   d.querySelector('#libraries button').click();d.getElementById('view-tracks').click();
   let artists=[...d.querySelectorAll('#artist-list button')];artists[1].click();artists=[...d.querySelectorAll('#artist-list button')];artists[2].dispatchEvent(new w.MouseEvent('click',{shiftKey:true,bubbles:true}));
   const scroll=d.querySelector('.content-scroll');scroll.scrollTop=120;
@@ -1110,6 +1115,9 @@ test('explicit player-cover reveal aligns album sections and track rows at the t
  try{await w.eval(`(async()=>{${source}\n})()`);const pane=d.querySelector('.content-scroll');Object.defineProperty(pane,'clientHeight',{get:()=>500});Object.defineProperty(pane,'scrollHeight',{get:()=>1200+(parseFloat(d.getElementById('playing-reveal-space')?.style.height)||0)});pane.getBoundingClientRect=()=>({top:100,bottom:600});
  w.HTMLElement.prototype.getBoundingClientRect=function(){const top=this.matches('.album-section')?1000:this.hasAttribute('data-track-id')?1100:0;return {top:top-pane.scrollTop,bottom:top+28-pane.scrollTop,height:28,left:0,right:100,width:100};};pane.getBoundingClientRect=()=>({top:100,bottom:600});
  d.querySelector('#tracks tr').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));await flush();for(const tab of ['tracks','albums','covers']){d.getElementById('view-'+tab).click();pane.scrollTop=0;d.getElementById('now-art').click();const target=d.querySelector(tab==='tracks'?'#tracks tr.selected':'.album-section');const inset=(parseFloat(w.getComputedStyle(pane).paddingTop)||0)+(tab==='tracks'&&!d.querySelector('.track-table thead').hidden?28:0);assert.equal(target.getBoundingClientRect().top,100+inset);assert.ok(parseFloat(d.getElementById('playing-reveal-space').style.height)>0);assert.equal(d.getElementById('view-'+tab).getAttribute('aria-pressed'),'true');}
+ // Both dedicated random-next and Next with shuffle use the artwork's album-aware alignment.
+ for(const tab of ['tracks','albums','covers']){d.getElementById('view-'+tab).click();pane.scrollTop=0;d.body.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',ctrlKey:true,shiftKey:true,bubbles:true,cancelable:true}));await flush();let target=d.querySelector(tab==='tracks'?'#tracks tr.selected':'.album-section');let inset=(parseFloat(w.getComputedStyle(pane).paddingTop)||0)+(tab==='tracks'&&!d.querySelector('.track-table thead').hidden?28:0);assert.equal(target.getBoundingClientRect().top,100+inset);assert.equal(d.getElementById('view-'+tab).getAttribute('aria-pressed'),'true');d.querySelector('[data-track-id]').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));await flush();pane.scrollTop=0;d.getElementById('next-track').click();await flush();target=d.querySelector(tab==='tracks'?'#tracks tr.selected':'.album-section');assert.equal(target.getBoundingClientRect().top,100+inset);}
+ d.getElementById('shuffle').click();await flush();d.querySelector('[data-track-id]').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));await flush();
  let scrolling;w.HTMLElement.prototype.scrollIntoView=options=>scrolling=options.block;d.getElementById('next-track').click();await flush();assert.equal(scrolling,'nearest');assert.ok(d.getElementById('playing-reveal-space'));
  }finally{w.close();}
 });

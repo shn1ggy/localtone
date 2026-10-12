@@ -365,13 +365,7 @@ function renderSidebar() {
       button.title = `${item.name}${dynamic ? ' · Dynamic playlist' : ''}\n${tracks.length.toLocaleString()} tracks · ${minutes.toLocaleString()} minutes`;
       button.classList.toggle('active', scope.kind === kind && scope.id === item.id);
       button.onclick = () => setScope({ kind, id: item.id });
-      if (kind === 'playlist')
-        button.ondblclick = () => {
-          if (busy) return;
-          setScope({ kind, id: item.id });
-          const tracks = selectTracks(state, scope, '', 'manual');
-          if (tracks.length) playVisible(tracks[Math.floor(Math.random() * tracks.length)].id);
-        };
+      button.ondblclick = () => playRandomCollection({ kind, id: item.id });
       bindSidebarItem(button, item, kind);
       $(container).append(button);
     }
@@ -556,6 +550,12 @@ function showActions(track, event) {
   }
   openContextMenu(event);
 }
+function playRandomCollection(source) {
+  if (busy) return;
+  setScope(source);
+  const tracks = selectTracks(state, scope, '', 'manual');
+  if (tracks.length) playVisible(tracks[Math.floor(Math.random() * tracks.length)].id);
+}
 function playVisible(id) {
   let source = selectTracks(state, scope, '', sort, direction, null, randomSortSeed);
   if (view !== 'tracks')
@@ -710,7 +710,7 @@ function advance(step, ended = false, forcePrevious = false) {
   } else if (next < 0) playback.select(0);
   else playback.select(next);
   startTrack();
-  if (!ended) navigateFromPlayer(true, true);
+  if (!ended) navigateFromPlayer(true, true, shuffle && step > 0);
 }
 function toggle() {
   if (!audio.src) {
@@ -784,6 +784,7 @@ function renderQueue() {
   if (!$('queue-panel').hidden) revealPlayingQueueItem();
 }
 $('all').onclick = () => setScope({ kind: 'all' });
+$('all').ondblclick = () => playRandomCollection({ kind: 'all' });
 $('add-library').onclick = $('empty-add').onclick = addLibrary;
 $('add-playlist').onclick = createPlaylist;
 function syncSearchClear() {
@@ -3437,7 +3438,7 @@ function randomNext() {
   repeat = 0;
   updateSettings({ shuffle: true, repeat: 0 });
   startTrack();
-  navigateFromPlayer(true, true);
+  navigateFromPlayer(true, true, true);
   if (!$('queue-panel').hidden) revealPlayingQueueItem();
 }
 
