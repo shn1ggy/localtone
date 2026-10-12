@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "0.125.0",
-  "commit": "2d68c488945b40cc1326d36e46e91b47d72fe923",
-  "buildRun": 38238636666,
-  "tag": "v0.125.0",
+  "version": "0.127.0",
+  "commit": "d05b3c80245747dd290aeaf55a349861a8a50619",
+  "buildRun": 38323305861,
+  "tag": "v0.127.0",
   "attempt": 1,
-  "title": "Localtone 0.125.0 — Playback reveal, column headings and confirmed deletion"
+  "title": "Localtone 0.127.0 \u2014 Library settings and Windows window fixes"
 }
