@@ -1,6 +1,15 @@
 // Real Chromium/native-window regression checks. Isolated data, never user music.
 const electron = require('electron');
 const { app, BrowserWindow, screen } = electron;
+app.disableHardwareAcceleration();
+process.on('uncaughtException', (error) => {
+  console.error(error);
+  app.exit(1);
+});
+process.on('unhandledRejection', (error) => {
+  console.error(error);
+  app.exit(1);
+});
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
@@ -11,7 +20,11 @@ app.setPath('userData', temporary);
 // The check uses an isolated instance; no OS singleton socket is required.
 app.requestSingleInstanceLock = () => true;
 app.on('quit', () => {
-  fs.rmSync(temporary, { recursive: true, force: true });
+  try {
+    fs.rmSync(temporary, { recursive: true, force: true, maxRetries: 3, retryDelay: 40 });
+  } catch (error) {
+    console.warn('Temporary UI data cleanup deferred:', error.code);
+  }
 });
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const fail = (error) => {
@@ -30,6 +43,8 @@ app.on('browser-window-created', (_event, win) => {
         js(
           `(()=>{const result={};for(const id of ['empty-add','empty-import','view-albums','view-covers','view-tracks','sort','volume','queue']){const b=document.getElementById(id),r=b.getBoundingClientRect(),s=getComputedStyle(b);result[id]={x:r.x,y:r.y,width:r.width,height:r.height,font:s.fontSize,line:s.lineHeight,padding:s.padding,color:s.color,background:s.backgroundColor,text:b.textContent};}return result;})()`,
         );
+      console.log('UI_CHECK loaded');
+      win.focus();
       const before = await geometry();
       for (const id of ['empty-add', 'empty-import']) {
         assert.equal(before[id].height, 28);
@@ -54,6 +69,7 @@ app.on('browser-window-created', (_event, win) => {
       assert.equal(menu.scroll, false);
       await js("document.querySelector('#track-actions button').click()");
       assert.equal(await js("document.getElementById('context-menu').hidden"), true);
+      console.log('UI_CHECK cancellation and menus passed');
       const bounds = win.getBounds();
       const start = Date.now();
       await js("document.getElementById('queue').click()");
@@ -78,6 +94,7 @@ app.on('browser-window-created', (_event, win) => {
       assert.equal(await js("document.body.classList.contains('mini-player')"), false);
       assert.deepEqual(win.getBounds(), bounds);
       assert.equal(await js("document.body.classList.contains('window-transition')"), false);
+      console.log('UI_CHECK native queue and mini passed');
       const music = path.join(temporary, 'Music');
       fs.mkdirSync(music);
       for (const name of ['song.mp3', 'preview.mp3'])
@@ -188,6 +205,7 @@ app.on('browser-window-created', (_event, win) => {
           milliseconds: Date.now() - start,
         }),
       );
+      console.log('UI_CHECK library and album highlight passed');
       BrowserWindow.getAllWindows().forEach((window) => window.hide());
       app.quit();
     } catch (error) {
@@ -208,8 +226,21 @@ Module._load = function (name, ...args) {
       workArea: { x: 0, y: 0, width: 4000, height: 2200 },
     }),
   });
+  const native = Object.fromEntries(
+    [
+      'app',
+      'ipcMain',
+      'dialog',
+      'protocol',
+      'net',
+      'session',
+      'shell',
+      'safeStorage',
+      'globalShortcut',
+    ].map((key) => [key, electron[key]]),
+  );
   return {
-    ...electron,
+    ...native,
     screen: desktopScreen,
     BrowserWindow:
       process.platform === 'linux'

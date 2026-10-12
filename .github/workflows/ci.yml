@@ -27,6 +27,7 @@ jobs:
       - run: npm ci
       - run: npm run verify
       - name: Native Windows UI and window transitions
+        timeout-minutes: 2
         if: runner.os == 'Windows'
         run: npm run verify:desktop-ui
       - run: npm run benchmark
