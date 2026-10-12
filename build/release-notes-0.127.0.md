@@ -8,3 +8,5 @@
 - Document the design contracts and verify repeated native transitions at 100% and 125% Windows display scaling.
 
 Publication remains on hold pending user testing. Existing settings remain intact.
+
+Validation: the native Electron checks cover paired button width/weight, Escape and folder-picker cancellation, the initial filtered scan, compact library-dialog sizing, and ten interleaved queue/mini-player cycles. Reduced-motion users retain instantaneous transitions.

@@ -28,3 +28,9 @@ test('Windows reveal animates the panel around a single native resize, with a st
  const presentation=createWindowPresentation({window:w,document:d,api:{platform:'win32',windowAction:async(action,options)=>{steps.push(['native',action,options.animate]);return {value:action==='queue-open'};}},getPreferences:()=>({queuePresentation:'extend'}),syncPaneBounds(){},toast(message){throw Error(message);}});
  try{await presentation.setQueueVisible(true);assert.equal(d.getElementById('close-queue').style.position,'absolute');await presentation.setQueueVisible(false);assert.deepEqual(steps,[['native','queue-open',false],['reveal','translateX(224px)',180],['reveal','translateX(0)',140],['native','queue-close',false]]);assert.equal(d.getElementById('queue-panel').style.transform,'');}finally{presentation.dispose();w.close();}
 });
+
+test('Windows queue reveal respects reduced motion',async()=>{
+ const dom=new JSDOM('<body><button id="queue"></button><section id="queue-panel" hidden><button id="close-queue"></button><div id="queue-list"></div></section></body>'),w=dom.window,d=w.document;w.requestAnimationFrame=callback=>w.setTimeout(callback,0);w.matchMedia=()=>({matches:true});let animated=0;d.getElementById('queue-panel').animate=()=>{animated++;throw Error('Reduced motion must not animate');};
+ const presentation=createWindowPresentation({window:w,document:d,api:{platform:'win32',windowAction:async action=>({value:action==='queue-open'})},getPreferences:()=>({queuePresentation:'extend'}),syncPaneBounds(){},toast(message){throw Error(message);}});
+ try{await presentation.setQueueVisible(true);await presentation.setQueueVisible(false);assert.equal(animated,0);assert.equal(d.getElementById('queue-panel').style.transform,'');assert.equal(d.body.classList.contains('window-transition'),false);}finally{presentation.dispose();w.close();}
+});
