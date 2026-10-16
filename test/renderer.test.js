@@ -96,7 +96,10 @@ test('ratings shortcuts, context menu, player links, themes, covers and search o
   d.getElementById('now-artist').click();assert.equal(d.querySelector('.album-info').firstChild.textContent,'Album');assert.equal(d.getElementById('browse-navigation').textContent.includes('Artist'),false);assert.equal(d.querySelector('.artist-name.active').textContent,'Artist');
   d.getElementById('now-album').click();assert.equal(d.querySelector('.track-name').textContent,'Song');
   key(d.body,'f');assert.equal(d.activeElement,d.getElementById('search'));d.getElementById('search').blur();
-  key(d.body,'3');await flush();assert.deepEqual(rates.at(-1),['a',3]); // playing-track fallback after navigation
+  const playingAudio=d.getElementById('audio');const sourceBefore=playingAudio.getAttribute('src');let interruptions=0;
+  playingAudio.pause=()=>interruptions++;playingAudio.load=()=>interruptions++;
+  key(d.body,'3');await flush();assert.deepEqual(rates.at(-1),['a',3]);
+  assert.equal(interruptions,0,'rating the playing song must not pause or reload audio');assert.equal(playingAudio.getAttribute('src'),sourceBefore);
   d.getElementById('open-settings').click();const theme=d.getElementById('setting-accentColor');theme.value='#b3bdcc';theme.dispatchEvent(new w.Event('change'));await flush();assert.equal(d.documentElement.style.getPropertyValue('--accent'),'#b3bdcc');d.getElementById('close-settings').click();
   d.getElementById('view-covers').click();const size=d.getElementById('setting-coverSize');size.value='small';size.dispatchEvent(new w.Event('change'));await flush();assert.equal(d.documentElement.dataset.coverSize,'small');
   assert.equal(d.querySelector('.toolbar #shuffle'),null);assert.ok(d.querySelector('.sidebar-player #shuffle'));d.getElementById('shuffle').click();await flush();assert.equal(d.getElementById('shuffle').getAttribute('aria-pressed'),'true');
@@ -1119,6 +1122,10 @@ test('explicit player-cover reveal aligns album sections and track rows at the t
  for(const tab of ['tracks','albums','covers']){d.getElementById('view-'+tab).click();pane.scrollTop=0;d.body.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',ctrlKey:true,shiftKey:true,bubbles:true,cancelable:true}));await flush();let target=d.querySelector(tab==='tracks'?'#tracks tr.selected':'.album-section');let inset=(parseFloat(w.getComputedStyle(pane).paddingTop)||0)+(tab==='tracks'&&!d.querySelector('.track-table thead').hidden?28:0);assert.equal(target.getBoundingClientRect().top,100+inset);assert.equal(d.getElementById('view-'+tab).getAttribute('aria-pressed'),'true');d.querySelector('[data-track-id]').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));await flush();pane.scrollTop=0;d.getElementById('next-track').click();await flush();target=d.querySelector(tab==='tracks'?'#tracks tr.selected':'.album-section');assert.equal(target.getBoundingClientRect().top,100+inset);}
  d.getElementById('shuffle').click();await flush();d.querySelector('[data-track-id]').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));await flush();
  let scrolling;w.HTMLElement.prototype.scrollIntoView=options=>scrolling=options.block;d.getElementById('next-track').click();await flush();assert.equal(scrolling,'nearest');assert.ok(d.getElementById('playing-reveal-space'));
+ // A late track in a long album takes precedence over keeping its heading at the top.
+ w.HTMLElement.prototype.getBoundingClientRect=function(){const top=this.matches('.album-section')?1000:this.hasAttribute('data-track-id')?2000:0;return {top:top-pane.scrollTop,bottom:top+28-pane.scrollTop,height:28,left:0,right:100,width:100};};
+ for(const tab of ['albums','covers']){d.getElementById('view-'+tab).click();pane.scrollTop=0;d.getElementById('now-art').click();const row=d.querySelector('.album-section [data-track-id].selected');assert.ok(row);assert.ok(row.getBoundingClientRect().top>=100);assert.ok(row.getBoundingClientRect().bottom<=600,'Playing track must remain visible even when its heading is offscreen');}
+
  }finally{w.close();}
 });
 

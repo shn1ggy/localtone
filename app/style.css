@@ -5204,36 +5204,6 @@ body.mini-player .sidebar {
   border: 0;
 }
 
-body.mini-player .sidebar-player {
-  padding: 0;
-  margin: 0;
-  width: 100%;
-}
-
-body.mini-player .sidebar-player .now {
-  width: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-body.mini-player .sidebar-player #now-art {
-  width: 292px;
-  height: 292px;
-  max-height: none;
-  aspect-ratio: 1;
-}
-
-body.mini-player .player-meta,
-body.mini-player .now-text {
-  display: none !important;
-}
-
-body.mini-player .transport-controls {
-  margin: 8px 0 0;
-  height: 28px;
-  padding: 0;
-}
-
 /* Filled transport marks and vertically aligned secondary track information. */
 .transport-center .ui-icon {
   width: 22px;
@@ -5477,35 +5447,6 @@ body.mini-player .sidebar {
   padding: 10px;
 }
 
-body.mini-player .sidebar-player #now-art {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1;
-}
-
-body.mini-player .sidebar-player .now {
-  gap: 8px;
-}
-
-body.mini-player .player-meta {
-  display: flex !important;
-  height: 20px;
-  min-height: 20px;
-  width: 100%;
-}
-
-body.mini-player .now-text {
-  display: block !important;
-  height: 42px;
-  min-height: 42px;
-  padding: 3px 0 6px;
-}
-
-body.mini-player .transport-controls {
-  height: 30px;
-  margin-top: 8px;
-}
-
 /* Tab buttons are content-sized; only the close control has a square width. */
 #settings-dialog .settings-heading .settings-tabs {
   width: max-content;
@@ -5649,22 +5590,6 @@ body.mini-player .transport-controls {
 #close-queue .ui-icon {
   width: 16px;
   height: 16px;
-}
-
-/* Mini mode uses the same measured component heights as the sidebar. */
-body.mini-player .player-meta {
-  height: auto;
-  min-height: 0;
-}
-
-body.mini-player .now-text {
-  height: auto;
-  min-height: 0;
-}
-
-body.mini-player .transport-controls {
-  margin: 0;
-  height: 30px;
 }
 
 #playlist-settings-dialog .playlist-rule {
@@ -6093,7 +6018,7 @@ body.mini-player .transport-controls {
 }
 
 body.queue-extended .work-row > main {
-  margin-right: 224px;
+  margin-right: var(--queue-width, 224px);
 }
 
 #toast .chip {
@@ -6178,8 +6103,8 @@ body.window-transition {
 body.window-transition .shell {
   position: fixed !important;
   left: 0;
-  bottom: 0;
-  top: auto;
+  bottom: auto;
+  top: 0;
   width: var(--motion-width) !important;
   height: var(--motion-height) !important;
   min-width: 0 !important;
@@ -6189,38 +6114,14 @@ body.window-transition .shell {
 
 body.window-transition.queue-extended #queue-panel {
   position: fixed !important;
-  left: calc(var(--motion-width) - 224px) !important;
+  left: calc(var(--motion-width) - var(--queue-width, 224px)) !important;
   right: auto !important;
-  width: 224px !important;
-}
-
-body.player-transition .sidebar-player {
-  position: fixed !important;
-  left: 10px !important;
-  bottom: 10px !important;
-  width: var(--motion-player-width) !important;
-  padding-top: 0 !important;
-  margin: 0 !important;
-  z-index: 10;
-}
-
-body.player-transition .sidebar-player #now-art {
-  width: var(--motion-art-size) !important;
-  height: var(--motion-art-size) !important;
-  max-height: none !important;
+  width: var(--queue-width, 224px) !important;
 }
 
 body.window-transition #toast,
 body.window-transition #toast button {
   pointer-events: none;
-}
-
-/* Reserve the player footprint so playlists cannot grow behind the artwork. */
-body.player-transition .sidebar::after {
-  content: '';
-  display: block;
-  flex: 0 0 var(--motion-player-footprint);
-  height: var(--motion-player-footprint);
 }
 
 body.player-transition .sidebar .brand,
@@ -7595,6 +7496,7 @@ dialog input.preference-switch:checked {
 
 /* Extended queues own the full right edge; the waveform keeps its original span. */
 body.queue-extended #queue-panel {
+  width: var(--queue-width, 224px);
   position: fixed;
   top: 0;
   bottom: 0;
@@ -7602,7 +7504,7 @@ body.queue-extended #queue-panel {
   max-height: none;
 }
 body.queue-extended .waveform-dock {
-  margin-right: 224px;
+  margin-right: var(--queue-width, 224px);
 }
 #tag-dialog #tag-standard-fields > summary {
   font-size: 13px;
@@ -8249,4 +8151,28 @@ dialog .preference-group h3 {
 }
 #library-create-name-row[hidden] {
   display: none;
+}
+
+/* The same footer box/layer is used in normal, transitioning and mini modes. */
+.sidebar-player {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  width: calc(min(var(--sidebar-width, 242px), var(--sidebar-max-width, 320px)) - 20px);
+  margin: 0;
+  padding: 0;
+}
+.sidebar::after {
+  content: '';
+  display: block;
+  flex: 0 0 var(--player-footprint, 380px);
+  height: var(--player-footprint, 380px);
+}
+body.mini-player .sidebar::after {
+  display: none;
+}
+
+/* Keep the footer at the same CSS baseline after native one-pixel rounding. */
+body:not(.mini-player):not(.player-transition) .sidebar-player {
+  bottom: calc(10px + var(--player-bottom-offset, 0px));
 }

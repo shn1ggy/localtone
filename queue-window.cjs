@@ -27,13 +27,18 @@ function createQueueWindow() {
       if (win.isMaximized() || win.isFullScreen?.()) return false;
       const before = normal.capture(win),
         area = screen?.getDisplayMatching(before)?.workArea;
-      if (!area || before.width + width > area.width) return false;
+      if (
+        !area ||
+        before.width + width > area.width ||
+        before.x + before.width + width > area.x + area.width
+      )
+        return false;
       prior = before;
       extension = width;
       const target = {
         ...before,
         width: before.width + width,
-        x: Math.max(area.x, Math.min(before.x, area.x + area.width - before.width - width)),
+        x: before.x,
       };
       const finished = () => {
         expanded = { ...win.getBounds() };

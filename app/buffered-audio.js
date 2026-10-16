@@ -119,7 +119,7 @@ export class BufferedAudio extends EventTarget {
       return;
     }
     if (!this.buffered) {
-      this.native.src = url;
+      this.native.src = `${url}?playback=${this.generation}`;
       if (position)
         this.native.addEventListener(
           'loadedmetadata',
@@ -142,7 +142,7 @@ export class BufferedAudio extends EventTarget {
       .catch((error) => {
         if (generation !== this.generation) return;
         this.buffered = false;
-        this.native.src = url;
+        this.native.src = `${url}?playback=${this.generation}`;
         if (position)
           this.native.addEventListener(
             'loadedmetadata',

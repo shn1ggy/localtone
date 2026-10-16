@@ -1,7 +1,7 @@
 // Real Chromium/native-window regression checks. Isolated data, never user music.
 const electron = require('electron');
 const { app, BrowserWindow, screen } = electron;
-app.disableHardwareAcceleration();
+if (process.env.UI_CHECK_GPU !== '1') app.disableHardwareAcceleration();
 if (process.env.UI_CHECK_SCALE)
   app.commandLine.appendSwitch('force-device-scale-factor', process.env.UI_CHECK_SCALE);
 process.on('uncaughtException', (error) => {
@@ -146,6 +146,20 @@ app.on('browser-window-created', (_event, win) => {
       await js(
         "window.__queueRevealCalls=0;const panel=document.getElementById('queue-panel'),animate=panel.animate.bind(panel);panel.animate=(...args)=>{window.__queueRevealCalls++;return animate(...args)};void 0",
       );
+      await js(`window.__playerFrames=[];window.__watchPlayer=true;
+        (()=>{const sample=()=>{if(!window.__watchPlayer)return;
+          const player=document.querySelector('.sidebar-player'),p=player.getBoundingClientRect();
+          const frame={mini:document.body.classList.contains('mini-player'),transition:document.body.classList.contains('window-transition'),parts:{}};
+          for(const selector of ['#now-art','.player-meta','.now-text','.transport-controls']){
+            const r=player.querySelector(selector).getBoundingClientRect();
+            frame.parts[selector]=[r.x-p.x,r.y-p.y,r.width,r.height];
+          }
+          if(!frame.mini&&!document.body.classList.contains('player-transition')) {
+            const main=document.querySelector('.work-row > main').getBoundingClientRect();
+            frame.main=[main.x,main.width,p.y];
+          }
+          window.__playerFrames.push(frame);requestAnimationFrame(sample);
+        };sample()})();void 0`);
       for (let cycle = 0; cycle < 10; cycle++) {
         await js("document.getElementById('queue').click()");
         await settled();
@@ -171,6 +185,25 @@ app.on('browser-window-created', (_event, win) => {
         assert.equal(await js("document.body.classList.contains('mini-player')"), false);
         stableBounds();
       }
+      const frames = await js('window.__watchPlayer=false;window.__playerFrames');
+      assert.ok(
+        frames.some((frame) => frame.transition),
+        'Must sample during transitions',
+      );
+      for (const frame of frames)
+        for (const [selector, rect] of Object.entries(frame.parts))
+          for (let i = 0; i < rect.length; i++)
+            assert.ok(
+              Math.abs(rect[i] - frames[0].parts[selector][i]) <= 0.05,
+              `Player layout changed during transition: ${selector}[${i}] ${frames[0].parts[selector][i]} → ${rect[i]}; mini=${frame.mini}`,
+            );
+      for (const frame of frames.filter((frame) => frame.main))
+        for (let i = 0; i < frame.main.length; i++)
+          assert.ok(
+            Math.abs(frame.main[i] - frames[0].main[i]) <= 0.05,
+            `Main pane shifted during queue transition: ${frames[0].main} → ${frame.main}; ${JSON.stringify(frame.viewport)}`,
+          );
+      console.log('UI_CHECK stable player frames', frames.length);
       const after = await geometry();
       for (const id of ['view-albums', 'view-covers', 'view-tracks', 'sort', 'volume', 'queue'])
         for (const key of ['x', 'y', 'width', 'height'])

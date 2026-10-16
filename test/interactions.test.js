@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {moveQueueItem,insertQueueItems,seekTo} from '../app/interactions.js';
-import {serveAudio} from '../media.cjs';
-import {readFile} from 'node:fs/promises';
+import {serveAudio,createAudioSources} from '../media.cjs';
+import {readFile,mkdtemp,copyFile,rm} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 test('queue reorder preserves the playing occurrence, even with duplicate songs',()=>{
  assert.deepEqual(moveQueueItem(['a','b','a','c'],2,0,4),{queue:['b','a','c','a'],cursor:1});
@@ -27,4 +27,23 @@ test('column boundaries move in pixels without changing total width, and layouts
  const columns=[{width:42,fixed:true},{width:240,fixed:false},{width:100,fixed:true},{width:80,fixed:true}];
  assert.deepEqual(columnWidths(columns,640),[42,418,100,80]);assert.deepEqual(resizeColumnBoundary([42,418,100,80],1,30),[42,448,70,80]);assert.deepEqual(resizeColumnBoundary([42,418,100,80],1,200),[42,482,36,80]);
  const narrow=columnWidths(columns,180);assert.ok(narrow.every(w=>w>=0));assert.ok(Math.abs(narrow.reduce((a,b)=>a+b,0)-180)<.001);
+});
+
+test('rating writes preserve the playing byte source and subsequent seeks, while a new playback gets updated tags',async()=>{
+ const {tmpdir}=await import('node:os'),{join}=await import('node:path');
+ const {writeRating,readRating}=await import('../rating-tags.cjs');
+ const dir=await mkdtemp(join(tmpdir(),'localtone-playing-rating-')),file=join(dir,'song.mp3'),sources=createAudioSources();
+ try{
+  await copyFile(fileURLToPath(new URL('./fixtures/tone.mp3',import.meta.url)),file);
+  const original=await readFile(file);
+  const request=(session,range)=>new Request(`https://audio/song?playback=${session}`,{headers:range?{range}:{}});
+  const first=await sources.serve(file,request(1,'bytes=0-99'));await first.arrayBuffer();
+  await writeRating({file,rating:4,backupDir:join(dir,'backups')});
+  assert.equal(readRating(await readFile(file)),4);
+  const seek=await sources.serve(file,request(1,'bytes=100-199'));
+  assert.equal(seek.headers.get('Content-Range'),`bytes 100-199/${original.length}`);
+  assert.deepEqual(Buffer.from(await seek.arrayBuffer()),original.subarray(100,200));
+  const restarted=await sources.serve(file,request(2));
+  assert.equal(readRating(Buffer.from(await restarted.arrayBuffer())),4);
+ }finally{await sources.dispose();await rm(dir,{recursive:true,force:true});}
 });

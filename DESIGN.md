@@ -286,3 +286,19 @@ Track requested and actual settled native bounds separately. Preserve the origin
 Give Windows transitions one paint opportunity with a 32ms fallback when Chromium throttles requestAnimationFrame. Viewport-settle waits must use the same bounded frame helper; never await a throttled frame indefinitely. Native regression checks wait for the transition to finish before comparing geometry, and choose a viewport that fits the runner's actual scaled desktop.
 
 Minimum-size IPC includes the renderer's actual inner viewport. Use it to measure normal decoration extents when it agrees with native content bounds within 2px; do not let later integer-DIP rounding increase the cached frame or minimum height on the same display.
+
+
+### Window transitions at fractional display scaling
+
+- Keep the now-playing footer in one permanent layout and layer in normal and mini modes. Reserve its measured height in the sidebar; never change artwork size, spacing, or positioning rules at transition boundaries.
+- Freeze the shell at its exact CSS viewport dimensions (`visualViewport`), anchored at the top left. At 130% OS scaling, integer `innerWidth`/`innerHeight` round away fractional pixels and can cause visible shifts.
+- Extend only to the right, preserving the original left edge. Use overlay placement when the display has insufficient room to the right. Never move the whole window left to make room.
+- Retain canonical CSS content dimensions and the footer baseline across one-pixel native rounding on programmatic round trips; release them on a real user resize.
+- On Windows, update only changed native bounds. Reserve the measured queue viewport delta atomically with the frozen root width, rather than assuming every native resize is exactly 224 CSS pixels.
+- Reveal the queue from its left edge toward its right edge without translating its text or buttons. Preserve reduced-motion behavior.
+- Check player geometry during transitions, not only after settling, at 100%, 125%, and 130% Windows display scaling and 100% app zoom.
+- Revealing a playing track prioritizes the track being fully visible. Include the album heading when both fit; never hide a long album's playing track merely to keep its heading at the top.
+
+### Rating playback continuity
+
+Saving a rating must never pause, reload, seek, or replace the playing audio source. Persist MP3 ratings immediately with the verified atomic tag-write path and session undo. Serve each normal playback session from its original open file descriptor so later range requests keep the same byte offsets after tags change. Bound retained descriptors, release them on retirement/quit, and give each new playback a fresh source identity. Keep decoded gapless playback uninterrupted as well.

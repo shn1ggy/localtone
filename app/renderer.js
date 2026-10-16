@@ -2880,13 +2880,14 @@ function navigateFromPlayer(album = false, preserveView = false, alignTop = fals
         const inset =
           (parseFloat(getComputedStyle(pane).paddingTop) || 0) +
           (header && !header.hidden ? header.getBoundingClientRect().height : 0);
-        const top = Math.max(
-          0,
-          pane.scrollTop +
-            target.getBoundingClientRect().top -
-            pane.getBoundingClientRect().top -
-            inset,
-        );
+        const paneBounds = pane.getBoundingClientRect(),
+          rowBounds = row.getBoundingClientRect();
+        const headingTop =
+          pane.scrollTop + target.getBoundingClientRect().top - paneBounds.top - inset;
+        const rowTop = pane.scrollTop + rowBounds.top - paneBounds.top - inset;
+        const rowBottom = pane.scrollTop + rowBounds.bottom - paneBounds.top;
+        // Keep the heading at the top only if it leaves the selected row fully visible.
+        const top = Math.max(0, rowBottom - headingTop <= pane.clientHeight ? headingTop : rowTop);
         const space = el('div');
         space.id = 'playing-reveal-space';
         space.setAttribute('aria-hidden', 'true');
@@ -3012,7 +3013,8 @@ bindDrop($('queue'), (payload) => {
   setQueueVisible(true);
 });
 async function saveRating(id, rating, refresh = true) {
-  const result = await withReleasedTrack(id, () => api.rate(id, rating));
+  // Ratings replace the file atomically; the audio source keeps its original file handle.
+  const result = await api.rate(id, rating);
   if (result?.modifiedAt) {
     const track = state.tracks.find((t) => t.id === id);
     if (track) track.modifiedAt = result.modifiedAt;
@@ -3555,9 +3557,10 @@ function syncPaneBounds(sidebar = prefs.sidebarWidth, artist = prefs.artistWidth
   document.documentElement.style.setProperty('--sidebar-max-width', `${maximum}px`);
   $('sidebar-resize').setAttribute('aria-valuemax', String(maximum));
   $('sidebar-resize').setAttribute('aria-valuenow', String(width));
+  windowPresentation.refreshPlayerLayout();
   // 600px content + 36px main padding + two 6px dividers.
   const sidebarNode = document.querySelector('.sidebar');
-  let needed = 28 + 148; // Sidebar padding plus five 28px playlist rows and four gaps.
+  let needed = 28 + 148 + 14; // Sidebar padding plus five 28px playlist rows and four gaps.
   for (const child of sidebarNode.children) {
     if (child.id === 'playlists') continue;
     const style = getComputedStyle(child);
@@ -3568,7 +3571,10 @@ function syncPaneBounds(sidebar = prefs.sidebarWidth, artist = prefs.artistWidth
   }
   api.layoutMinimum?.(
     Math.ceil(
-      width + artist + 648 + (document.body.classList.contains('queue-extended') ? 224 : 0),
+      width +
+        artist +
+        648 +
+        (document.body.classList.contains('queue-extended') ? windowPresentation.queueWidth : 0),
     ),
     Math.max(740, Math.ceil(needed)),
     [window.innerWidth, window.innerHeight],

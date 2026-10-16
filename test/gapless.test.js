@@ -37,3 +37,8 @@ test('switching tracks during output reload never restores the old seek position
  try{audio.src='localtone://audio/1';await audio.play();native.currentTime=.4;const switching=audio.setSinkId('speakers');await new Promise(r=>setImmediate(r));audio.src='localtone://audio/2';await switching;assert.equal(audio.src,'localtone://audio/2');assert.equal(native.paused,true);assert.notEqual(native.currentTime,.4);assert.equal(audio.cancelOutputReload,null);
  }finally{audio.dispose();}
 });
+
+test('normal playback uses a fresh byte source per load without changing logical gapless URLs',async()=>{
+ const native=new Native(),audio=new BufferedAudio(native,{decode:async()=>pcm(),contextFactory:()=>context()});
+ try{audio.src='localtone://audio/1';const first=native.src;assert.match(first,/\?playback=\d+$/);audio.src='localtone://audio/1';assert.notEqual(native.src,first);assert.equal(audio.src,'localtone://audio/1');}finally{audio.dispose();}
+});

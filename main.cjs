@@ -68,7 +68,8 @@ const { LastfmService, metadataFor } = require('./lastfm.cjs');
 let lastfm,
   tagHistory,
   quitting = false;
-const { serveAudio } = require('./media.cjs');
+const { createAudioSources } = require('./media.cjs');
+const audioSources = createAudioSources();
 const ratingTags = require('./rating-tags.cjs');
 const tagEditor = require('./tags.cjs');
 const musicbrainz = require('./musicbrainz.cjs').createMusicBrainz({
@@ -368,7 +369,7 @@ app.whenReady().then(async () => {
     if (!track || !['audio', 'cover'].includes(url.host))
       return new Response('Not found', { status: 404 });
     try {
-      if (url.host === 'audio') return await serveAudio(track.path, request);
+      if (url.host === 'audio') return await audioSources.serve(track.path, request);
       return await net.fetch(pathToFileURL(path.join(covers, id)).href);
     } catch {
       return new Response('File unavailable', { status: 404 });
@@ -608,7 +609,14 @@ app.whenReady().then(async () => {
   const runWindowAction = async (action, size) => {
     const animated = size?.animate === true && process.platform !== 'win32';
     const resize = (target) => {
-      return animated ? animateBounds(win, target) : win.setBounds(target);
+      if (animated) return animateBounds(win, target);
+      if (process.platform !== 'win32') return win.setBounds(target);
+      // Do not round-trip untouched axes through Windows' DIP/frame conversion.
+      const before = win.getBounds();
+      const changed = Object.fromEntries(
+        Object.entries(target).filter(([key, value]) => value !== before[key]),
+      );
+      if (Object.keys(changed).length) return win.setBounds(changed);
     };
     if (action === 'queue-open') return !miniMode && queueWindow.open(win, screen, 224, resize);
     if (action === 'queue-close') {
@@ -1799,7 +1807,10 @@ app.whenReady().then(async () => {
   if (missingChanged) await save();
   await win.loadURL('localtone://app/index.html');
 });
-app.on('will-quit', () => playbackShortcuts.set(false));
+app.on('will-quit', () => {
+  playbackShortcuts.set(false);
+  audioSources.dispose().catch(() => {});
+});
 app.on('before-quit', (event) => {
   gaplessDecoder.cancel();
   waveforms?.cancel();

@@ -12,6 +12,46 @@ export function createWindowPresentation({
   let windowTransition = false,
     normalLayout = null,
     miniTransition = false;
+  let queueBaseLayout = null,
+    retainedLayout = null,
+    queueWidth = 224;
+  function viewportSize() {
+    return {
+      width: window.visualViewport?.width || window.innerWidth,
+      height: window.visualViewport?.height || window.innerHeight,
+    };
+  }
+  function layoutSize() {
+    const bounds = document.querySelector('.shell')?.getBoundingClientRect();
+    return bounds?.width && bounds?.height
+      ? { width: bounds.width, height: bounds.height }
+      : viewportSize();
+  }
+  function retainLayout(layout) {
+    const shell = document.querySelector('.shell');
+    if (!shell) return;
+    retainedLayout = layout;
+    shell.style.width = layout ? `${layout.width}px` : '';
+    shell.style.height = layout ? `${layout.height}px` : '';
+    document.documentElement.style.setProperty(
+      '--player-bottom-offset',
+      `${layout ? viewportSize().height - layout.height : 0}px`,
+    );
+  }
+  function refreshPlayerLayout() {
+    const player = document.querySelector('.sidebar-player');
+    if (player && !windowTransition)
+      document.documentElement.style.setProperty(
+        '--player-footprint',
+        `${player.getBoundingClientRect().height + 14}px`,
+      );
+  }
+  const player = document.querySelector('.sidebar-player');
+  const playerObserver =
+    player && typeof window.ResizeObserver === 'function'
+      ? new window.ResizeObserver(refreshPlayerLayout)
+      : null;
+  if (playerObserver) playerObserver.observe(player);
   function alignQueueClose() {
     const button = $('queue').getBoundingClientRect(),
       close = $('close-queue'),
@@ -28,6 +68,23 @@ export function createWindowPresentation({
     });
   }
   const onResize = () => {
+    if (windowTransition && !document.body.classList.contains('player-transition'))
+      document.documentElement.style.setProperty(
+        '--player-bottom-offset',
+        `${viewportSize().height - layoutSize().height}px`,
+      );
+    if (!windowTransition && !document.body.classList.contains('mini-player') && retainedLayout) {
+      const viewport = viewportSize();
+      // Native bounds may round by a pixel at fractional DPI. Keep the content stable;
+      // an actual user resize releases the retained layout immediately.
+      if (
+        Math.abs(viewport.width - retainedLayout.width) > 2 ||
+        Math.abs(viewport.height - retainedLayout.height) > 2
+      ) {
+        retainLayout(null);
+        normalLayout = queueBaseLayout = null;
+      }
+    }
     if (!$('queue-panel').hidden) alignQueueClose();
   };
   window.addEventListener('resize', onResize);
@@ -76,8 +133,8 @@ export function createWindowPresentation({
     if (!queueRevealEnabled() || typeof panel.animate !== 'function') return;
     const animation = panel.animate(
       show
-        ? [{ transform: 'translateX(224px)' }, { transform: 'translateX(0)' }]
-        : [{ transform: 'translateX(0)' }, { transform: 'translateX(224px)' }],
+        ? [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)' }]
+        : [{ clipPath: 'inset(0 0% 0 0)' }, { clipPath: 'inset(0 100% 0 0)' }],
       { duration: show ? 180 : 140, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' },
     );
     try {
@@ -85,7 +142,7 @@ export function createWindowPresentation({
     } finally {
       animation.cancel();
     }
-    panel.style.transform = show ? '' : 'translateX(224px)';
+    panel.style.clipPath = show ? '' : 'inset(0 100% 0 0)';
   }
   function freezeLayout(width, height, { player = false } = {}) {
     windowTransition = true;
@@ -98,6 +155,17 @@ export function createWindowPresentation({
   async function finishLayout(commit = () => {}) {
     await paintFrame();
     commit();
+    const mini = document.body.classList.contains('mini-player');
+    const base = queueBaseLayout || normalLayout;
+    retainLayout(
+      mini || !base
+        ? null
+        : {
+            width:
+              base.width + (document.body.classList.contains('queue-extended') ? queueWidth : 0),
+            height: base.height,
+          },
+    );
     document.body.classList.remove('window-transition', 'player-transition');
     windowTransition = false;
     syncPaneBounds();
@@ -111,34 +179,18 @@ export function createWindowPresentation({
       if (!$('queue-panel').hidden) await setQueueVisible(false);
       const sidebar = document.querySelector('.sidebar'),
         player = document.querySelector('.sidebar-player'),
-        art = $('now-art'),
         style = document.documentElement.style;
       const size = {
         width: Math.round(sidebar.getBoundingClientRect().width),
-        height: Math.round(
-          player.getBoundingClientRect().height -
-            parseFloat(window.getComputedStyle(player).paddingTop) +
-            20,
-        ),
+        height: Math.ceil(player.getBoundingClientRect().height + 20),
         animate: false,
         report: true,
       };
       if (entering) {
-        normalLayout = { width: window.innerWidth, height: window.innerHeight };
-        style.setProperty(
-          '--motion-player-footprint',
-          `${player.getBoundingClientRect().height}px`,
-        );
-        for (const label of sidebar.querySelectorAll('.brand,.section-label')) {
-          const computed = window.getComputedStyle(label);
-          label.style.setProperty('--motion-margin-top', computed.marginTop);
-          label.style.setProperty('--motion-margin-bottom', computed.marginBottom);
-        }
-        style.setProperty('--motion-player-width', `${player.getBoundingClientRect().width}px`);
-        style.setProperty('--motion-art-size', `${art.getBoundingClientRect().width}px`);
+        normalLayout = layoutSize();
         style.setProperty('--mini-width', `${size.width}px`);
       }
-      const layout = normalLayout || { width: window.innerWidth, height: window.innerHeight };
+      const layout = normalLayout || layoutSize();
       freezeLayout(layout.width, layout.height, { player: true });
       document.body.classList.remove('mini-player');
       await paintFrame();
@@ -186,12 +238,17 @@ export function createWindowPresentation({
         const extend = show && getPreferences().queuePresentation === 'extend',
           wasDocked = document.body.classList.contains('queue-extended');
         if (extend || wasDocked) {
-          const width = window.innerWidth + (extend && !wasDocked ? 224 : 0);
-          freezeLayout(width, window.innerHeight);
+          const viewport = layoutSize();
+          if (extend && !wasDocked) {
+            queueBaseLayout = viewport;
+            queueWidth = 224;
+          }
+          document.documentElement.style.setProperty('--queue-width', `${queueWidth}px`);
+          freezeLayout(viewport.width + (extend && !wasDocked ? queueWidth : 0), viewport.height);
           document.body.classList.add('queue-extended');
           $('queue-panel').hidden = false;
           if (extend && !wasDocked && queueRevealEnabled())
-            $('queue-panel').style.transform = 'translateX(224px)';
+            $('queue-panel').style.clipPath = 'inset(0 100% 0 0)';
           alignQueueClose();
           await paintFrame();
           let commit = () => {
@@ -206,6 +263,16 @@ export function createWindowPresentation({
             });
             await waitForViewport(result);
             const docked = extend && motionValue(result);
+            if (docked && queueBaseLayout) {
+              const actual = viewportSize(),
+                delta = actual.width - queueBaseLayout.width;
+              if (delta > 200 && delta < 250) {
+                queueWidth = delta;
+                // Commit both quantities together: the existing main pane never gains/loses a pixel.
+                document.documentElement.style.setProperty('--queue-width', `${queueWidth}px`);
+                document.documentElement.style.setProperty('--motion-width', `${actual.width}px`);
+              }
+            }
             alignQueueClose();
             if (docked && !wasDocked) await animateQueue(true);
             commit = () => {
@@ -215,7 +282,7 @@ export function createWindowPresentation({
           } finally {
             await finishLayout(() => {
               commit();
-              $('queue-panel').style.transform = '';
+              $('queue-panel').style.clipPath = '';
             });
           }
         } else {
@@ -238,6 +305,10 @@ export function createWindowPresentation({
 
   return {
     toggleMini,
+    refreshPlayerLayout,
+    get queueWidth() {
+      return queueWidth;
+    },
     setQueueVisible,
     alignQueueClose,
     revealPlayingQueueItem,
@@ -246,6 +317,7 @@ export function createWindowPresentation({
     },
     dispose() {
       window.removeEventListener('resize', onResize);
+      playerObserver?.disconnect();
     },
   };
 }
