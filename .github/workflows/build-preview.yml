@@ -3,7 +3,7 @@ name: Build unsigned test packages
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, 'test/**']
     paths:
       - 'package.json'
       - 'online-updates.cjs'
