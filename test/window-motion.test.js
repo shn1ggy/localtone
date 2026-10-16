@@ -19,3 +19,21 @@ test('mini bounds memory restores a stable target despite native rounding, prese
  for(let i=0;i<20;i++){const target=memory.capture(win);assert.deepEqual(target,original);bounds={x:target.x+1,y:target.y+1,width:target.width+1,height:target.height+1};memory.remember(win,target);}
  bounds.width+=100;assert.equal(memory.capture(win).width,1201);
 });
+
+test('Windows endpoint correction removes two-pixel native frame rounding without touching unchanged axes',()=>{
+ let bounds={x:0,y:0,width:1213,height:790};const calls=[];
+ const win={getBounds:()=>({...bounds}),setBounds:patch=>{calls.push({...patch});bounds={...bounds,...patch};if(patch.width!==undefined)bounds.width+=2;}};
+ const original={...bounds};
+ for(let i=0;i<10;i++){
+  queue.setStableBounds(win,{...original,width:original.width+224});
+  assert.equal(bounds.width,1437);
+  queue.setStableBounds(win,original);assert.deepEqual(bounds,original);
+ }
+ assert.equal(calls.length,40);assert.ok(calls.every(p=>Object.keys(p).join(',')==='width'));
+ const count=calls.length;queue.setStableBounds(win,original);assert.equal(calls.length,count);
+});
+test('Windows endpoint correction is bounded when an odd logical size cannot be represented',()=>{
+ let bounds={x:0,y:0,width:1200,height:800},calls=0;
+ const win={getBounds:()=>({...bounds}),setBounds:patch=>{calls++;bounds={...bounds,...patch};bounds.width=Math.round(bounds.width/2)*2;}};
+ queue.setStableBounds(win,{...bounds,width:1213});assert.ok(calls<=3);assert.ok(Math.abs(bounds.width-1213)<=1);
+});

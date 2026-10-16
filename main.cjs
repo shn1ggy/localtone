@@ -31,7 +31,7 @@ const { cleanUnusedCache } = require('./cache-cleanup.cjs');
 let startupRefresh = { changed: 0, unavailable: 0, warnings: [] };
 const { validateSession } = require('./browsing-session.cjs');
 let browsingSession = null;
-const { createQueueWindow, createBoundsMemory } = require('./queue-window.cjs');
+const { createQueueWindow, createBoundsMemory, setStableBounds } = require('./queue-window.cjs');
 const queueWindow = createQueueWindow();
 const miniBoundsMemory = createBoundsMemory();
 let normalFrame = null;
@@ -614,12 +614,7 @@ app.whenReady().then(async () => {
     const resize = (target) => {
       if (animated) return animateBounds(win, target);
       if (process.platform !== 'win32') return win.setBounds(target);
-      // Do not round-trip untouched axes through Windows' DIP/frame conversion.
-      const before = win.getBounds();
-      const changed = Object.fromEntries(
-        Object.entries(target).filter(([key, value]) => value !== before[key]),
-      );
-      if (Object.keys(changed).length) return win.setBounds(changed);
+      return setStableBounds(win, target);
     };
     if (action === 'queue-open') return !miniMode && queueWindow.open(win, screen, 224, resize);
     if (action === 'queue-close') {

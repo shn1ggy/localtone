@@ -294,7 +294,7 @@ Minimum-size IPC includes the renderer's actual inner viewport. Use it to measur
 - Freeze the shell at its exact CSS viewport dimensions (`visualViewport`), anchored at the top left. At 130% OS scaling, integer `innerWidth`/`innerHeight` round away fractional pixels and can cause visible shifts.
 - Extend only to the right, preserving the original left edge. Use overlay placement when the display has insufficient room to the right. Never move the whole window left to make room.
 - Retain canonical CSS content dimensions and the footer baseline across one-pixel native rounding on programmatic round trips; release them on a real user resize.
-- On Windows, update only changed native bounds. Reserve the measured queue viewport delta atomically with the frozen root width, rather than assuming every native resize is exactly 224 CSS pixels.
+- On Windows, update only changed native bounds and compensate measured frame/DIP endpoint error with at most two immediate corrective writes while the renderer remains frozen. Reserve the measured queue viewport delta atomically with the frozen root width, rather than assuming every native resize is exactly 224 CSS pixels.
 - Reveal the queue from its left edge toward its right edge without translating its text or buttons. Preserve reduced-motion behavior.
 - Check player geometry during transitions, not only after settling, at 100%, 125%, and 130% Windows display scaling and 100% app zoom.
 - Revealing a playing track prioritizes the track being fully visible. Include the album heading when both fit; never hide a long album's playing track merely to keep its heading at the top.

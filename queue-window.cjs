@@ -76,4 +76,24 @@ function createQueueWindow() {
     },
   };
 }
-module.exports = { createQueueWindow, createBoundsMemory };
+// Compensate Windows frame/DIP rounding at the endpoint while the renderer is
+// frozen. Only changed axes are sent; never animate through many native sizes.
+function setStableBounds(win, target) {
+  const before = win.getBounds();
+  let requested = Object.fromEntries(
+    Object.entries(target).filter(([key, value]) => value !== before[key]),
+  );
+  if (!Object.keys(requested).length) return;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    win.setBounds(requested);
+    const actual = win.getBounds();
+    const next = Object.fromEntries(
+      Object.entries(requested)
+        .filter(([key]) => actual[key] !== target[key])
+        .map(([key, value]) => [key, value + target[key] - actual[key]]),
+    );
+    if (!Object.keys(next).length) return;
+    requested = next;
+  }
+}
+module.exports = { createQueueWindow, createBoundsMemory, setStableBounds };
