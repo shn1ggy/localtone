@@ -16,6 +16,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
+// Fractional OS scaling quantizes CSS boxes by hundredths of a CSS pixel.
+// Allow that representation noise without permitting a one-pixel layout shift.
+const near = (actual, expected) =>
+  assert.ok(Math.abs(actual - expected) <= 0.05, `Expected ${expected}px, received ${actual}px`);
 const root = path.resolve(__dirname, '..');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'localtone-ui-'));
 app.setPath('userData', temporary);
@@ -73,11 +77,11 @@ app.on('browser-window-created', (_event, win) => {
       win.focus();
       const before = await geometry();
       for (const id of ['empty-add', 'empty-import']) {
-        assert.equal(before[id].height, 28);
+        near(before[id].height, 28);
         assert.equal(before[id].font, '13px');
         assert.equal(before[id].line, '20px');
       }
-      assert.equal(before['empty-add'].width, before['empty-import'].width);
+      near(before['empty-add'].width, before['empty-import'].width);
       assert.equal(before['empty-add'].weight, before['empty-import'].weight);
       assert.equal(
         await js(
@@ -105,7 +109,7 @@ app.on('browser-window-created', (_event, win) => {
       const menu = await js(
         "(()=>{const b=document.querySelector('#track-actions button'),m=document.getElementById('track-actions');return {height:b.getBoundingClientRect().height,font:getComputedStyle(b).fontSize,scroll:m.scrollHeight>m.clientHeight}})()",
       );
-      assert.equal(menu.height, 28);
+      near(menu.height, 28);
       assert.equal(menu.font, '12px');
       assert.equal(menu.scroll, false);
       await js("document.querySelector('#track-actions button').click()");
@@ -276,11 +280,11 @@ app.on('browser-window-created', (_event, win) => {
         "[...document.querySelectorAll('#library-settings-dialog .setting-row input')].filter(b=>!b.closest('[hidden]')).map(b=>({width:b.getBoundingClientRect().width,height:b.getBoundingClientRect().height,font:getComputedStyle(b).fontSize,type:b.type}))",
       );
       for (const row of rows) {
-        assert.equal(row.width, row.type === 'checkbox' ? 30 : 245);
-        assert.equal(row.height, row.type === 'checkbox' ? 17 : 28);
+        near(row.width, row.type === 'checkbox' ? 30 : 245);
+        near(row.height, row.type === 'checkbox' ? 17 : 28);
         if (row.type !== 'checkbox') assert.equal(row.font, '13px');
       }
-      assert.equal(
+      near(
         await js("document.getElementById('library-settings-close').getBoundingClientRect().width"),
         28,
       );
