@@ -1,4 +1,4 @@
-const { stat, open, copyFile, mkdir, mkdtemp, rm } = require('node:fs/promises');
+const { stat, copyFile, mkdir, mkdtemp, rm } = require('node:fs/promises');
 const { constants } = require('node:fs');
 const { randomUUID } = require('node:crypto');
 const { tmpdir } = require('node:os');
@@ -81,42 +81,30 @@ function createAudioSources({ limit = 2, directory } = {}) {
       if (!sources.has(key)) {
         const pending = (async () => {
           const snapshot = path.join(await sourceDirectory(), randomUUID());
-          let handle;
-          try {
-            await copyFile(file, snapshot, constants.COPYFILE_FICLONE);
-            handle = await open(snapshot, 'r');
-          } catch (error) {
-            await rm(snapshot, { force: true });
-            throw error;
-          }
           let info;
           try {
-            info = await handle.stat();
+            await copyFile(file, snapshot, constants.COPYFILE_FICLONE);
+            info = await stat(snapshot);
           } catch (error) {
-            await handle.close();
             await rm(snapshot, { force: true });
             throw error;
           }
           let closing;
           const source = {
-            handle,
             info,
             readers: 0,
             streams: new Set(),
             retired: false,
             close() {
               return (closing ||= (async () => {
-                await handle.close();
                 await rm(snapshot, { force: true });
               })());
             },
             stream(range) {
               source.readers++;
-              const stream = createReadStream(snapshot, {
-                ...range,
-                fd: handle.fd,
-                autoClose: false,
-              });
+              // Chromium cancels range requests on seeks. Each response must own
+              // its descriptor: destroying one must never close another's source.
+              const stream = createReadStream(snapshot, range);
               source.streams.add(stream);
               let finished = false;
               const release = () => {
@@ -126,8 +114,6 @@ function createAudioSources({ limit = 2, directory } = {}) {
                 source.streams.delete(stream);
                 if (source.retired && !source.readers) source.close().catch(() => {});
               };
-              stream.once('end', release);
-              stream.once('error', release);
               stream.once('close', release);
               return stream;
             },

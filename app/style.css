@@ -8176,3 +8176,18 @@ body.mini-player .sidebar::after {
 body:not(.mini-player):not(.player-transition) .sidebar-player {
   bottom: calc(10px + var(--player-bottom-offset, 0px));
 }
+
+/* Empty panes share the toolbar's leading edge, one text column and one inset. */
+#empty,
+#artist-list > .browse-empty,
+#browser > .browse-empty,
+.cover-grid > .browse-empty {
+  padding: 25px 0;
+  margin: 0;
+}
+#empty h2,
+#empty:not(.first-launch) h2,
+#empty p {
+  padding-left: 0;
+  padding-right: 0;
+}

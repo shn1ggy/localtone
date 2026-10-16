@@ -10,14 +10,14 @@ const mainPath=fileURLToPath(new URL('../main.cjs',import.meta.url));
 const source=await readFile(mainPath,'utf8'),require=createRequire(mainPath);
 async function launch(userData,music,dialogs={}) {
  const handlers=new Map(),events=new Map(),opened=[];let quitCount=0;let ready,windowInstance,assetHandler;
- class Window {constructor(options){windowInstance=this;this.visible=options.show!==false;this.size=[options.width,options.height];this.minimum=[options.minWidth,options.minHeight];this.webContents={capturePage:async()=>({toDataURL:()=> 'data:image/png;base64,snapshot'}),setWindowOpenHandler(){},on(){},send(){}};}getBounds(){return {x:this.x??20,y:this.y??20,width:this.size[0],height:this.size[1]};}getNormalBounds(){return this.restoreBounds||this.getBounds();}setBounds(b){const next={...this.getBounds(),...b};this.x=next.x;this.y=next.y;this.size=[next.width,next.height];}setResizable(value){this.resizable=value;}setContentSize(w,h){this.size=[w+16,h+32];}isMaximized(){return !!this.maximized;}maximize(){this.restoreBounds=this.getBounds();this.maximized=true;this.setBounds({x:0,y:0,width:1920,height:1080});}unmaximize(){this.maximized=false;if(this.restoreBounds)this.setBounds(this.restoreBounds);}getSize(){return this.size;}getContentSize(){return [this.size[0]-16,this.size[1]-32];}setMinimumSize(w,h){this.minimum=[w,h];}setSize(w,h){this.size=[w,h];}show(){this.visible=true;}async loadURL(){}isDestroyed(){return false;}}
+ class Window {constructor(options){windowInstance=this;this.visible=options.show!==false;this.size=[options.width,options.height];this.minimum=[options.minWidth,options.minHeight];this.webContents={capturePage:async()=>({toDataURL:()=> 'data:image/png;base64,snapshot'}),setWindowOpenHandler(){},on(){},send(){}};}getBounds(){return {x:this.x??20,y:this.y??20,width:this.size[0],height:this.size[1]};}getNormalBounds(){return this.restoreBounds||this.getBounds();}setBounds(b){const next={...this.getBounds(),...b};this.x=next.x;this.y=next.y;this.size=[next.width,next.height];}setResizable(value){this.resizable=value;}setContentSize(w,h){this.size=[w+16,h+32];}isMaximized(){return !!this.maximized;}maximize(){this.restoreBounds=this.getBounds();this.maximized=true;this.setBounds({x:0,y:0,width:1920,height:1080});}unmaximize(){this.maximized=false;if(this.restoreBounds)this.setBounds(this.restoreBounds);}getSize(){return this.size;}getContentSize(){return [this.size[0]-16,this.size[1]-32];}setMinimumSize(w,h){this.minimum=[w,h];}setSize(w,h){this.size=[w,h];}show(){this.visible=true;}async loadURL(){await dialogs.onLoad?.((name,...args)=>handlers.get(name)({senderFrame:{url:'localtone://app/index.html'}},...args));}isDestroyed(){return false;}}
  const electron={
   app:{getVersion:()=>'0.81.0',requestSingleInstanceLock:()=>true,on:(name,fn)=>events.set(name,fn),getPath:()=>userData,whenReady:()=>({then:fn=>{ready=fn();return ready;}}),quit(){let prevented=false;events.get('before-quit')?.({preventDefault(){prevented=true;}});if(!prevented)quitCount++;}},BrowserWindow:Window,
   ipcMain:{handle:(name,fn)=>handlers.set(name,fn),on:(name,fn)=>handlers.set(name,fn)},protocol:{registerSchemesAsPrivileged(){},handle:(_scheme,handler)=>assetHandler=handler},net:{fetch:async url=>new Response(await readFile(new URL(url)))},session:{defaultSession:{setPermissionRequestHandler(){}}},shell:{trashItem:dialogs.trashItem||(()=>{throw Error('Trash mock not configured');}),openExternal:async url=>opened.push(url),showItemInFolder:target=>opened.push(target),openPath:async folder=>{opened.push(folder);return '';}},
   dialog:{showOpenDialog:async()=>({canceled:false,filePaths:[music]}),showErrorBox:(_title,error)=>{throw new Error(error);},...dialogs}
  };
  vm.runInNewContext(`(function(){${source}\n})()`,{require:name=>name==='electron'?electron:require(name),__dirname:path.dirname(mainPath),structuredClone,process,console,URL,Response,setTimeout,clearTimeout});await ready;
- const invoke=(name,...args)=>handlers.get(name)({senderFrame:{url:'localtone://app/index.html'}},...args);invoke.shutdown=async()=>{events.get('before-quit')({preventDefault(){}});const deadline=Date.now()+10000;while(!quitCount&&Date.now()<deadline)await new Promise(r=>setTimeout(r,10));assert.ok(quitCount);};invoke.quitCount=()=>quitCount;invoke.opened=opened;invoke.window=windowInstance;invoke.asset=url=>assetHandler({url});return invoke;
+ const invoke=(name,...args)=>handlers.get(name)({senderFrame:{url:'localtone://app/index.html'}},...args);invoke.shutdown=async()=>{events.get('before-quit')({preventDefault(){}});const deadline=Date.now()+10000;while(!quitCount&&Date.now()<deadline)await new Promise(r=>setTimeout(r,10));assert.ok(quitCount);};invoke.quitCount=()=>quitCount;invoke.opened=opened;invoke.window=windowInstance;invoke.asset=(url,options={})=>assetHandler({url,method:'GET',headers:new Headers(),...options});return invoke;
 }
 test('ratings and settings survive rescans and main-process restart with real disk persistence',async()=>{
  const dir=await realpath(await mkdtemp(path.join(tmpdir(),'localtone-persistence-')));try{
@@ -475,4 +475,40 @@ test('renderer viewport prevents native DPI rounding from inflating minimum heig
  try{const invoke=await launch(path.join(dir,'data'),dir),win=invoke.window;win.setBounds({x:20,y:20,width:1300,height:1000});win.getContentSize=()=>[win.size[0]-16,win.size[1]-34];
  for(let i=0;i<20;i++){await invoke('layout-minimum',1044,740,[win.size[0]-16,win.size[1]-32]);assert.equal(win.minimum[1],772);assert.deepEqual(win.getBounds(),{x:20,y:20,width:1300,height:1000});}
  }finally{await rm(dir,{recursive:true,force:true});}
+});
+
+test('cached startup reaches the UI before a slow scan and queues file mutations until reconciliation completes',async()=>{
+ const dir=await realpath(await mkdtemp(path.join(tmpdir(),'localtone-cached-start-')));
+ try{
+  const music=path.join(dir,'Music'),userData=path.join(dir,'state');await mkdir(music);await copyFile(new URL('./fixtures/tone.mp3',import.meta.url),path.join(music,'song.mp3'));
+  let invoke=await launch(userData,music);const added=await invoke('add-library','Music'),id=added.state.tracks[0].id;
+  await rm(path.join(music,'song.mp3'));
+  let reached=false,pendingLoad,pendingWrite;
+  invoke=await launch(userData,music,{onLoad:async call=>{
+    reached=true;
+    const cached=await call('load',{cached:true});assert.equal(cached.tracks[0].id,id);
+    pendingLoad=call('load');pendingWrite=call('playlist',{type:'create',name:'After startup'});
+    // Returning from the UI load must not wait for reconciliation or mutate its lane.
+  }});
+  assert.equal(reached,true);assert.equal((await pendingLoad).tracks[0].missing,true);
+  await pendingWrite;assert.equal((await invoke('load')).playlists[0].name,'After startup');
+ }finally{await rm(dir,{recursive:true,force:true});}
+});
+
+test('library and Explorer-imported playlist audio keep serving seek ranges after an earlier response is cancelled',async()=>{
+ const dir=await realpath(await mkdtemp(path.join(tmpdir(),'localtone-protocol-seek-')));let invoke;
+ try{
+  const music=path.join(dir,'Music');await mkdir(music);
+  const bytes=Buffer.alloc(44+44100*4*12);bytes.write('RIFF');bytes.writeUInt32LE(bytes.length-8,4);bytes.write('WAVEfmt ',8);bytes.writeUInt32LE(16,16);bytes.writeUInt16LE(1,20);bytes.writeUInt16LE(2,22);bytes.writeUInt32LE(44100,24);bytes.writeUInt32LE(176400,28);bytes.writeUInt16LE(4,32);bytes.writeUInt16LE(16,34);bytes.write('data',36);bytes.writeUInt32LE(bytes.length-44,40);
+  const archive=path.join(music,'song.wav'),dropped=path.join(dir,'dropped.wav');await writeFile(archive,bytes);await writeFile(dropped,bytes);
+  invoke=await launch(path.join(dir,'data'),music);await invoke('add-library','Music');let state=await invoke('playlist',{type:'create',name:'Dropped'});const id=state.playlists[0].id;
+  await invoke('import-playlist-files',id,[dropped]);state=await invoke('load');assert.equal(state.tracks.length,2);
+  for(const track of state.tracks){
+   const url=`localtone://audio/${track.id}?playback=seek-test`,request=range=>invoke.asset(url,{headers:new Headers({range})});
+   const response=await request('bytes=0-'),reader=response.body.getReader();await reader.read();
+   const next=await request('bytes=1500000-1599999');await reader.cancel();assert.equal(next.status,206);
+   assert.deepEqual(Buffer.from(await next.arrayBuffer()),bytes.subarray(1500000,1600000));
+   const backwards=await request('bytes=200000-209999');assert.deepEqual(Buffer.from(await backwards.arrayBuffer()),bytes.subarray(200000,210000));
+  }
+ }finally{await invoke?.shutdown();await rm(dir,{recursive:true,force:true});}
 });

@@ -29,6 +29,7 @@ const settingsTransfer = require('./settings-transfer.cjs');
 const { changedTracks } = require('./startup-refresh.cjs');
 const { cleanUnusedCache } = require('./cache-cleanup.cjs');
 let startupRefresh = { changed: 0, unavailable: 0, warnings: [] };
+let startupReady = Promise.resolve();
 const { validateSession } = require('./browsing-session.cjs');
 let browsingSession = null;
 const { createQueueWindow, createBoundsMemory, setStableBounds } = require('./queue-window.cjs');
@@ -172,6 +173,7 @@ function check(event) {
 function handle(name, fn) {
   ipcMain.handle(name, async (event, ...args) => {
     check(event);
+    await startupReady;
     if (busy || quitting)
       throw new Error('Localtone is updating your music or saving changes. Please wait a moment.');
     busy = true;
@@ -534,8 +536,9 @@ app.whenReady().then(async () => {
       kind: release.manifest.kind,
     };
   });
-  ipcMain.handle('load', (event) => {
+  ipcMain.handle('load', async (event, options) => {
     check(event);
+    if (options?.cached !== true) await startupReady;
     return snapshot();
   });
   ipcMain.on('save-browsing', (event, value) => {
@@ -1761,50 +1764,58 @@ app.whenReady().then(async () => {
   try {
     playbackShortcuts.set(db.settings.globalPlaybackShortcuts, db.settings.shortcuts);
   } catch {}
-  const external = await changedTracks(db.tracks);
-  startupRefresh.unavailable = external.unavailable.length;
-  const missingIds = new Set([...external.missing, ...external.unavailable]);
-  let missingChanged = false;
-  for (const track of db.tracks)
-    if (missingIds.has(track.id) && !track.missing) {
-      track.missing = true;
-      missingChanged = true;
-    }
-  for (const library of db.libraries) {
-    const files = [
-        ...new Set([
-          ...(external.changed.get(library.id) || []),
-          ...(library.importedFiles
-            ? db.tracks
-                .filter(
-                  (t) => t.libraryId === library.id && !t.missing && typeof t.discRaw !== 'string',
-                )
-                .map((t) => t.path)
-            : []),
-        ]),
-      ],
-      beforeIds = new Set(db.tracks.map((t) => t.id));
-    try {
-      if (library.importedFiles && !files.length) continue;
-      const result = await importLibrary(
-        library,
-        library.importedFiles ? files : null,
-        false,
-        true,
-      );
-      startupRefresh.changed +=
-        files.length +
-        db.tracks.filter((t) => t.libraryId === library.id && !beforeIds.has(t.id)).length;
-      if (result.warnings)
-        startupRefresh.warnings.push(
-          `${library.name}: ${result.warnings} file(s) could not be read; retry after syncing finishes.`,
+  // The cached collection is usable before slow disks or cloud folders finish
+  // reconciliation. File mutations wait for this lane; playback remains usable.
+  startupReady = (async () => {
+    const external = await changedTracks(db.tracks);
+    startupRefresh.unavailable = external.unavailable.length;
+    const missingIds = new Set([...external.missing, ...external.unavailable]);
+    let missingChanged = false;
+    for (const track of db.tracks)
+      if (missingIds.has(track.id) && !track.missing) {
+        track.missing = true;
+        missingChanged = true;
+      }
+    for (const library of db.libraries) {
+      const files = [
+          ...new Set([
+            ...(external.changed.get(library.id) || []),
+            ...(library.importedFiles
+              ? db.tracks
+                  .filter(
+                    (t) =>
+                      t.libraryId === library.id && !t.missing && typeof t.discRaw !== 'string',
+                  )
+                  .map((t) => t.path)
+              : []),
+          ]),
+        ],
+        beforeIds = new Set(db.tracks.map((t) => t.id));
+      try {
+        if (library.importedFiles && !files.length) continue;
+        const result = await importLibrary(
+          library,
+          library.importedFiles ? files : null,
+          false,
+          true,
         );
-    } catch (error) {
-      startupRefresh.warnings.push(`${library.name}: ${error.message}`);
+        startupRefresh.changed +=
+          files.length +
+          db.tracks.filter((t) => t.libraryId === library.id && !beforeIds.has(t.id)).length;
+        if (result.warnings)
+          startupRefresh.warnings.push(
+            `${library.name}: ${result.warnings} file(s) could not be read; retry after syncing finishes.`,
+          );
+      } catch (error) {
+        startupRefresh.warnings.push(`${library.name}: ${error.message}`);
+      }
     }
-  }
-  if (missingChanged) await save();
+    if (missingChanged) await save();
+  })().catch((error) => {
+    startupRefresh.warnings.push(error.message);
+  });
   await win.loadURL('localtone://app/index.html');
+  await startupReady;
 });
 app.on('will-quit', () => {
   playbackShortcuts.set(false);
@@ -1817,6 +1828,7 @@ app.on('before-quit', (event) => {
     quitting = true;
     Promise.allSettled([
       onlineUpdates.shutdown(),
+      startupReady,
       audioSources.dispose(),
       historyWrites,
       lastfm?.close(),

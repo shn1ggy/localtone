@@ -302,3 +302,12 @@ Minimum-size IPC includes the renderer's actual inner viewport. Use it to measur
 ### Rating playback continuity
 
 Saving a rating must never pause, reload, seek, or replace the playing audio source. Persist MP3 ratings immediately with the verified atomic tag-write path and session undo. Serve each normal playback session from an immutable temporary copy so later range requests keep the same byte offsets after tags change and Windows can replace the original file. Keep at most two playback copies under the active settings folder, remove them on retirement/quit and clean up interrupted sessions on startup. Finish an initial copy before writing that original. Use copy-on-write cloning where supported, and give each new playback a fresh source identity. Keep decoded gapless playback uninterrupted as well.
+
+
+### Cached startup and empty-pane alignment
+
+Show the saved collection and preferences before disk/cloud-folder reconciliation completes. The first UI load may request the cached snapshot; fresh collection reads and mutations must wait for startup reconciliation so edits cannot race a rescan. Apply the reconciled snapshot in place, preserving search, selections, scroll, queue, playback and appearance. Avoid an immediate duplicate focus-triggered rescan while startup checking is pending. Reveal the window only after preferences and handlers have initialized, never while fallback markup is visible.
+
+Empty artist, album, cover and track states use the same 25px top inset and align their leading edge with their pane toolbar. Headings and explanatory text must share that edge, including first launch, empty playlists and no search results. Do not indent only the heading or only the secondary line. Verify actual text and element alignment in Electron, with column headings both shown and hidden.
+
+Every normal audio range response owns its own read stream and descriptor. Chromium aborts older requests while seeking; cancellation must not close or corrupt later or concurrent responses from the immutable playback copy. Retire copies only after all response streams close. Gapless remains a separate predecoded mode; preserve the user's saved choice and verify both paths.

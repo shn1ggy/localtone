@@ -1,4 +1,7 @@
 // Real Chromium/native-window regression checks. Isolated data, never user music.
+const startedAt = Date.now();
+let startupCheckStarted = false,
+  startupCheckFinished = false;
 const electron = require('electron');
 const { app, BrowserWindow, screen } = electron;
 if (process.env.UI_CHECK_GPU !== '1') app.disableHardwareAcceleration();
@@ -68,11 +71,24 @@ app.on('browser-window-created', (_event, win) => {
         });
         await delay(60);
       }
-      const js = (code) => win.webContents.executeJavaScript(code);
+      const js = (code) =>
+        win.webContents.executeJavaScript(code).catch((error) => {
+          throw new Error(`${error.message}\nScript: ${code}`);
+        });
       const geometry = () =>
         js(
           `(()=>{const result={};for(const id of ['empty-add','empty-import','view-albums','view-covers','view-tracks','sort','volume','queue']){const b=document.getElementById(id),r=b.getBoundingClientRect(),s=getComputedStyle(b);result[id]={x:r.x,y:r.y,width:r.width,height:r.height,font:s.fontSize,line:s.lineHeight,padding:s.padding,color:s.color,background:s.backgroundColor,text:b.textContent,weight:s.fontWeight,decoration:s.textDecorationLine};}return result;})()`,
         );
+      assert.equal(startupCheckFinished, false, 'UI must load before directory checking finishes');
+      assert.equal(
+        win.isVisible(),
+        true,
+        'Saved preferences and UI must be visible while checking files',
+      );
+      console.log(
+        'UI_STARTUP',
+        JSON.stringify({ shownBeforeRefresh: true, milliseconds: Date.now() - startedAt }),
+      );
       console.log('UI_CHECK loaded');
       win.focus();
       const before = await geometry();
@@ -89,6 +105,23 @@ app.on('browser-window-created', (_event, win) => {
         ),
         true,
       );
+      const checkEmptyAlignment = async () => {
+        const metrics = await js(`(()=>{
+          const rect=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {x:r.x,y:r.y};};
+          const text=selector=>{const range=document.createRange();range.selectNodeContents(document.querySelector(selector));const r=range.getBoundingClientRect();return {x:r.x,y:r.y};};
+          return {artist:text('#artist-list .browse-empty'),search:rect('#artist-pane .collection-search'),
+            title:text('#empty h2'),description:text('#empty > p'),tab:rect('.library-content .view-tabs')};
+        })()`);
+        near(metrics.artist.x, metrics.search.x);
+        near(metrics.title.x, metrics.tab.x);
+        near(metrics.description.x, metrics.title.x);
+        near(metrics.artist.y, metrics.title.y);
+      };
+      for (const tab of ['albums', 'covers', 'tracks']) {
+        await js(`document.getElementById('view-${tab}').click()`);
+        await checkEmptyAlignment();
+      }
+      await js("document.getElementById('view-albums').click()");
       await js("document.getElementById('empty-add').click()");
       assert.equal(await js("document.getElementById('library-create-name-row').hidden"), false);
       if (process.env.UI_CHECK_CAPTURE)
@@ -342,6 +375,48 @@ app.on('browser-window-created', (_event, win) => {
           milliseconds: Date.now() - start,
         }),
       );
+      await js(
+        "document.getElementById('context-menu').hidden=true;document.getElementById('add-playlist').click();document.getElementById('playlist-name').value='Empty';document.getElementById('playlist-settings-form').requestSubmit()",
+      );
+      for (let i = 0; i < 100; i++) {
+        if (await js("!document.getElementById('playlist-settings-dialog').open")) break;
+        await delay(25);
+      }
+      assert.equal(
+        await js("document.querySelector('#empty > p').textContent"),
+        'Drag audio files, tracks, albums, or artists here.',
+      );
+      for (let pass = 0; pass < 2; pass++) {
+        await js(
+          "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'X',shiftKey:true,bubbles:true,cancelable:true}))",
+        );
+        for (const tab of ['albums', 'covers', 'tracks']) {
+          await js(`document.getElementById('view-${tab}').click()`);
+          await checkEmptyAlignment();
+        }
+      }
+      await js(
+        "document.querySelector('#libraries [data-source-kind]').click();document.getElementById('search').value='no match at all';document.getElementById('search').dispatchEvent(new Event('input',{bubbles:true}))",
+      );
+      for (let i = 0; i < 40; i++) {
+        if (
+          await js(
+            "!!document.querySelector('#artist-list .browse-empty') && !document.getElementById('empty').hidden",
+          )
+        )
+          break;
+        await delay(25);
+      }
+      for (const tab of ['albums', 'covers', 'tracks']) {
+        await js(`document.getElementById('view-${tab}').click()`);
+        await checkEmptyAlignment();
+      }
+      if (process.env.UI_CHECK_CAPTURE)
+        fs.writeFileSync(
+          process.env.UI_CHECK_CAPTURE.replace('.png', '-empty.png'),
+          (await win.webContents.capturePage()).toPNG(),
+        );
+      console.log('UI_CHECK empty pane headings and descriptions aligned in every view');
       console.log('UI_CHECK library and album highlight passed');
       BrowserWindow.getAllWindows().forEach((window) => window.hide());
       app.quit();
@@ -353,6 +428,21 @@ app.on('browser-window-created', (_event, win) => {
 const Module = require('node:module');
 const load = Module._load;
 Module._load = function (name, ...args) {
+  if (name === './startup-refresh.cjs') {
+    const actual = load.call(this, name, ...args);
+    return {
+      ...actual,
+      async changedTracks(...args) {
+        if (!startupCheckStarted) {
+          startupCheckStarted = true;
+          await delay(2000); // Represent a slow cloud-folder check, independent of the UI.
+        }
+        const result = await actual.changedTracks(...args);
+        startupCheckFinished = true;
+        return result;
+      },
+    };
+  }
   if (name === './portable.cjs')
     return { ...load.call(this, name, ...args), configurePortable() {} };
   if (name !== 'electron') return load.call(this, name, ...args);

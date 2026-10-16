@@ -63,3 +63,21 @@ test('playback copies are bounded, interrupted sessions are cleaned, and disposa
   await assert.rejects(sources.serve(file,new Request('https://audio/track')),/closed/);
  }finally{await sources.dispose();await rm(dir,{recursive:true,force:true});}
 });
+
+test('cancelling a seek response does not close later or overlapping reads of the same playback session',async()=>{
+ const {tmpdir}=await import('node:os'),{join}=await import('node:path'),{writeFile}=await import('node:fs/promises');
+ const dir=await mkdtemp(join(tmpdir(),'localtone-seek-cancel-')),file=join(dir,'audio.mp3'),sources=createAudioSources();
+ const bytes=Buffer.alloc(4*1024*1024);for(let i=0;i<bytes.length;i++)bytes[i]=i%251;
+ const request=range=>new Request('https://audio/song?playback=1',{headers:{range}});
+ try{
+  await writeFile(file,bytes);
+  const initial=await sources.serve(file,request('bytes=0-')),reader=initial.body.getReader();await reader.read();
+  const concurrent=await sources.serve(file,request('bytes=1500000-1599999'));
+  await reader.cancel();
+  assert.deepEqual(Buffer.from(await concurrent.arrayBuffer()),bytes.subarray(1500000,1600000));
+  for(const start of [3000000,200000,3900000]){
+   const response=await sources.serve(file,request(`bytes=${start}-${start+9999}`));
+   assert.deepEqual(Buffer.from(await response.arrayBuffer()),bytes.subarray(start,start+10000));
+  }
+ }finally{await sources.dispose();await rm(dir,{recursive:true,force:true});}
+});

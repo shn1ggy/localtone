@@ -42,7 +42,8 @@ const selection = createBrowseSelection();
 const deselectedBrowsePositions = { artists: null, tracks: null };
 let recordingShortcut = null,
   searchResultIds = null;
-let pendingBrowsingRestore = null;
+let pendingBrowsingRestore = null,
+  initialLibraryRefresh = null;
 let state = { libraries: [], tracks: [], playlists: [] },
   scope = { kind: 'all' },
   query = '',
@@ -1515,7 +1516,8 @@ setIcon(document.querySelector('.search>span'), 'search');
 if (api) {
   api.onProgress((count) => toast(`Indexing your music… ${count.toLocaleString()} files`, true));
   try {
-    state = await api.load();
+    state = await api.load({ cached: true });
+    initialLibraryRefresh = api.load();
     globalShortcutStatus = state.globalShortcutStatus || globalShortcutStatus;
     prefs = { ...prefs, ...state.settings };
     sort = prefs.defaultSort;
@@ -5758,32 +5760,48 @@ window.addEventListener('beforeunload', saveBrowsingState);
 
 // Quiet directory reconciliation after returning from Explorer/Finder, and while open.
 if (api.refreshLibraries) {
-  let refreshing = false,
+  let refreshing = !!initialLibraryRefresh,
     queuedRefresh;
+  const applyRefresh = (result) => {
+    if (result.changed) {
+      const old = currentTrack();
+      applyFileState(result.state);
+      playback.prune((id) => trackLookup.has(id));
+      if (old && !trackLookup.has(old.id)) {
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+        listener.clear();
+        playback.select(-1);
+        $('now-title').textContent = 'Nothing playing';
+        $('now-artist').textContent = '';
+        $('now-art').replaceChildren();
+        waveformPeaks = null;
+        applyWaveformAppearance();
+      }
+      renderQueue();
+    }
+  };
+  initialLibraryRefresh
+    ?.then((value) => {
+      const changed = ['tracks', 'libraries', 'playlists', 'ratings'].some(
+        (key) => JSON.stringify(value[key]) !== JSON.stringify(state[key]),
+      );
+      applyRefresh({ state: value, changed });
+      if (value.startupRefresh?.warnings?.length)
+        toast(value.startupRefresh.warnings.join(' · '), true);
+    })
+    .catch((error) => toast(error.message, true))
+    .finally(() => {
+      refreshing = false;
+    });
   const refresh = async () => {
     if (refreshing || busy || !document.hasFocus() || document.querySelector('dialog[open]'))
       return;
     refreshing = true;
     try {
       const result = await api.refreshLibraries();
-      if (result.changed) {
-        const old = currentTrack();
-        applyFileState(result.state);
-        playback.prune((id) => trackLookup.has(id));
-        if (old && !trackLookup.has(old.id)) {
-          audio.pause();
-          audio.removeAttribute('src');
-          audio.load();
-          listener.clear();
-          playback.select(-1);
-          $('now-title').textContent = 'Nothing playing';
-          $('now-artist').textContent = '';
-          $('now-art').replaceChildren();
-          waveformPeaks = null;
-          applyWaveformAppearance();
-        }
-        renderQueue();
-      }
+      applyRefresh(result);
     } catch {
       /* An edit may hold the write lane; retry on the next refresh. */
     } finally {

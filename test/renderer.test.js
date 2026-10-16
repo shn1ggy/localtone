@@ -1150,3 +1150,18 @@ test('tab heading toggles persist and confirmed selection removal never deletes 
  d.querySelector('#libraries button').focus();key('Backspace',{shiftKey:true});await flush();assert.equal(state.libraries.length,0);assert.equal(calls.at(-1).deleteLibrary,'l');
  }finally{w.close();}
 });
+
+test('cached startup remains interactive and fresh library results retain search, selection and scroll',async()=>{
+ const dom=new JSDOM(html,{runScripts:'outside-only'}),w=dom.window,d=w.document;
+ Object.assign(w,{createDuplicatesDialog},{createSettingsHelp,createDuplicatesDialog},core,browse,interactions,{structuredClone},{designDefaults,appearanceDefaults},{createSettingsWrites},{createTagEditor,createPlaylistEditor,createLastfmSettings},{createDialogCoordinator,createSettingsTabs},{createBrowseSelection},{createPlaybackQueue},{createWindowPresentation,createAudioOutputSettings,mountVirtualTracks},{createIcons,normalizeMenu,shortcutDefaults,createQueueViewCache,queuePage},{createNameDialog,ListenTracker,waveformPath});
+ const state={libraries:[{id:'l',name:'Music'}],playlists:[],settings:{lastView:'tracks',libraryOpening:'none'},tracks:[{id:'a',libraryId:'l',title:'Song',artist:'Artist',album:'Album',duration:60}]};
+ let complete;const pending=new Promise(resolve=>complete=resolve),calls=[];
+ w.localtone={load:async options=>{calls.push(options);return options?.cached?snapshot(state):pending;},settings:async patch=>patch,onProgress(){},refreshLibraries:async()=>({changed:false})};
+ try{
+  await w.eval(`(async()=>{${source}\n})()`);assert.equal(calls[0].cached,true);assert.equal(calls[1],undefined);
+  const search=d.getElementById('search');search.value='Song';search.dispatchEvent(new w.Event('input',{bubbles:true}));d.querySelector('.artist-name').click();
+  const pane=d.querySelector('.content-scroll');pane.scrollTop=640;
+  const fresh=snapshot(state);fresh.tracks[0].title='Song updated';complete(fresh);await flush();
+  assert.equal(search.value,'Song');assert.equal(pane.scrollTop,640);assert.equal(d.querySelector('.artist-name.active').textContent,'Artist');assert.match(d.getElementById('tracks').textContent,/Song updated/);
+ }finally{w.close();}
+});

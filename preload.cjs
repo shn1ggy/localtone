@@ -56,7 +56,7 @@ contextBridge.exposeInMainWorld('localtone', {
     ipcRenderer.invoke('write-tags-batch', entries, patch, remove),
   readTags: (id) => ipcRenderer.invoke('read-tags', id),
   writeTags: (id, values, token) => ipcRenderer.invoke('write-tags', id, values, token),
-  load: () => ipcRenderer.invoke('load'),
+  load: (options) => ipcRenderer.invoke('load', options),
   addLibrary: (name, filters) => ipcRenderer.invoke('add-library', name, filters),
   refreshLibraries: () => ipcRenderer.invoke('refresh-libraries'),
   missingFiles: () => ipcRenderer.invoke('missing-files'),
