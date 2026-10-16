@@ -1,4 +1,7 @@
-const { stat, open } = require('node:fs/promises');
+const { stat, open, copyFile, mkdir, mkdtemp, rm } = require('node:fs/promises');
+const { constants } = require('node:fs');
+const { randomUUID } = require('node:crypto');
+const { tmpdir } = require('node:os');
 const { createReadStream } = require('node:fs');
 const { Readable } = require('node:stream');
 const path = require('node:path');
@@ -47,41 +50,81 @@ async function serveAudio(file, request, source = null) {
     headers,
   });
 }
-// Keep each native playback session on the same inode across atomic tag writes.
-// libuv opens with FILE_SHARE_DELETE on Windows, so saving tags need not stop playback.
-function createAudioSources(limit = 2) {
+// Native playback reads an immutable copy, never the editable original. Windows
+// cannot replace an open destination even when its reader allows shared deletion.
+// Copies are bounded to two sessions and removed on retirement, quit and startup.
+function createAudioSources({ limit = 2, directory } = {}) {
   const sources = new Map();
+  let root,
+    disposed = false;
+  function sourceDirectory() {
+    if (!root)
+      root = (async () => {
+        if (!directory) return mkdtemp(path.join(tmpdir(), 'localtone-playback-'));
+        const target = directory();
+        await rm(target, { recursive: true, force: true });
+        await mkdir(target, { recursive: true });
+        return target;
+      })();
+    return root;
+  }
   async function retire(pending) {
     const source = await pending;
     source.retired = true;
-    if (!source.readers) await source.handle.close();
+    if (!source.readers) await source.close();
   }
   return {
+    init: sourceDirectory,
     async serve(file, request) {
+      if (disposed) throw new Error('Audio sources are closed.');
       const key = request.url;
       if (!sources.has(key)) {
-        const pending = open(file, 'r').then(async (handle) => {
+        const pending = (async () => {
+          const snapshot = path.join(await sourceDirectory(), randomUUID());
+          let handle;
+          try {
+            await copyFile(file, snapshot, constants.COPYFILE_FICLONE);
+            handle = await open(snapshot, 'r');
+          } catch (error) {
+            await rm(snapshot, { force: true });
+            throw error;
+          }
           let info;
           try {
             info = await handle.stat();
           } catch (error) {
             await handle.close();
+            await rm(snapshot, { force: true });
             throw error;
           }
+          let closing;
           const source = {
             handle,
             info,
             readers: 0,
+            streams: new Set(),
             retired: false,
+            close() {
+              return (closing ||= (async () => {
+                await handle.close();
+                await rm(snapshot, { force: true });
+              })());
+            },
             stream(range) {
               source.readers++;
-              const stream = createReadStream(file, { ...range, fd: handle.fd, autoClose: false });
+              const stream = createReadStream(snapshot, {
+                ...range,
+                fd: handle.fd,
+                autoClose: false,
+              });
+              source.streams.add(stream);
               let finished = false;
               const release = () => {
                 if (finished) return;
                 finished = true;
                 source.readers--;
-                if (source.retired && !source.readers) handle.close().catch(() => {});
+                source.streams.delete(stream);
+                if (source.retired && !source.readers) source.close().catch(() => {});
               };
               stream.once('end', release);
               stream.once('error', release);
@@ -90,7 +133,8 @@ function createAudioSources(limit = 2) {
             },
           };
           return source;
-        });
+        })();
+        pending.file = file;
         sources.set(key, pending);
         pending.catch(() => {
           if (sources.get(key) === pending) sources.delete(key);
@@ -103,10 +147,34 @@ function createAudioSources(limit = 2) {
       }
       return serveAudio(file, request, await sources.get(key));
     },
+    async beforeWrite(file) {
+      // Let an initial copy finish before attempting Windows replacement.
+      await Promise.all([...sources.values()].filter((pending) => pending.file === file));
+    },
     async dispose() {
+      disposed = true;
       const pending = [...sources.values()];
       sources.clear();
-      await Promise.allSettled(pending.map(retire));
+      await Promise.allSettled(
+        pending.map(async (pending) => {
+          const source = await pending;
+          source.retired = true;
+          await Promise.all(
+            [...source.streams].map(
+              (stream) =>
+                new Promise((resolve) => {
+                  stream.once('close', resolve);
+                  stream.destroy();
+                }),
+            ),
+          );
+          await source.close();
+        }),
+      );
+      if (root) {
+        const directory = await root;
+        await rm(directory, { recursive: true, force: true, maxRetries: 3 });
+      }
     },
   };
 }

@@ -69,7 +69,9 @@ let lastfm,
   tagHistory,
   quitting = false;
 const { createAudioSources } = require('./media.cjs');
-const audioSources = createAudioSources();
+const audioSources = createAudioSources({
+  directory: () => path.join(app.getPath('userData'), 'playback-audio'),
+});
 const ratingTags = require('./rating-tags.cjs');
 const tagEditor = require('./tags.cjs');
 const musicbrainz = require('./musicbrainz.cjs').createMusicBrainz({
@@ -264,6 +266,7 @@ app.whenReady().then(async () => {
   dbPath = path.join(app.getPath('userData'), 'collection.json');
   covers = path.join(app.getPath('userData'), 'covers');
   await fs.mkdir(app.getPath('userData'), { recursive: true });
+  await audioSources.init();
   tagHistory = require('./tag-history.cjs').createTagHistory(
     path.join(app.getPath('userData'), 'tag-backups'),
   );
@@ -865,6 +868,7 @@ app.whenReady().then(async () => {
     };
     let undoToken = null;
     if (track.codec === 'MP3') {
+      await audioSources.beforeWrite(track.path);
       const saved = await ratingTags.writeRating({
         file: track.path,
         rating,
@@ -1809,7 +1813,6 @@ app.whenReady().then(async () => {
 });
 app.on('will-quit', () => {
   playbackShortcuts.set(false);
-  audioSources.dispose().catch(() => {});
 });
 app.on('before-quit', (event) => {
   gaplessDecoder.cancel();
@@ -1819,6 +1822,7 @@ app.on('before-quit', (event) => {
     quitting = true;
     Promise.allSettled([
       onlineUpdates.shutdown(),
+      audioSources.dispose(),
       historyWrites,
       lastfm?.close(),
       (async () => {

@@ -32,12 +32,13 @@ test('column boundaries move in pixels without changing total width, and layouts
 test('rating writes preserve the playing byte source and subsequent seeks, while a new playback gets updated tags',async()=>{
  const {tmpdir}=await import('node:os'),{join}=await import('node:path');
  const {writeRating,readRating}=await import('../rating-tags.cjs');
- const dir=await mkdtemp(join(tmpdir(),'localtone-playing-rating-')),file=join(dir,'song.mp3'),sources=createAudioSources();
+ const dir=await mkdtemp(join(tmpdir(),'localtone-playing-rating-')),file=join(dir,'song.mp3'),sources=createAudioSources({directory:()=>join(dir,'playback')});
  try{
   await copyFile(fileURLToPath(new URL('./fixtures/tone.mp3',import.meta.url)),file);
   const original=await readFile(file);
   const request=(session,range)=>new Request(`https://audio/song?playback=${session}`,{headers:range?{range}:{}});
   const first=await sources.serve(file,request(1,'bytes=0-99'));await first.arrayBuffer();
+  await sources.beforeWrite(file);
   await writeRating({file,rating:4,backupDir:join(dir,'backups')});
   assert.equal(readRating(await readFile(file)),4);
   const seek=await sources.serve(file,request(1,'bytes=100-199'));
@@ -45,5 +46,20 @@ test('rating writes preserve the playing byte source and subsequent seeks, while
   assert.deepEqual(Buffer.from(await seek.arrayBuffer()),original.subarray(100,200));
   const restarted=await sources.serve(file,request(2));
   assert.equal(readRating(Buffer.from(await restarted.arrayBuffer())),4);
+ }finally{await sources.dispose();await assert.rejects(readFile(join(dir,'playback')),/ENOENT/);await rm(dir,{recursive:true,force:true});}
+});
+
+test('playback copies are bounded, interrupted sessions are cleaned, and disposal cancels active reads',async()=>{
+ const {tmpdir}=await import('node:os'),{join}=await import('node:path'),{mkdir,writeFile,readdir}=await import('node:fs/promises');
+ const dir=await mkdtemp(join(tmpdir(),'localtone-audio-cache-')),directory=join(dir,'playback'),file=join(dir,'large.mp3');
+ const sources=createAudioSources({directory:()=>directory});
+ try{
+  await mkdir(directory);await writeFile(join(directory,'stale-copy'),'stale');await sources.init();assert.deepEqual(await readdir(directory),[]);
+  await writeFile(file,Buffer.alloc(1024*1024,42));
+  for(let n=0;n<4;n++)await (await sources.serve(file,new Request(`https://audio/track?playback=${n}`))).arrayBuffer();
+  await new Promise(r=>setTimeout(r,20));assert.equal((await readdir(directory)).length,2);
+  const playing=await sources.serve(file,new Request('https://audio/track?playback=latest'));
+  await sources.dispose();assert.equal(playing.body.locked,false);await assert.rejects(readdir(directory),/ENOENT/);
+  await assert.rejects(sources.serve(file,new Request('https://audio/track')),/closed/);
  }finally{await sources.dispose();await rm(dir,{recursive:true,force:true});}
 });

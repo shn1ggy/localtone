@@ -3013,7 +3013,7 @@ bindDrop($('queue'), (payload) => {
   setQueueVisible(true);
 });
 async function saveRating(id, rating, refresh = true) {
-  // Ratings replace the file atomically; the audio source keeps its original file handle.
+  // Ratings replace the file atomically; playback keeps its immutable source.
   const result = await api.rate(id, rating);
   if (result?.modifiedAt) {
     const track = state.tracks.find((t) => t.id === id);
