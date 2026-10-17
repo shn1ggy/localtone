@@ -1,0 +1,31 @@
+name: Capture documentation screenshots
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/capture-presentation.cjs'
+      - 'docs/demo-art/**'
+      - '.github/workflows/docs-screenshots.yml'
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Capture actual Electron UI at 100% zoom
+        run: ./node_modules/.bin/electron docs/capture-presentation.cjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: documentation-screenshots
+          path: docs/images/*.png
+          if-no-files-found: error
