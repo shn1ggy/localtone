@@ -2,6 +2,7 @@ const root = require('node:path').resolve(__dirname, '..');
 const { app, BrowserWindow } = require('electron');
 const fs = require('node:fs'),
   path = require('node:path');
+fs.mkdirSync(path.join(root, 'docs', 'images'), { recursive: true });
 const base = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'localtone-presentation-')),
   data = path.join(base, 'data'),
   music = path.join(base, 'Music');
