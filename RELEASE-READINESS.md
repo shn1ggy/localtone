@@ -1,3 +1,13 @@
+# Current release status — 17 October 2026
+
+Localtone 0.131.0 is an early-access release. The public GitHub repository, GPL-3.0-or-later license, native builds for Apple Silicon Mac, Intel Mac, Windows x64 and Linux x64, matching FFmpeg sources/notices, checksums and GitHub-hosted updates are established. 384 tests pass on Windows, macOS and Linux. Native Windows UI checks cover 100%, 125% and 130% display scaling, including queue/mini transitions and minimum-height behavior. The project owner approved the tested candidates for publication.
+
+Remaining priorities are broader independent hardware/audio testing, signing/notarization, accessibility and newcomer testing, clearer public documentation, and playlist interoperability. Passing automated checks does not establish every device, Linux desktop or screen-reader workflow. No broad stable-release claim is made.
+
+**Historical audit follows.** The older statements below about choosing a license, creating a repository, unpublished downloads and old shortcuts describe earlier development states. Use the current README, release notes and this status section for the present release; the older audit remains background for the roadmap.
+
+---
+
 > Published follow-up (0.114): the first public early-access release is available on GitHub for Apple Silicon Mac, Intel Mac, Windows x64 and Linux x64. All four native builds, archived app manifests, matching decoder sources, dependency notices and uploaded asset hashes were verified. 321 app tests pass across the three operating systems; publishing safeguards have additional tests. These packages are unsigned/not notarized, and physical Mac/Windows hardware validation remains outstanding. Stable in-app checks intentionally exclude this pre-release.
 
 > Current follow-up (0.114): the repository is public. Native releases now require pinned-source FFmpeg builds and include platform-specific matching source archives; previous prebuilt decoder candidates must not be published. Native rebuilding and early-access release verification are in progress. Hardware/signing validation remains open.

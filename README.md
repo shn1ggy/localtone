@@ -1,24 +1,26 @@
 # Localtone
 
-A compact local music player for macOS, Windows and Linux. **0.127.0 — early access.**
+A compact local music player for macOS, Windows and Linux. **0.131.0 — early access.**
 
 ## Download
 
-[All downloads and release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.127.0)
+[All downloads and release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.131.0)
 
 | System | Download |
 | --- | --- |
-| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.127.0/Localtone-0.127.0-mac-arm64.zip) |
-| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.127.0/Localtone-0.127.0-mac-x64.zip) |
-| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.127.0/Localtone-0.127.0-win-x64.zip) |
-| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v0.127.0/Localtone-0.127.0-linux-x86_64.AppImage) |
+| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.131.0/Localtone-0.131.0-mac-arm64.zip) |
+| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.131.0/Localtone-0.131.0-mac-x64.zip) |
+| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.131.0/Localtone-0.131.0-win-x64.zip) |
+| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v0.131.0/Localtone-0.131.0-linux-x86_64.AppImage) |
 
-These desktop packages include everything needed to run Localtone; Node.js is only needed to work with the source. Extract the complete ZIP, or make the Linux AppImage executable. Windows portable EXE and Linux ZIP are also on the release page. These early-access builds have no verified publisher identity. Mac bundles are ad-hoc signed for integrity but are not Apple notarized; macOS may require approval in Privacy & Security. Version 0.115 fixed Mac bundle signing; 0.118 fixes early-access update discovery and Electron redirect handling. Versions 0.117 and earlier need one manual download.
+The desktop downloads run without Node.js. Extract the complete ZIP, or make the Linux AppImage executable. Windows portable EXE and Linux ZIP are also on the release page. Keep Localtone-data beside the app when using portable mode.
+
+These early-access builds have no verified publisher identity. Mac bundles are ad-hoc signed for integrity but are not Apple notarized; macOS may require approval in Privacy & Security.
 
 
-This is an early-access development build. Native platform validation and third-party redistribution review are still pending; see [RELEASE-READINESS.md](RELEASE-READINESS.md).
+Localtone is in early access. Automated checks run on Windows, macOS and Linux, with native packages for both Mac processors. Broader hardware, audio-device and accessibility testing is ongoing; see [RELEASE-READINESS.md](RELEASE-READINESS.md).
 
-## Run
+## Run from source
 
 Install Node.js **24 LTS, version 24.15 or newer** (this release was verified on 24.19.0; the exact supported ranges are in package.json), extract this folder, then open a terminal here:
 
@@ -27,7 +29,7 @@ npm ci
 npm start
 ```
 
-This download contains source code, not a signed installer. Build a launchable desktop package on its target operating system:
+The GitHub source archive is for development; the desktop downloads above are ready to run. To build a desktop package from source, use its target operating system:
 
 ```sh
 # First build the pinned decoder; see build/ffmpeg/README.md

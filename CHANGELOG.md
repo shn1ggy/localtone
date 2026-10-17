@@ -1,3 +1,14 @@
+# 0.131.0
+
+- Restore complete playback queues, current song/time and browsing sessions across exit/restart, including duplicate queue entries and pane scrolls.
+- Fix cancelled normal-audio seeks and rating interruptions; show cached libraries before background directory checks finish.
+- Preserve manual queue-click scroll. Prevent document scrollbars and correct Windows resize rounding at minimum height.
+- Commit non-player chrome suppression before mini-mode resizing, without snapshots.
+- Save confirmed tag edits in the background after closing the editor, with progress, persistent error review and unchanged undo/write verification.
+- Preserve settings and music. 384 tests pass across the three operating systems; native Windows UI checks cover 100%, 125% and 130% display scaling.
+
+See [release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.131.0) for downloads and update instructions.
+
 ## 0.114.0
 
 - Build release decoders from pinned FFmpeg 9.0.2 source on all platforms. Reject nonfree or unverifiable decoders during packaging. Include matching source, actual configuration, licenses and build instructions with release downloads.
