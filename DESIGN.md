@@ -233,7 +233,7 @@ Appearance → Albums & tracks offers a saved Show disc number switch, off by de
 
 ## First launch and empty collections
 
-A fresh collection shows Add a library and Import settings actions in the main pane. Keep the existing shell, tabs and keyboard pane navigation; do not open a setup wizard automatically, hide the artist pane or change saved preferences. Use 28px text-fit buttons, 13px text, an 8px action gap and the current theme. Import settings reuses General's import flow, including validation, confirmation and backing up existing preferences; pending actions are disabled and errors/cancellation leave a usable first-launch screen. Tab into the empty track pane focuses Add library; Tab continues to Import settings, then Artists. Shift+Tab retains sidebar navigation. Native Enter/Space activate these buttons. A first-launch import applies the saved browsing tab/order; imports from an existing collection retain current browsing behavior. Empty playlists, search results and indexed-but-empty folders use their own concise guidance.
+A fresh collection shows Add a library and Import settings actions in the main pane. Keep the existing shell, tabs and keyboard pane navigation; do not open a setup wizard automatically, hide the artist pane or change saved preferences. Use 28px text-fit buttons, 12px main-window text (matching the toolbar), an 8px action gap and the current theme. Import settings reuses General's import flow, including validation, confirmation and backing up existing preferences; pending actions are disabled and errors/cancellation leave a usable first-launch screen. Tab into the empty track pane focuses Add library; Tab continues to Import settings, then Artists. Shift+Tab retains sidebar navigation. Native Enter/Space activate these buttons. A first-launch import applies the saved browsing tab/order; imports from an existing collection retain current browsing behavior. Empty playlists, search results and indexed-but-empty folders use their own concise guidance.
 
 ## In-place browsing refreshes
 
@@ -261,7 +261,7 @@ Shift+Backspace confirms removing the focused library/playlist or the selected t
 
 ## Test-build corrections and library exclusions
 
-First-launch buttons use the shared dialog-button geometry outside dialogs too: 28px height, 13px text/20px line height, 10px horizontal padding, 5px corners. Primary text must remain text-on-accent after keyboard focus restoration; never apply the secondary accent-text hover rule to primary actions. Native cancellation/focus restoration is a required visual regression.
+First-launch buttons use the shared dialog-button geometry outside dialogs, but with the main window's text size: 28px height, 12px text/18px line height, 10px horizontal padding, 5px corners. Primary text must remain text-on-accent after keyboard focus restoration; never apply the secondary accent-text hover rule to primary actions. Native cancellation/focus restoration is a required visual regression.
 
 Only the outer context menu owns scrolling, constrained to viewport minus 12px. Its inner action list has no separate height cap. Destination submenus reuse the parent menu's 12px font, 28px rows, padding and line height; no independent 13px override or arbitrary 320px cap. Disk deletion follows file renaming in the editing group. Library settings follows Rename… in library menus.
 
@@ -273,7 +273,7 @@ On Windows, perform one native bounds update for queue and mini transitions rath
 
 ## Startup actions and stable desktop transitions
 
-Paired first-launch Add library / Import settings buttons have **equal widths and heights**, identical 13px font size, 400 text weight, 20px line height, 10px horizontal padding and 5px radii. Use a shared equal-column grid; do not let label length or primary-action weight change their geometry. Preserve dark text-on-accent for the primary action after Escape/native picker cancellation. Keyboard focus restoration must never add text underlines to buttons, tabs or disclosure labels; use the existing restrained color feedback. These are app styles, not OS styles.
+Paired first-launch Add library / Import settings buttons have **equal widths and heights**, identical 12px font size, 400 text weight, 18px line height, 10px horizontal padding and 5px radii. Use a shared equal-column grid; do not let label length or primary-action weight change their geometry. Preserve dark text-on-accent for the primary action after Escape/native picker cancellation. Keyboard focus restoration must never add text underlines to buttons, tabs or disclosure labels; use the existing restrained color feedback. These are app styles, not OS styles.
 
 Empty artist, album and track messages use the same muted text token, 600 weight, shared font size and a final period. Do not use primary white for one empty pane and muted gray for another.
 
@@ -325,3 +325,7 @@ The document itself never scrolls: constrain html/body to the viewport and clip 
 Before mini-mode native resizing, suppress all non-player chrome at the compositor level and allow two animation frames for that change to paint. One requestAnimationFrame callback precedes paint and is insufficient. Preserve a short timeout fallback for throttled Windows surfaces; do not use screenshots or replay old interface textures. Keep the suppression until the new viewport and player layout are ready.
 
 After tag-save validation/confirmation, close the editor immediately and show compact background progress through the shared notice. Keep browsing/playback available; serialize conflicting file mutations and wait for writes before exit. Retain undo and all existing write verification. Errors remain visible with a Review action; partial failures cannot silently retry stale tokens. A background completion must not replace the now-playing title if the user has changed tracks.
+
+## Main-window control text and corners
+
+Toolbar controls (view tabs, sort select, icon chips) and first-launch actions use the 12px `--font-normal` text and `--radius` (5px) corners; dialogs keep their 13px text. Chips no longer use a separate 4px radius.

@@ -41,7 +41,11 @@ const fail = (error) => {
   app.exit(1);
 };
 setTimeout(() => fail(Error('Native UI check timed out.')), 60000).unref();
+let primaryWindow = null;
 app.on('browser-window-created', (_event, win) => {
+  // The detached Windows mini player is a second real window, not another test runner.
+  if (primaryWindow) return;
+  primaryWindow = win;
   win.webContents.once('did-finish-load', async () => {
     try {
       const area = screen.getPrimaryDisplay().workArea;
@@ -94,8 +98,8 @@ app.on('browser-window-created', (_event, win) => {
       const before = await geometry();
       for (const id of ['empty-add', 'empty-import']) {
         near(before[id].height, 28);
-        assert.equal(before[id].font, '13px');
-        assert.equal(before[id].line, '20px');
+        assert.equal(before[id].font, '12px');
+        assert.equal(before[id].line, '18px');
       }
       near(before['empty-add'].width, before['empty-import'].width);
       assert.equal(before['empty-add'].weight, before['empty-import'].weight);
@@ -112,7 +116,7 @@ app.on('browser-window-created', (_event, win) => {
           return {artist:text('#artist-list .browse-empty'),search:rect('#artist-pane .collection-search'),
             title:text('#empty h2'),description:text('#empty > p'),tab:rect('.library-content .view-tabs')};
         })()`);
-        near(metrics.artist.x, metrics.search.x);
+        near(metrics.artist.x, metrics.search.x + 8);
         near(metrics.title.x, metrics.tab.x);
         near(metrics.description.x, metrics.title.x);
         near(metrics.artist.y, metrics.title.y);
@@ -154,7 +158,7 @@ app.on('browser-window-created', (_event, win) => {
           await delay(20);
           if (
             await js(
-              `!document.body.classList.contains('window-transition') && document.body.classList.contains('mini-player') === ${mini}`,
+              `!document.body.classList.contains('window-transition') && (document.body.classList.contains('mini-player') || document.body.classList.contains('mini-detached')) === ${mini}`,
             )
           )
             return;
@@ -221,12 +225,53 @@ app.on('browser-window-created', (_event, win) => {
           "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true}))",
         );
         await settled(true);
-        assert.equal(await js("document.body.classList.contains('mini-player')"), true);
-        await js(
-          "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true}))",
+        const detached = process.platform === 'win32';
+        assert.equal(
+          await js(
+            `document.body.classList.contains('${detached ? 'mini-detached' : 'mini-player'}')`,
+          ),
+          true,
         );
+        if (detached) {
+          const mini = BrowserWindow.getAllWindows().find(
+            (candidate) =>
+              candidate !== win && candidate.webContents.getURL() === 'localtone://app/mini.html',
+          );
+          assert.ok(mini, 'Detached player must exist');
+          assert.equal(win.getOpacity(), 0);
+          assert.equal(mini.getOpacity(), 1);
+          stableBounds();
+          assert.equal(
+            await mini.webContents.executeJavaScript('window.devicePixelRatio'),
+            await js('window.devicePixelRatio'),
+          );
+          const miniParts = await mini.webContents.executeJavaScript(`(()=>{
+            const player=document.querySelector('.sidebar-player'),p=player.getBoundingClientRect(),parts={};
+            for(const selector of ['#now-art','.player-meta','.now-text','.transport-controls']){
+              const r=player.querySelector(selector).getBoundingClientRect();
+              parts[selector]=[r.x-p.x,r.y-p.y,r.width,r.height];
+            }
+            return parts;
+          })()`);
+          const reference = await js('window.__playerFrames[0].parts');
+          for (const [selector, rect] of Object.entries(miniParts))
+            rect.forEach((value, index) => near(value, reference[selector][index]));
+          // Exercise the real mini preload -> main IPC -> renderer keyboard path.
+          mini.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'M' });
+          mini.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'M' });
+        } else {
+          await js(
+            "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true}))",
+          );
+        }
         await settled();
-        assert.equal(await js("document.body.classList.contains('mini-player')"), false);
+        assert.equal(
+          await js(
+            "document.body.classList.contains('mini-player') || document.body.classList.contains('mini-detached')",
+          ),
+          false,
+        );
+        assert.equal(win.getOpacity(), 1);
         stableBounds();
       }
       const frames = await js('window.__watchPlayer=false;window.__playerFrames');

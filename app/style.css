@@ -45,7 +45,6 @@ button {
   background: transparent;
   color: inherit;
   cursor: pointer;
-  border-radius: 4px;
   padding: 5px 8px;
 }
 
@@ -69,11 +68,6 @@ input,
 select {
   color: inherit;
   border: 1px solid #ffffff1a;
-  background: hsl(
-    var(--background-hue, 220) var(--background-saturation, 12%)
-      clamp(2%, calc(13.5% + var(--background-brightness-offset, 0%)), 40%)
-  );
-  border-radius: 4px;
   padding: 7px;
 }
 
@@ -83,35 +77,26 @@ select {
 
 .shell {
   display: flex;
-  height: calc(100vh - 72px);
-  min-height: 380px;
 }
 
 .sidebar {
-  width: 176px;
   flex-shrink: 0;
   background: hsl(
     var(--background-hue, 220) var(--background-saturation, 12%)
       clamp(2%, calc(7.5% + var(--background-brightness-offset, 0%)), 40%)
   );
-  border-right: 1px solid #ffffff08;
-  padding: 18px 10px;
-  overflow: auto;
 }
 
 .brand {
-  font-size: var(--font-large);
   font-weight: 650;
   letter-spacing: -0.6px;
   display: flex;
   align-items: center;
   gap: 7px;
   padding: 0 8px;
-  margin-bottom: 22px;
 }
 
 .brandmark {
-  font-size: var(--font-large);
   color: var(--green);
   line-height: 1;
 }
@@ -159,8 +144,6 @@ select {
 main {
   flex: 1;
   min-width: 0;
-  overflow: auto;
-  padding: 0 22px 12px;
   background: hsl(
     var(--background-hue, 220) var(--background-saturation, 12%)
       clamp(2%, calc(10.6% + var(--background-brightness-offset, 0%)), 40%)
@@ -168,7 +151,6 @@ main {
 }
 
 header {
-  height: 62px;
   display: flex;
   align-items: center;
 }
@@ -212,12 +194,10 @@ header {
   display: flex;
   align-items: baseline;
   gap: 14px;
-  margin: 10px 0 17px;
   flex-wrap: wrap;
 }
 
 h1 {
-  font-size: var(--font-large);
   font-weight: 600;
   letter-spacing: -0.6px;
   margin: 0;
@@ -227,20 +207,17 @@ h1 {
 
 #summary {
   color: var(--text-muted);
-  font-size: var(--font-small);
 }
 
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 7px;
   padding: 0 0 16px;
   flex-wrap: wrap;
 }
 
 .primary {
   background: var(--green);
-  color: var(--text-muted);
   font-weight: 600;
   padding: 8px 12px;
 }
@@ -251,9 +228,7 @@ h1 {
 
 .chip {
   border: 1px solid #ffffff1a;
-  border-radius: 4px;
-  font-size: var(--font-small);
-  padding: 5px 8px;
+  border-radius: var(--radius);
   color: var(--text-muted);
 }
 
@@ -274,9 +249,7 @@ h1 {
 .toolbar select {
   background: transparent;
   border: 0;
-  font-size: var(--font-small);
   width: 112px;
-  padding: 4px;
 }
 
 .table-wrap {
@@ -306,30 +279,6 @@ th button {
 th:first-child {
   width: 30px;
   text-align: center;
-}
-
-th:nth-child(2) {
-  width: 28%;
-}
-
-th:nth-child(3) {
-  width: 18%;
-}
-
-th:nth-child(4) {
-  width: 21%;
-}
-
-th:nth-child(5) {
-  width: 7%;
-}
-
-th:nth-child(6) {
-  width: 12%;
-}
-
-th:nth-child(7) {
-  width: 47px;
 }
 
 td {
@@ -407,13 +356,11 @@ tbody tr.current td.title-cell {
 
 #empty {
   text-align: left;
-  padding: 25px 0;
 }
 
 #empty h2 {
   font-size: var(--font-normal);
   line-height: 18px;
-  font-weight: 500;
   margin: 0 0 8px;
 }
 
@@ -425,7 +372,6 @@ tbody tr.current td.title-cell {
 }
 
 .player {
-  height: 72px;
   background: hsl(
     var(--background-hue, 220) var(--background-saturation, 12%)
       clamp(2%, calc(7.5% + var(--background-brightness-offset, 0%)), 40%)
@@ -433,15 +379,12 @@ tbody tr.current td.title-cell {
   border-top: 1px solid #ffffff12;
   display: flex;
   align-items: center;
-  padding: 9px 18px;
-  gap: 20px;
 }
 
 .now {
   display: flex;
   gap: 10px;
   align-items: center;
-  width: 29%;
   min-width: 0;
 }
 
@@ -482,21 +425,17 @@ tbody tr.current td.title-cell {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 13px;
 }
 
 .controls button {
   font-size: var(--font-normal);
   color: var(--text-muted);
-  padding: 3px 7px;
 }
 
 .controls .play-toggle {
   background: #e0e9e2;
   color: var(--text-muted);
   border-radius: 50%;
-  width: 27px;
-  height: 27px;
   padding: 0;
   font-size: var(--font-normal);
 }
@@ -508,14 +447,11 @@ tbody tr.current td.title-cell {
 .scrubber {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
 }
 
 .scrubber span {
   font-size: var(--font-small);
   color: var(--text-muted);
-  width: 30px;
 }
 
 input[type='range'] {
@@ -532,15 +468,10 @@ input[type='range'] {
 }
 
 .volume {
-  width: 18%;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.volume input {
-  width: 80px;
 }
 
 .volume button {
@@ -548,69 +479,29 @@ input[type='range'] {
 }
 
 #queue-panel {
-  width: 224px;
-  padding: 0 12px;
-  overflow: auto;
   flex-shrink: 0;
-  background: hsl(
-    var(--background-hue, 220) var(--background-saturation, 12%)
-      clamp(2%, calc(6.5% + var(--background-brightness-offset, 0%)), 40%)
-  );
 }
 
 .queue-item {
   width: 100%;
   text-align: left;
-  font-size: var(--font-small);
-  padding: 7px;
 }
 
 .queue-item small {
   display: block;
-  color: var(--text-muted);
   margin-top: 4px;
-}
-
-.queue-item.active {
-  color: var(--green);
 }
 
 #toast {
   position: fixed;
-  bottom: 85px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #dce9dc;
-  color: var(--text-muted);
-  padding: 10px 16px;
-  border-radius: 5px;
-  box-shadow: 0 4px 25px #0007;
-  max-width: 650px;
-  z-index: 5;
-  font-size: var(--font-normal);
 }
 
 dialog {
   width: 340px;
-  border: 1px solid
-    hsl(
-      var(--background-hue, 220) var(--background-saturation, 12%)
-        clamp(2%, calc(26.5% + var(--background-brightness-offset, 0%)), 40%)
-    );
-  background: hsl(
-    var(--background-hue, 220) var(--background-saturation, 12%)
-      clamp(2%, calc(11.2% + var(--background-brightness-offset, 0%)), 40%)
-  );
-  color: var(--text-muted);
-  border-radius: 7px;
-  padding: 20px;
-  box-shadow: 0 12px 60px #0008;
 }
 
 dialog h2 {
-  font-size: 13px;
   font-weight: 500;
-  margin: 0 0 18px;
 }
 
 dialog label {
@@ -628,7 +519,6 @@ dialog input {
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
   margin-top: 18px;
 }
 
@@ -653,20 +543,8 @@ dialog input {
 }
 
 @media (max-width: 1000px) {
-  main {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
   .search kbd {
     display: none;
-  }
-  #queue-panel {
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 72px;
-    z-index: 3;
-    box-shadow: -10px 0 30px #0006;
   }
   th:nth-child(6),
   td:nth-child(6) {
@@ -674,25 +552,11 @@ dialog input {
   }
 }
 
-.view-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin: 0 0 13px;
-  min-height: 29px;
-}
-
 .view-tabs {
   display: flex;
-  gap: 3px;
-  border: 1px solid #ffffff12;
-  border-radius: 5px;
-  padding: 2px;
 }
 
 .view-tabs button {
-  font-size: var(--font-small);
-  padding: 4px 10px;
   color: var(--text-muted);
 }
 
@@ -707,7 +571,6 @@ dialog input {
   gap: 10px;
   font-size: var(--font-small);
   color: var(--text-muted);
-  min-width: 0;
 }
 
 #browse-navigation span {
@@ -725,29 +588,23 @@ dialog input {
 
 .artist-name {
   text-align: left;
-  padding: 9px 10px;
   border-bottom: 1px solid #ffffff05;
   font-size: var(--font-normal);
   border-radius: 3px;
 }
 
 .browse-empty {
-  color: var(--text-muted);
   font-size: var(--font-normal);
   padding: 25px 8px;
 }
 
 .cover-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 14px;
   padding: 2px 0 20px;
 }
 
 .album-cover-button {
   padding: 0;
-  aspect-ratio: 1;
-  border-radius: 4px;
   overflow: hidden;
 }
 
@@ -755,7 +612,6 @@ dialog input {
   width: 100%;
   height: 100%;
   font-size: var(--font-large);
-  border-radius: 4px;
   background: linear-gradient(
     135deg,
     hsl(
@@ -769,10 +625,6 @@ dialog input {
   );
 }
 
-.album-cover-button:hover {
-  outline: 1px solid var(--accent);
-}
-
 .album-section {
   border-bottom: 1px solid #ffffff0b;
 }
@@ -781,7 +633,6 @@ dialog input {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 0;
 }
 
 .album-expand {
@@ -789,9 +640,7 @@ dialog input {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
   text-align: left;
-  padding: 6px;
 }
 
 .album-expand > .cover {
@@ -816,10 +665,6 @@ dialog input {
   font-size: var(--font-small);
   color: var(--text-muted);
   margin-top: 5px;
-}
-
-.album-tracks {
-  padding: 0 0 8px 25px;
 }
 
 .album-track {
@@ -847,19 +692,11 @@ dialog input {
   white-space: nowrap;
 }
 
-#tag-dialog {
-  width: 450px;
-}
-
 #tag-fields {
-  display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
 }
 
 #tag-error {
-  color: var(--text-error);
-  font-size: var(--font-normal);
   line-height: 1.5;
 }
 
@@ -901,7 +738,6 @@ dialog input {
 }
 
 .settings-link {
-  margin-top: auto;
   padding-top: 18px;
   color: var(--text-muted);
 }
@@ -911,13 +747,7 @@ dialog input {
 }
 
 .cover-grid {
-  grid-template-columns: repeat(auto-fill, var(--cover-size));
   align-content: start;
-}
-
-.album-cover-button {
-  width: var(--cover-size);
-  height: var(--cover-size);
 }
 
 th:nth-child(2) {
@@ -962,7 +792,6 @@ th:last-child {
 
 .stars button {
   font-size: var(--font-normal);
-  padding: 4px 1px;
   line-height: 1;
   color: var(--text-muted);
   border-radius: 2px;
@@ -970,11 +799,6 @@ th:last-child {
 
 .stars button.filled {
   color: var(--accent);
-}
-
-.stars button:hover {
-  color: var(--accent);
-  background: rgb(var(--accent-rgb) / 0.1);
 }
 
 .rating-cell {
@@ -1032,10 +856,6 @@ th:last-child {
   opacity: 1;
 }
 
-.player {
-  gap: 14px;
-}
-
 .volume {
   width: auto;
   flex-shrink: 0;
@@ -1057,19 +877,10 @@ th:last-child {
   color: var(--accent);
 }
 
-#settings-dialog {
-  width: 410px;
-  background: hsl(
-    var(--background-hue, 220) var(--background-saturation, 12%)
-      clamp(2%, calc(12.2% + var(--background-brightness-offset, 0%)), 40%)
-  );
-}
-
 .settings-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
 }
 
 .settings-heading h2 {
@@ -1083,27 +894,15 @@ th:last-child {
 .settings-fields {
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
 .settings-fields label {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: var(--font-normal);
-}
-
-.settings-fields select {
-  width: 155px;
-  background: hsl(
-    var(--background-hue, 220) var(--background-saturation, 12%)
-      clamp(2%, calc(16.3% + var(--background-brightness-offset, 0%)), 40%)
-  );
 }
 
 #settings-dialog h3 {
-  font-size: 13px;
-  margin: 24px 0 12px;
   font-weight: 500;
   color: var(--text-muted);
 }
@@ -1127,7 +926,6 @@ th:last-child {
 .settings-note {
   font-size: var(--font-small);
   line-height: 1.6;
-  color: var(--text-muted);
   margin: 16px 0 0;
 }
 
@@ -1149,9 +947,6 @@ th:last-child {
 }
 
 @media (max-width: 950px) {
-  .player {
-    gap: 9px;
-  }
   .volume input {
     width: 48px;
   }
@@ -1176,7 +971,6 @@ th:last-child {
       clamp(2%, calc(12.9% + var(--background-brightness-offset, 0%)), 40%)
   );
   --border: #ffffff12;
-  --text-muted: #94a0ae;
   --gap: 8px;
 }
 
@@ -1196,10 +990,6 @@ input,
 select {
   background: var(--surface);
   border-color: var(--border);
-}
-
-main {
-  padding: 0 22px 16px;
 }
 
 .sidebar {
@@ -1253,22 +1043,12 @@ main {
   padding: 0;
 }
 
-.brand {
-  margin-bottom: 20px;
-}
-
-.collection-heading {
-  margin: 6px 0 14px;
-}
-
 h1 {
   font-size: var(--font-large);
 }
 
 .toolbar {
   gap: var(--gap);
-  padding-bottom: 12px;
-  min-height: var(--control-height);
 }
 
 .chip,
@@ -1285,12 +1065,6 @@ h1 {
   display: flex;
   align-items: center;
   gap: 5px;
-}
-
-.view-toolbar {
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
 }
 
 .view-tabs {
@@ -1340,11 +1114,6 @@ table td {
   border-radius: var(--radius);
 }
 
-#queue-list {
-  min-height: 120px;
-  padding-bottom: 45px;
-}
-
 #queue-panel .section-label {
   height: 32px;
   margin: 14px 0 8px;
@@ -1353,11 +1122,6 @@ table td {
 .drop-target {
   outline: 1px solid var(--accent) !important;
   background: rgb(var(--accent-rgb) / 0.1) !important;
-}
-
-.queue-item.drop-target {
-  outline: 0 !important;
-  border-top: 2px solid var(--accent);
 }
 
 .dragging {
@@ -1370,13 +1134,8 @@ table td {
 }
 
 .player {
-  height: 76px;
   padding: 8px 18px;
   gap: 14px;
-}
-
-.shell {
-  height: calc(100vh - 76px);
 }
 
 .transport {
@@ -1398,8 +1157,6 @@ table td {
 }
 
 .scrubber {
-  margin-top: 2px;
-  height: 20px;
   gap: 8px;
 }
 
@@ -1459,16 +1216,6 @@ input[type='range']:hover::-webkit-slider-runnable-track {
   background: #647182;
 }
 
-dialog {
-  background: hsl(
-    var(--background-hue, 220) var(--background-saturation, 12%)
-      clamp(2%, calc(12.5% + var(--background-brightness-offset, 0%)), 40%)
-  );
-  border: 1px solid #ffffff1c;
-  border-radius: 8px;
-  padding: 20px;
-}
-
 dialog input,
 dialog select {
   height: 32px;
@@ -1485,20 +1232,8 @@ dialog .dialog-actions button {
   padding: 0 12px;
 }
 
-.settings-fields label {
-  min-height: 32px;
-}
-
 .settings-note {
   color: var(--text-muted);
-}
-
-#toast {
-  bottom: 90px;
-}
-
-.cover-grid {
-  gap: 14px;
 }
 
 .album-cover-button {
@@ -1510,9 +1245,6 @@ dialog .dialog-actions button {
 }
 
 @media (max-width: 1000px) {
-  #queue-panel {
-    bottom: 76px;
-  }
 }
 
 /* Compact library header and stable album controls. */
@@ -1530,8 +1262,6 @@ header {
 }
 
 .view-toolbar {
-  margin-bottom: 8px;
-  gap: 8px;
   flex-wrap: nowrap;
 }
 
@@ -1569,19 +1299,8 @@ header {
   border-top: 2px solid transparent;
 }
 
-.table-wrap,
-.album-tracks {
-  overflow-x: auto;
-}
-
 .album-tracks {
   padding: 0 0 8px;
-}
-
-.track-table {
-  table-layout: fixed;
-  min-width: 100%;
-  border-collapse: collapse;
 }
 
 .track-table th,
@@ -1617,16 +1336,10 @@ header {
 
 .column-resize {
   position: absolute;
-  right: 0;
   top: 0;
   bottom: 0;
-  width: 8px;
   cursor: col-resize;
   touch-action: none;
-}
-
-.column-resize:hover {
-  background: rgb(var(--accent-rgb) / 0.2);
 }
 
 .track-table .album-track {
@@ -1635,15 +1348,6 @@ header {
 
 .album-heading .album-expand > .cover {
   margin-left: 0;
-}
-
-#settings-dialog {
-  max-height: 85vh;
-  overflow: auto;
-}
-
-.track-table td[data-column='number'] {
-  color: var(--text-muted);
 }
 
 .queue-item {
@@ -1697,7 +1401,7 @@ header {
 .view-controls select {
   height: 30px;
   padding: 0 8px;
-  font-size: var(--font-small);
+  font-size: var(--font-normal);
   max-width: 160px;
 }
 
@@ -1814,7 +1518,6 @@ header {
   width: 100%;
   min-height: 28px;
   padding: 5px 9px;
-  font-size: var(--font-normal);
   border-radius: 4px;
 }
 
@@ -1832,7 +1535,6 @@ header {
 }
 
 #context-menu p {
-  font-size: var(--font-small);
   color: var(--text-muted);
   padding: 8px 9px 3px;
   margin: 3px 0 0;
@@ -1873,7 +1575,6 @@ header {
 
 .sidebar {
   width: var(--sidebar-width);
-  max-width: 28vw;
   min-width: 140px;
   border-right: 0;
 }
@@ -1894,7 +1595,6 @@ main {
 
 #artist-pane {
   width: var(--artist-width);
-  max-width: 38%;
   min-width: 160px;
   flex-shrink: 0;
   display: flex;
@@ -1914,7 +1614,6 @@ main {
 
 #artist-list .artist-name {
   width: 100%;
-  min-height: 32px;
   padding: 7px 8px;
   text-align: left;
   white-space: nowrap;
@@ -1930,8 +1629,6 @@ main {
 
 .library-content {
   flex: 1;
-  min-width: 0;
-  overflow: auto;
   padding-left: 10px;
 }
 
@@ -1991,14 +1688,11 @@ main {
 }
 
 #lastfm-settings input[type='password'] {
-  width: 190px;
   min-width: 0;
-  font-size: var(--font-small);
 }
 
 .lastfm-actions {
   display: flex;
-  gap: 6px;
   flex-wrap: wrap;
   margin: 12px 0;
 }
@@ -2017,10 +1711,7 @@ main {
 }
 
 #lastfm-error {
-  font-size: var(--font-small);
   line-height: 1.5;
-  color: var(--text-muted);
-  margin: 10px 0 0;
 }
 
 /* Cover sizes set a minimum; equal grid columns fill the available pane. */
@@ -2042,15 +1733,6 @@ main {
 }
 
 /* A single compact control system across settings and playlist editors. */
-#settings-dialog,
-#playlist-settings-dialog {
-  width: min(540px, calc(100vw - 40px));
-  max-height: 85vh;
-  overflow: auto;
-  padding: 18px;
-  background: var(--surface);
-}
-
 .settings-fields {
   gap: 8px;
 }
@@ -2079,11 +1761,6 @@ main {
 
 #settings-dialog button:not(.settings-heading button),
 #playlist-settings-dialog button:not(.settings-heading button) {
-  height: 30px;
-  min-height: 30px;
-  padding: 0 10px;
-  font-size: var(--font-small);
-  border-radius: var(--radius);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2124,7 +1801,6 @@ main {
 
 .playlist-rule {
   display: grid;
-  grid-template-columns: 1fr 1.1fr 1fr 30px;
   gap: 6px;
   margin: 8px 0;
 }
@@ -2153,7 +1829,6 @@ main {
 /* Waveform uses the same keyboard-accessible range control for seeking. */
 :root {
   --player-height: 76px;
-  --seek-height: 20px;
 }
 
 :root[data-seek-display='waveform'] {
@@ -2168,18 +1843,6 @@ main {
 
 .player {
   height: var(--player-height);
-}
-
-.shell {
-  height: calc(100vh - var(--player-height));
-}
-
-#queue-panel {
-  bottom: var(--player-height);
-}
-
-#toast {
-  bottom: calc(var(--player-height) + 14px);
 }
 
 .scrubber {
@@ -2211,16 +1874,6 @@ main {
   width: 100%;
   height: 100%;
   pointer-events: none;
-}
-
-#waveform-base {
-  fill: #596371;
-  stroke: #596371;
-}
-
-#waveform-played {
-  fill: var(--accent);
-  stroke: var(--accent);
 }
 
 #seek-visual[data-style='bars'] path {
@@ -2288,10 +1941,6 @@ main {
   grid-template-columns: minmax(100px, 1fr) minmax(115px, 1fr) minmax(135px, 1.2fr) 30px;
 }
 
-#playlist-settings-dialog .check-setting {
-  margin: 0;
-}
-
 /* Keep search and controls on the same right edge; simple playlists reclaim the tabs row. */
 .collection-search {
   width: clamp(230px, 40%, 370px);
@@ -2308,41 +1957,13 @@ main {
   margin-top: 0;
 }
 
-#playlist-settings-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-#playlist-settings-dialog .settings-heading {
-  margin: 0 0 2px;
-}
-
 #playlist-settings-dialog .check-setting {
   margin: 0;
-  min-height: 24px;
   gap: 8px;
-  color: var(--text-muted);
-  font-size: 13px;
 }
 
 #playlist-settings-dialog .check-setting + .check-setting {
   margin-top: -6px;
-}
-
-#playlist-settings-dialog .settings-note {
-  margin: 0;
-  line-height: 1.5;
-}
-
-#playlist-settings-dialog .dialog-actions {
-  margin-top: 4px;
-  gap: 6px;
-}
-
-#playlist-settings-dialog .playlist-rule {
-  margin: 6px 0;
-  align-items: start;
 }
 
 #playlist-settings-dialog .playlist-rule input,
@@ -2355,15 +1976,9 @@ main {
   border-radius: var(--radius);
 }
 
-#playlist-settings-dialog .rule-values {
-  gap: 6px;
-}
-
 #playlist-settings-dialog .rule-values input,
 #playlist-settings-dialog .rule-values select {
   flex: 1 1 65px;
-  min-width: 65px;
-  width: 0;
 }
 
 #playlist-settings-dialog .rule-values input[type='date'] {
@@ -2372,21 +1987,8 @@ main {
   width: 100%;
 }
 
-#playlist-settings-dialog .playlist-rule > button {
-  width: var(--control-height);
-  height: var(--control-height);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-}
-
 #playlist-settings-dialog .dialog-actions button:not(.primary) {
   border: 1px solid var(--border);
-}
-
-#playlist-settings-error {
-  margin: 0;
-  font-size: var(--font-small);
-  color: var(--text-error);
 }
 
 /* One toolbar spans the content area; fixed slots prevent search from moving between views. */
@@ -2443,7 +2045,6 @@ main > .view-toolbar #sort {
 }
 
 main > .view-toolbar .collection-search {
-  width: 100%;
   min-width: 0;
 }
 
@@ -2541,7 +2142,6 @@ main > .view-toolbar .collection-search {
   width: 100%;
   min-width: 0;
   flex-shrink: 0;
-  margin-bottom: 10px;
 }
 
 #artist-pane .search {
@@ -2561,11 +2161,9 @@ main > .view-toolbar .collection-search {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 8px;
   min-height: 30px;
   height: 30px;
   margin: 0 0 10px;
-  position: sticky;
   top: 0;
   z-index: 2;
   background: hsl(
@@ -2582,18 +2180,8 @@ main > .view-toolbar .collection-search {
   height: 30px;
 }
 
-.library-content > .view-toolbar .view-tabs button {
-  padding: 0 7px;
-}
-
 .library-content > .view-toolbar .view-controls {
-  margin-left: auto;
   flex-shrink: 0;
-}
-
-.library-content > .view-toolbar #sort {
-  width: 90px;
-  max-width: 90px;
 }
 
 #artist-list {
@@ -2620,8 +2208,6 @@ button#now-art:hover {
 #artist-list > .browse-empty,
 #browser > .browse-empty,
 .cover-grid > .browse-empty {
-  margin: 0;
-  padding: 25px 8px;
   font-size: var(--font-normal);
   line-height: 18px;
 }
@@ -2678,7 +2264,6 @@ button:has(> .ui-icon) {
 }
 
 .stars button {
-  width: 17px;
   height: 24px;
   padding: 0;
   display: inline-flex;
@@ -2686,20 +2271,8 @@ button:has(> .ui-icon) {
   justify-content: center;
 }
 
-.stars .ui-icon {
-  width: 16px;
-  height: 16px;
-  flex-basis: 16px;
-}
-
 .stars button.filled .ui-icon {
   fill: currentColor;
-}
-
-.library-content > .view-toolbar #sort {
-  width: 132px;
-  max-width: 132px;
-  min-width: 132px;
 }
 
 .track-sort.unavailable {
@@ -2711,10 +2284,6 @@ button:has(> .ui-icon) {
   opacity: 1;
 }
 
-.library-content > .view-toolbar .view-tabs button {
-  padding: 0 5px;
-}
-
 /* Keep controls on one line when the artist pane is unusually wide. */
 .library-content {
   container-type: inline-size;
@@ -2723,8 +2292,6 @@ button:has(> .ui-icon) {
 /* Saved column widths act as proportions, so all visible columns fill the pane. */
 .track-table {
   width: 100%;
-  min-width: 100%;
-  max-width: 100%;
   table-layout: fixed;
 }
 
@@ -2744,7 +2311,6 @@ button:has(> .ui-icon) {
 }
 
 .rating-cell .stars button {
-  flex: 0 1 17px;
   min-width: 0;
 }
 
@@ -2784,9 +2350,7 @@ main {
 }
 
 .sidebar-player {
-  margin-top: auto;
   flex-shrink: 0;
-  padding-top: 14px;
 }
 
 .sidebar .brand {
@@ -2795,10 +2359,7 @@ main {
 
 #libraries,
 #playlists {
-  overflow: auto;
   min-height: 0;
-  max-height: 18vh;
-  flex-shrink: 1;
 }
 
 .sidebar > .section-label {
@@ -2813,10 +2374,6 @@ main {
 }
 
 .sidebar-player .now > #now-art {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1;
-  max-height: 30vh;
   border-radius: var(--radius);
   font-size: var(--font-large);
 }
@@ -2833,7 +2390,6 @@ main {
 .sidebar-player .now-text {
   width: 100%;
   text-align: center;
-  padding: 3px 0 6px;
 }
 
 .sidebar-player .now strong {
@@ -2851,10 +2407,6 @@ main {
   font-size: var(--font-small);
 }
 
-.sidebar-player #now-separator {
-  display: none;
-}
-
 .player-meta {
   display: flex;
   align-items: center;
@@ -2864,7 +2416,6 @@ main {
 }
 
 .player-time {
-  font-size: var(--font-small);
   color: var(--text-muted);
   white-space: nowrap;
 }
@@ -2872,7 +2423,6 @@ main {
 .player-time > span {
   display: inline;
   margin: 0;
-  font-size: var(--font-small);
 }
 
 .sidebar-player .controls {
@@ -2900,19 +2450,14 @@ main {
 }
 
 .waveform-dock {
-  height: 50px;
   flex-shrink: 0;
-  padding: 8px 18px 10px;
   background: hsl(
     var(--background-hue, 220) var(--background-saturation, 12%)
       clamp(2%, calc(10.6% + var(--background-brightness-offset, 0%)), 40%)
   );
-  border-top: 1px solid var(--border);
 }
 
 .waveform-dock .scrubber {
-  height: 100%;
-  margin: 0;
   gap: 0;
 }
 
@@ -2921,19 +2466,8 @@ main {
   width: 100%;
 }
 
-:root[data-waveform-height='tall'] .waveform-dock {
-  height: 66px;
-}
-
-#queue-panel {
-  position: relative;
-  top: auto;
-  bottom: auto;
-}
-
 .column-resize {
   width: 6px;
-  right: -3px;
 }
 
 .column-resize:hover {
@@ -2955,10 +2489,6 @@ main {
   background: var(--accent);
 }
 
-.track-table {
-  max-width: none;
-}
-
 .track-table .rating-cell .stars {
   justify-content: flex-end;
 }
@@ -2969,11 +2499,6 @@ main {
   text-align: right;
 }
 
-.track-table th:last-child,
-.track-table td:last-child {
-  padding-right: var(--scrollbar-control-inset, 0px);
-}
-
 @media (max-height: 650px) {
   .sidebar-player #now-art {
     max-height: 23vh;
@@ -2981,23 +2506,9 @@ main {
   .sidebar .section-label {
     margin-top: 8px;
   }
-  .sidebar-player {
-    padding-top: 8px;
-  }
-  .sidebar .brand {
-    margin-bottom: 10px;
-  }
 }
 
 @media (max-width: 1000px) {
-  #queue-panel {
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 50px;
-    width: 224px;
-    z-index: 3;
-  }
 }
 
 .sidebar-player .controls button {
@@ -3006,7 +2517,6 @@ main {
 }
 
 .player-meta #now-rating {
-  flex: 1;
   min-width: 0;
 }
 
@@ -3015,7 +2525,6 @@ main {
 }
 
 .player-meta .stars button {
-  flex: 0 1 17px;
   min-width: 0;
 }
 
@@ -3029,11 +2538,6 @@ main {
 }
 
 /* Fit tables inside the scrollable content box, including its vertical gutter. */
-.library-content {
-  overflow-x: hidden;
-  scrollbar-gutter: stable;
-}
-
 .table-wrap,
 .album-tracks {
   min-width: 0;
@@ -3061,7 +2565,6 @@ main {
 
 .track-table td[data-column='duration'] {
   padding-left: 4px;
-  padding-right: 8px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -3125,12 +2628,6 @@ main {
 }
 
 /* Transport spans the workspace; the seek bar has equal 12px top/bottom space. */
-.waveform-dock {
-  height: 94px;
-  padding: 8px 18px 12px;
-  border: 0;
-}
-
 .waveform-dock .transport-controls {
   height: 30px;
   display: grid;
@@ -3167,15 +2664,6 @@ main {
 
 .transport-controls button.enabled {
   color: var(--accent);
-}
-
-.waveform-dock .scrubber {
-  height: 32px;
-  margin: 12px 0 0;
-}
-
-:root[data-waveform-height='tall'] .waveform-dock {
-  height: 110px;
 }
 
 .collection-actions #queue {
@@ -3220,12 +2708,6 @@ body.resizing-columns * {
 }
 
 @media (max-width: 1000px) {
-  #queue-panel {
-    bottom: 94px;
-  }
-  :root[data-waveform-height='tall'] #queue-panel {
-    bottom: 110px;
-  }
 }
 
 .transport-controls .play-toggle {
@@ -3248,7 +2730,6 @@ main {
 
 .library-content > .view-toolbar {
   gap: 6px;
-  margin-bottom: 10px;
 }
 
 .library-content > .view-toolbar .view-controls {
@@ -3259,11 +2740,6 @@ main {
 .library-content > .view-toolbar .collection-actions {
   margin-left: auto;
   height: 30px;
-  gap: 8px;
-}
-
-.library-content > .view-toolbar .volume input {
-  width: 64px;
 }
 
 .library-content > .view-toolbar .track-sort {
@@ -3289,10 +2765,6 @@ main {
 .sidebar .brand {
   height: 30px;
   line-height: 30px;
-}
-
-#artist-pane {
-  max-width: min(38%, calc(100% - 430px));
 }
 
 /* Playback remains beneath the cover, with shuffle and repeat at either edge. */
@@ -3322,39 +2794,14 @@ main {
 }
 
 .waveform-dock {
-  height: 56px;
-  padding: 12px 18px;
   border: 0;
 }
 
-.waveform-dock .scrubber {
-  height: 32px;
-  margin: 0;
-}
-
-:root[data-waveform-height='tall'] .waveform-dock {
-  height: 72px;
-}
-
-:root[data-waveform-height='tall'] .waveform-dock .scrubber {
-  height: 48px;
-}
-
 @media (max-width: 1000px) {
-  #queue-panel {
-    bottom: 56px;
-  }
-  :root[data-waveform-height='tall'] #queue-panel {
-    bottom: 72px;
-  }
 }
 
 .library-content > .view-toolbar .view-tabs {
   align-items: center;
-}
-
-.library-content > .view-toolbar .view-tabs button {
-  height: 28px;
 }
 
 /* A stationary toolbar gap for both independently scrolling panes. */
@@ -3385,7 +2832,6 @@ main {
   min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-gutter: stable;
 }
 
 #browse-navigation:empty {
@@ -3404,30 +2850,13 @@ main {
   outline: none;
 }
 
-.stars .ui-icon {
-  width: 12px;
-  height: 12px;
-  flex-basis: 12px;
-}
-
-.stars button {
-  width: 15px;
-}
-
-.rating-cell .stars button,
-.player-meta .stars button {
-  flex: 0 1 15px;
-}
-
 /* Shared settings system: 12px type, 30px controls, 8px row rhythm. */
 dialog {
   --dialog-control: 30px;
-  font-size: 13px;
   background: hsl(
     var(--background-hue, 220) var(--background-saturation, 12%)
       clamp(2%, calc(12.5% + var(--background-brightness-offset, 0%)), 40%)
   );
-  color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 20px 70px #0007;
@@ -3534,10 +2963,7 @@ dialog .primary {
 
 #settings-dialog,
 #playlist-settings-dialog {
-  width: 640px;
-  max-width: calc(100vw - 32px);
   max-height: calc(100vh - 48px);
-  padding: 16px;
   background: hsl(
     var(--background-hue, 220) var(--background-saturation, 12%)
       clamp(2%, calc(12.5% + var(--background-brightness-offset, 0%)), 40%)
@@ -3548,13 +2974,10 @@ dialog .primary {
 #settings-dialog[open] {
   display: flex;
   flex-direction: column;
-  height: 470px;
 }
 
 #settings-dialog .settings-heading,
 #playlist-settings-dialog .settings-heading {
-  margin: 0 0 12px;
-  min-height: 30px;
   flex-shrink: 0;
 }
 
@@ -3565,26 +2988,8 @@ dialog .settings-heading button {
   color: var(--text-muted);
 }
 
-#settings-dialog .settings-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 0 0 12px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
 #settings-dialog .settings-tabs button {
-  font-size: 13px;
-  height: 30px;
-  padding: 0 12px;
-  color: var(--text-muted);
-  background: transparent;
   border: 0;
-}
-
-#settings-dialog .settings-tabs button[aria-selected='true'] {
-  color: var(--accent);
-  background: rgb(var(--accent-rgb) / 0.1);
 }
 
 #settings-dialog .settings-tabs button:hover,
@@ -3611,7 +3016,6 @@ dialog .settings-heading button {
 #playlist-settings-dialog .preference-group h3 {
   margin: 0 0 8px;
   font-size: 13px;
-  color: var(--text-muted);
 }
 
 .preference-group {
@@ -3622,18 +3026,13 @@ dialog .settings-heading button {
 #playlist-settings-dialog .settings-fields {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   margin: 0;
 }
 
 #settings-dialog .settings-fields label,
 #playlist-settings-dialog .settings-fields label,
 #settings-dialog .check-setting {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  min-height: 30px;
   margin: 0;
   font-size: 13px;
   color: var(--text-primary);
@@ -3666,9 +3065,7 @@ dialog .settings-heading button {
 
 #settings-dialog .settings-note,
 #playlist-settings-dialog .settings-note {
-  font-size: 12px;
   color: var(--text-muted);
-  line-height: 1.5;
   margin: 8px 0 0;
 }
 
@@ -3706,17 +3103,10 @@ dialog .settings-heading button {
   margin: 12px 0 0;
 }
 
-#settings-dialog button:not(.settings-heading button),
-#playlist-settings-dialog button:not(.settings-heading button) {
-  font-size: 13px;
-}
-
 #settings-dialog .shortcuts {
-  display: grid;
   grid-template-columns: 1fr auto;
   gap: 0;
   margin: 0;
-  font-size: 13px;
 }
 
 #settings-dialog .shortcuts dt,
@@ -3765,27 +3155,11 @@ dialog .settings-heading button {
   min-height: 30px;
 }
 
-#playlist-settings-dialog .rules-heading {
-  margin: 16px 0 8px;
-}
-
-#playlist-settings-dialog .playlist-rule {
-  display: grid;
-  grid-template-columns: minmax(110px, 1fr) minmax(130px, 1.1fr) minmax(145px, 1.2fr) 30px;
-  gap: 8px;
-  margin: 0 0 8px;
-  align-items: start;
-}
-
 #playlist-settings-dialog .playlist-rule :is(input, select) {
-  font-size: 13px;
   background: hsl(
     var(--background-hue, 220) var(--background-saturation, 12%)
       clamp(2%, calc(16.3% + var(--background-brightness-offset, 0%)), 40%)
   );
-  padding: 0 8px;
-  height: 30px;
-  min-height: 30px;
   border: 1px solid var(--border);
 }
 
@@ -3796,14 +3170,8 @@ dialog .settings-heading button {
   );
 }
 
-#playlist-settings-dialog .rule-values {
-  gap: 8px;
-}
-
 #playlist-settings-dialog .playlist-rule > button {
   height: 30px;
-  width: 30px;
-  background: transparent;
   border: 1px solid var(--border);
 }
 
@@ -3813,15 +3181,7 @@ dialog .settings-heading button {
 }
 
 #playlist-settings-dialog .dialog-actions {
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
-  margin-top: 16px;
-  gap: 8px;
   flex-shrink: 0;
-}
-
-#playlist-settings-dialog #playlist-preview {
-  margin: 0;
 }
 
 #playlist-settings-error,
@@ -3831,19 +3191,9 @@ dialog .settings-heading button {
   margin: 8px 0 0;
 }
 
-#tag-dialog {
-  width: 540px;
-  max-height: calc(100vh - 48px);
-  overflow: auto;
-}
-
 #tag-dialog h2,
 #name-dialog h2 {
   margin-bottom: 16px;
-}
-
-#tag-fields {
-  gap: 12px;
 }
 
 #tag-fields label,
@@ -3866,23 +3216,9 @@ dialog .dialog-actions {
 }
 
 @media (max-width: 620px) {
-  #settings-dialog .settings-tabs button {
-    padding: 0 8px;
-  }
-  #playlist-settings-dialog .playlist-rule {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 30px;
-  }
   #playlist-settings-dialog .rule-values {
     grid-column: 1/3;
     grid-row: 2;
-  }
-  #playlist-settings-dialog .playlist-rule > button {
-    grid-column: 3;
-    grid-row: 1;
-  }
-  #settings-dialog .settings-fields label,
-  #playlist-settings-dialog .settings-fields label {
-    gap: 8px;
   }
 }
 
@@ -3893,25 +3229,10 @@ dialog .dialog-actions {
 }
 
 /* Tag editor uses the same compact dialog rhythm as preferences and rules. */
-#tag-dialog {
-  width: 640px;
-  overflow: hidden;
-  padding: 16px;
-}
-
 #tag-form {
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 82px);
-}
-
-#tag-dialog .settings-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 30px;
-  margin-bottom: 12px;
-  gap: 12px;
 }
 
 #tag-dialog h2 {
@@ -3935,7 +3256,6 @@ dialog .dialog-actions {
 #tag-fields {
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
 .tag-field-heading,
@@ -3957,14 +3277,11 @@ dialog .dialog-actions {
 
 #tag-fields label {
   display: flex;
-  justify-content: center;
-  min-height: 30px;
   margin: 0;
 }
 
 #tag-fields input:not([type='checkbox']) {
   width: 100%;
-  height: 30px;
   font: inherit;
 }
 
@@ -3972,13 +3289,6 @@ dialog .dialog-actions {
   width: 14px;
   height: 14px;
   margin: 8px auto;
-}
-
-#tag-dialog .dialog-actions {
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
-  margin-top: 16px;
-  flex-shrink: 0;
 }
 
 #tag-error {
@@ -4012,11 +3322,6 @@ dialog .dialog-actions {
 .library-content > .view-toolbar .collection-actions {
   flex-shrink: 0;
   gap: 8px;
-}
-
-.library-content > .view-toolbar .volume input {
-  width: 64px;
-  min-width: 64px;
 }
 
 .library-content > .view-toolbar .view-controls {
@@ -4053,14 +3358,9 @@ dialog .dialog-actions {
   position: absolute;
   right: 0;
   top: 0;
-  bottom: 56px;
   width: 224px;
   z-index: 3;
   box-shadow: -10px 0 30px #0006;
-}
-
-:root[data-waveform-height='tall'] #queue-panel {
-  bottom: 72px;
 }
 
 /* Fixed row geometry allows continuous scrolling without thousands of live rows. */
@@ -4143,9 +3443,7 @@ dialog .dialog-actions {
 }
 
 #settings-dialog .settings-fields input[type='range'] {
-  padding: 0;
   background: transparent;
-  border: 0;
   width: 230px;
 }
 
@@ -4168,19 +3466,12 @@ dialog .dialog-actions {
   flex: 1 1 auto;
   max-height: none;
   min-height: 0;
-  overflow-y: auto;
-}
-
-.sidebar-player {
-  margin-top: 0;
-  padding-top: 14px;
 }
 
 /* Draw cover focus inside its bounds so the first column cannot clip it. */
 .album-cover-button:hover,
 .album-cover-button:focus-visible {
   outline: 1px solid var(--accent);
-  outline-offset: -1px;
 }
 
 .album-cover-button:focus-visible {
@@ -4201,23 +3492,7 @@ dialog .dialog-actions {
   display: none;
 }
 
-.track-table td[data-column='number'],
-.track-table th[data-column='number'] {
-  padding-left: 6px;
-  padding-right: 6px;
-}
-
 /* Compact tag rows: value and one explicit keep/set/clear action. */
-#tag-dialog {
-  width: 580px;
-}
-
-#tag-fields .tag-field-row {
-  grid-template-columns: 90px minmax(0, 1fr) 76px;
-  gap: 10px;
-  align-items: center;
-}
-
 #tag-fields .tag-field-row input,
 #tag-fields .tag-field-row select {
   width: 100%;
@@ -4284,14 +3559,10 @@ dialog .dialog-actions {
 }
 
 .track-table tbody tr:not(.virtual-spacer) {
-  height: 22px;
-  min-height: 22px;
   border: 0;
 }
 
 .track-table tbody tr:not(.virtual-spacer) > td {
-  height: 22px;
-  min-height: 22px;
   padding-top: 1px;
   padding-bottom: 1px;
   line-height: 18px;
@@ -4369,26 +3640,10 @@ dialog .dialog-actions {
 }
 
 /* Track view uses 32px rows; album tables use 24px. */
-.track-table tbody tr:not(.virtual-spacer),
-.track-table tbody tr:not(.virtual-spacer) > td {
-  height: 24px;
-  min-height: 24px;
-}
-
 .main-track-table tbody tr:not(.virtual-spacer),
 .main-track-table tbody tr:not(.virtual-spacer) > td {
   height: 32px;
   min-height: 32px;
-}
-
-.main-track-table .track-title {
-  height: 28px;
-}
-
-.main-track-table .track-title > .cover {
-  width: 26px;
-  height: 26px;
-  flex-basis: 26px;
 }
 
 .track-table td[data-column='number'],
@@ -4403,25 +3658,11 @@ dialog .dialog-actions {
 }
 
 /* Shared typography and first-row alignment across the two navigation panes. */
-.track-table .track-name {
-  font-size: var(--font-normal);
-}
-
 /* One shared font for artist names and track titles in every table. */
 .track-table .track-name,
 #artist-list .artist-name {
   font-size: var(--font-normal);
   line-height: 18px;
-}
-
-.sidebar .brand {
-  margin-bottom: var(--pane-toolbar-gap);
-}
-
-.sidebar #all {
-  height: 32px;
-  min-height: 32px;
-  max-height: 32px;
 }
 
 .album-heading .album-expand {
@@ -4460,9 +3701,6 @@ dialog .dialog-actions {
 #settings-dialog .settings-heading {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 0;
-  min-height: 30px;
 }
 
 #settings-dialog .settings-heading h2 {
@@ -4481,14 +3719,11 @@ dialog .dialog-actions {
   padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  height: 30px;
 }
 
 #settings-dialog .settings-tabs button {
   width: auto;
   min-width: 0;
-  height: 28px;
-  padding: 0 10px;
   border-radius: 4px;
   font-size: 13px;
   color: var(--text-muted);
@@ -4498,10 +3733,6 @@ dialog .dialog-actions {
 #settings-dialog .settings-tabs button[aria-selected='true'] {
   color: var(--accent);
   background: rgb(var(--accent-rgb) / 0.071);
-}
-
-#settings-dialog .settings-panels {
-  padding-top: 18px;
 }
 
 #settings-dialog .preference-group h3,
@@ -4518,7 +3749,6 @@ dialog .dialog-actions {
 #playlist-settings-dialog .settings-fields label {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 230px;
-  gap: 16px;
   align-items: center;
 }
 
@@ -4541,17 +3771,6 @@ dialog .dialog-actions {
   cursor: pointer;
 }
 
-#playlist-settings-dialog .playlist-rule {
-  grid-template-columns: max-content max-content minmax(100px, 1fr) 30px;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-#playlist-settings-dialog .playlist-rule > select {
-  min-width: 0;
-  max-width: none;
-}
-
 #playlist-settings-dialog .rule-values {
   min-width: 0;
   gap: 6px;
@@ -4565,14 +3784,6 @@ dialog .dialog-actions {
 
 #playlist-settings-dialog .rule-values:has(input[type='number']) {
   grid-template-columns: minmax(48px, 1fr) minmax(64px, 1fr);
-}
-
-#playlist-settings-dialog .playlist-editor-body {
-  gap: 12px;
-}
-
-#playlist-settings-dialog .settings-fields {
-  gap: 6px;
 }
 
 .library-content > .view-toolbar .view-tabs button {
@@ -4699,27 +3910,9 @@ dialog .dialog-actions {
 }
 
 /* Compact property table and closely spaced preference columns. */
-#settings-dialog {
-  width: 548px;
-}
-
-#settings-dialog .settings-heading {
-  gap: 10px;
-}
-
-#settings-dialog .settings-tabs button {
-  padding: 0 8px;
-}
-
 #settings-dialog .settings-fields label,
 #settings-dialog .check-setting {
   grid-template-columns: minmax(0, 1fr) 230px;
-  gap: 12px;
-}
-
-#tag-dialog {
-  width: 460px;
-  padding: 12px;
 }
 
 #tag-fields {
@@ -4737,9 +3930,7 @@ dialog .dialog-actions {
 
 #tag-dialog .tag-field-heading {
   margin: 0;
-  padding: 5px 8px;
   text-align: left;
-  background: #ffffff06;
   border: 1px solid var(--border);
   border-bottom: 0;
 }
@@ -4784,26 +3975,7 @@ dialog .dialog-actions {
   color: var(--accent);
 }
 
-#tag-dialog .tag-editor-body {
-  padding: 0;
-  scrollbar-gutter: auto;
-}
-
-#tag-dialog .dialog-actions {
-  margin-top: 12px;
-}
-
 /* Explicit property cells prevent legacy form rules from spanning both columns. */
-#tag-dialog {
-  width: 420px;
-  padding: 10px;
-}
-
-#tag-dialog .settings-heading {
-  min-height: 26px;
-  margin-bottom: 8px;
-}
-
 #tag-dialog .tag-field-heading,
 #tag-dialog #tag-fields .tag-field-row {
   grid-template-columns: 112px minmax(0, 1fr);
@@ -4812,46 +3984,23 @@ dialog .dialog-actions {
 
 #tag-dialog .tag-field-heading {
   padding: 0;
-  height: 24px;
 }
 
 #tag-dialog .tag-field-heading > span {
   padding: 0 8px;
 }
 
-#tag-dialog #tag-fields .tag-field-row {
-  height: 24px;
-  min-height: 24px;
-}
-
 #tag-dialog #tag-fields .tag-field-row > label {
   grid-column: 1;
   grid-row: 1;
   min-width: 0;
-  height: 24px;
-  min-height: 24px;
-  margin: 0;
-  padding: 0 8px;
-  justify-content: flex-start;
-  text-align: left;
-  color: var(--text-muted);
 }
 
 #tag-dialog #tag-fields .tag-field-row > input {
   grid-column: 2;
   grid-row: 1;
-  min-width: 0;
-  width: 100%;
-  height: 24px;
-  min-height: 24px;
-  padding: 0 8px;
   margin: 0;
   text-align: left;
-}
-
-#tag-dialog .dialog-actions {
-  padding-top: 8px;
-  margin-top: 8px;
 }
 
 .main-track-table td[data-column='title'],
@@ -4884,10 +4033,6 @@ dialog .dialog-actions {
   flex-basis: 11px;
 }
 
-#settings-dialog #setting-globalPlaybackShortcuts {
-  justify-self: end;
-}
-
 .album-heading .album-expand .album-info {
   color: var(--text-primary);
   font-size: 14px;
@@ -4902,8 +4047,6 @@ dialog .dialog-actions {
 
 /* Playlist dialog: compact rows, shared edges, paired source controls. */
 #playlist-settings-dialog {
-  width: 580px;
-  padding: 16px;
   border-radius: 8px;
   color: var(--text-primary);
   font-size: 13px;
@@ -5053,7 +4196,6 @@ dialog .dialog-actions {
 
 #playlist-settings-dialog .playlist-rule {
   display: grid;
-  grid-template-columns: 140px 128px minmax(0, 1fr) 28px;
   gap: 6px;
   margin: 0 0 6px;
   align-items: start;
@@ -5114,10 +4256,6 @@ dialog .dialog-actions {
   border-top: 1px solid var(--border);
 }
 
-#playlist-settings-dialog .dialog-actions button {
-  min-width: 68px;
-}
-
 #playlist-settings-dialog .dialog-actions .primary {
   background: var(--accent);
   color: var(--text-on-accent);
@@ -5153,10 +4291,6 @@ dialog .dialog-actions {
 
 ::-webkit-scrollbar-thumb:hover {
   background-color: hsl(var(--background-hue, 220) var(--background-saturation, 12%) 44%);
-}
-
-body {
-  user-select: none;
 }
 
 input,
@@ -5201,11 +4335,9 @@ body.mini-player .sidebar > :not(.sidebar-player) {
 }
 
 body.mini-player .sidebar {
-  width: 100%;
   min-width: 0;
   max-width: none;
   height: 100%;
-  padding: 14px;
   display: block;
   border: 0;
 }
@@ -5231,7 +4363,6 @@ body.mini-player .sidebar {
 
 .track-table td[data-column='number'],
 .track-table td[data-column='duration'] {
-  color: var(--text-muted);
   vertical-align: middle;
   line-height: 18px;
   font-size: var(--font-normal);
@@ -5254,20 +4385,13 @@ body [contenteditable='true'] * {
 /* Shared dialog vocabulary: 16px edges, 28px controls and quiet separators. */
 #settings-dialog,
 #tag-dialog {
-  padding: 16px;
   border-radius: 8px;
   color: var(--text-primary);
-  font-size: 13px;
 }
 
 #settings-dialog .settings-heading,
 #tag-dialog .settings-heading {
   min-height: 28px;
-  gap: 10px;
-}
-
-#tag-dialog .settings-heading {
-  margin: 0 0 16px;
 }
 
 #settings-dialog .settings-heading h2,
@@ -5284,38 +4408,10 @@ body [contenteditable='true'] * {
   padding: 0;
 }
 
-#settings-dialog .settings-panels {
-  padding: 16px 0 0;
-  scrollbar-gutter: auto;
-}
-
-#settings-dialog .settings-fields {
-  gap: 10px;
-}
-
 #settings-dialog .settings-fields label,
 #settings-dialog .check-setting {
   min-height: 28px;
   gap: 12px;
-}
-
-#settings-dialog .settings-fields :is(select, input:not([type='checkbox'])) {
-  height: 28px;
-  min-height: 28px;
-  border-radius: 5px;
-  font-size: 13px;
-}
-
-#settings-dialog .preference-group {
-  margin: 0 0 16px;
-}
-
-#settings-dialog .preference-group h3 {
-  font-size: 13px;
-  font-weight: 600;
-  margin: 0 0 10px;
-  padding: 0 0 8px;
-  border-bottom: 1px solid var(--border);
 }
 
 #settings-dialog button:not(.settings-heading button),
@@ -5387,10 +4483,7 @@ body [contenteditable='true'] * {
 }
 
 #tag-dialog .dialog-actions {
-  margin: 12px 0 0;
-  padding: 12px 0 0;
   gap: 8px;
-  border-top: 1px solid var(--border);
 }
 
 #tag-dialog .dialog-actions button {
@@ -5401,10 +4494,6 @@ body [contenteditable='true'] * {
   height: 28px;
   background: #ffffff06;
   font-weight: 500;
-}
-
-#tag-dialog #tag-fields .tag-field-row > input {
-  border-radius: 0;
 }
 
 /* Artwork edges exclude the divider's invisible hit area. */
@@ -5443,11 +4532,6 @@ body [contenteditable='true'] * {
   color: var(--accent);
 }
 
-.track-table td[data-column='number'],
-.track-table td[data-column='duration'] {
-  color: var(--text-muted);
-}
-
 /* Mini mode retains all now-playing information at the normal component sizes. */
 body.mini-player .sidebar {
   padding: 10px;
@@ -5456,30 +4540,16 @@ body.mini-player .sidebar {
 /* Tab buttons are content-sized; only the close control has a square width. */
 #settings-dialog .settings-heading .settings-tabs {
   width: max-content;
-  flex: 0 0 auto;
   max-width: none;
 }
 
 #settings-dialog .settings-heading .settings-tabs button {
-  width: auto;
   min-width: max-content;
   flex: 0 0 auto;
-  height: 26px;
-  padding: 0 8px;
   white-space: nowrap;
 }
 
-#settings-dialog .settings-panels {
-  padding: 16px 8px 0 0;
-  margin-right: -8px;
-  scrollbar-gutter: stable;
-}
-
 /* Tag editor follows the supplied label-and-field reference. */
-#tag-dialog {
-  width: 480px;
-}
-
 #tag-dialog .settings-heading {
   display: flex;
   gap: 10px;
@@ -5489,38 +4559,27 @@ body.mini-player .sidebar {
 
 #tag-dialog #tag-count {
   margin: 0 0 0 auto;
-  font-size: var(--font-normal);
 }
 
 #tag-dialog #tag-fields {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   border: 0;
 }
 
 #tag-dialog #tag-fields .tag-field-row {
-  height: 28px;
-  min-height: 28px;
-  grid-template-columns: 100px minmax(0, 1fr);
-  gap: 10px;
   border: 0;
 }
 
 #tag-dialog #tag-fields .tag-field-row > label {
-  height: 28px;
-  min-height: 28px;
   padding: 0;
   margin: 0;
   border: 0;
   display: flex;
   align-items: center;
-  font-size: 13px;
-  color: var(--text-muted);
 }
 
 #tag-dialog #tag-fields .tag-field-row > input {
-  height: 28px;
   min-height: 28px;
   padding: 0 9px;
   border: 1px solid var(--border);
@@ -5529,7 +4588,6 @@ body.mini-player .sidebar {
     var(--background-hue, 220) var(--background-saturation, 12%)
       clamp(2%, calc(16.3% + var(--background-brightness-offset, 0%)), 40%)
   );
-  font-size: 13px;
 }
 
 #tag-dialog #tag-fields .tag-field-row > input:focus {
@@ -5537,12 +4595,6 @@ body.mini-player .sidebar {
     var(--background-hue, 220) var(--background-saturation, 12%)
       clamp(2%, calc(18.8% + var(--background-brightness-offset, 0%)), 40%)
   );
-}
-
-#tag-dialog .tag-editor-body {
-  padding-right: 8px;
-  margin-right: -8px;
-  scrollbar-gutter: stable;
 }
 
 #tag-dialog #tag-fields .tag-field-row > label {
@@ -5567,23 +4619,6 @@ body.mini-player .sidebar {
   color: var(--text-dim);
 }
 
-#playlist-settings-dialog {
-  width: 480px;
-}
-
-#playlist-settings-dialog .playlist-rule {
-  grid-template-columns: 128px 120px minmax(0, 1fr) 28px;
-}
-
-#queue-panel > .section-label {
-  height: 30px;
-  min-height: 30px;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  align-items: center;
-}
-
 #close-queue {
   padding: 0;
   display: flex;
@@ -5606,20 +4641,12 @@ body.mini-player .sidebar {
   width: var(--mini-width, 100%);
 }
 
-.content-scroll {
-  padding-right: 8px;
-  margin-right: -8px;
-  scrollbar-gutter: stable;
-}
-
 .album-expand:hover {
   background: transparent;
   color: var(--accent);
 }
 
 #settings-dialog .shortcut-binding {
-  min-width: 140px;
-  justify-content: flex-end;
   background: transparent;
   border: 1px solid var(--border);
 }
@@ -5707,11 +4734,6 @@ body[data-browse-focus='tracks'] .library-content > .view-toolbar {
   }
 }
 
-.album-selected > .album-heading,
-.album-cover-button.album-selected {
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-
 /* Shared non-blocking notices, consistently below the main toolbar. */
 #toast {
   top: 50px;
@@ -5729,7 +4751,6 @@ body[data-browse-focus='tracks'] .library-content > .view-toolbar {
   font-size: var(--font-normal);
   line-height: 1.4;
   z-index: 100;
-  pointer-events: none;
 }
 
 body.mini-player #toast {
@@ -5907,11 +4928,6 @@ body.mini-player .transport-controls {
   font-size: var(--font-small);
 }
 
-#settings-dialog {
-  width: 550px;
-  max-width: calc(100vw - 32px);
-}
-
 #setting-audioOutput {
   width: 220px;
   max-width: 100%;
@@ -6032,12 +5048,6 @@ body.queue-extended .work-row > main {
   color: var(--accent);
 }
 
-#missing-dialog {
-  width: 620px;
-  max-width: 90vw;
-  padding: 16px;
-}
-
 #missing-dialog .settings-heading,
 .missing-heading,
 .missing-toolbar {
@@ -6073,7 +5083,6 @@ body.queue-extended .work-row > main {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 2px 12px;
-  padding: 6px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -6168,7 +5177,6 @@ body.player-transition .sidebar > .section-label {
   content: '';
   position: absolute;
   inset: 0;
-  border: 2px solid var(--accent);
   border-radius: inherit;
   pointer-events: none;
   z-index: 2;
@@ -6942,19 +5950,11 @@ dialog button.dialog-close .ui-icon,
   box-shadow: 0 6px 20px #0006;
 }
 #context-menu .playlist-submenu button {
-  display: block;
   width: 100%;
-  height: 28px;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: var(--font-normal);
-}
-#context-menu button[data-playlist-submenu]::after {
-  content: '›';
-  float: right;
-  margin-left: 16px;
 }
 #add-to-playlist-dialog {
   width: 480px;
@@ -7084,7 +6084,6 @@ dialog button.dialog-close .ui-icon,
   margin: 0;
 }
 #tag-dialog .settings-link {
-  padding: 0;
   background: transparent;
   border: 0;
   color: var(--accent);
@@ -7219,7 +6218,6 @@ dialog button.dialog-close .ui-icon,
 #tag-dialog .tag-mb-track-scroll :is(th, td):last-child {
   width: 42px;
   padding-right: 0;
-  text-align: right;
 }
 #tag-dialog .tag-mb-track-scroll select {
   width: 100%;
@@ -7321,8 +6319,6 @@ dialog button.dialog-close .ui-icon,
 }
 #context-menu button[data-playlist-submenu]::after {
   float: none;
-  display: inline-block;
-  margin-left: 0;
   vertical-align: baseline;
 }
 #name-dialog .settings-heading {
@@ -8154,8 +7150,12 @@ dialog .preference-group h3 {
 }
 
 /* Paired startup actions share their complete geometry and text weight. */
+/* First-launch actions sit in the main window, so they use its 12px control text
+   (like the toolbar), not the 13px dialog text. Same 28px height and equal widths. */
 #empty .empty-actions button:is(.primary, .chip) {
   font-weight: 400;
+  font-size: var(--font-normal);
+  line-height: 18px;
 }
 #library-create-name-row[hidden] {
   display: none;
@@ -8193,9 +7193,53 @@ body:not(.mini-player):not(.player-transition) .sidebar-player {
   padding: 25px 0;
   margin: 0;
 }
+/* In the artist pane the message starts where artist names start (their 8px inset),
+   which also lines it up with the search field's icon. */
+#artist-list > .browse-empty {
+  padding-left: 8px;
+  padding-right: 8px;
+}
 #empty h2,
 #empty:not(.first-launch) h2,
 #empty p {
   padding-left: 0;
   padding-right: 0;
+}
+
+/* Detached mini window (Windows): same player box as the main window, including the
+   main window's sub-pixel footer offset, so the swap is pixel-identical. */
+body.mini-window {
+  overflow: hidden;
+}
+body.mini-window .sidebar-player {
+  bottom: calc(10px + var(--player-bottom-offset, 0px));
+}
+
+/* Dialog text follows the shared scale (DESIGN.md): 13px/20px labels and controls,
+   13px/20px section headings, 18px/24px titles. These dialogs had drifted to 12px
+   labels or 1.45 line heights. */
+#library-settings-dialog label,
+#duplicates-dialog label,
+#name-dialog label,
+#playlist-settings-dialog label,
+#add-to-playlist-dialog label {
+  font-size: 13px;
+  line-height: 20px;
+}
+#duplicates-dialog select {
+  font-size: 13px;
+}
+#tag-dialog h3,
+#settings-guide h3 {
+  line-height: 20px;
+}
+#settings-guide h2 {
+  line-height: 24px;
+}
+/* Primary dialog actions are semibold (DESIGN.md "Shared text buttons"). An earlier
+   :is(dialog, #empty) rule carries ID specificity and reset some of them to 400;
+   :is(dialog, #_) matches only dialogs with enough specificity to restore 600.
+   First-launch actions outside dialogs stay 400. */
+:is(dialog, #_) button.primary {
+  font-weight: 600;
 }

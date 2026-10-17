@@ -1,4 +1,4 @@
-import { artistGroupName, artistGroupKey, comparePaths, randomRank } from './core.js';
+import { artistGroupName, artistGroupKey, compareParts, pathParts, randomRank } from './core.js';
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 export const albumKey = (track) =>
   JSON.stringify([track.folderKey, track.albumFolder ?? track.album ?? '']);
@@ -44,11 +44,22 @@ export function albumsFor(
     album.tracks.push(track);
     if (track.cover && !album.cover) album.cover = track;
   }
+  // Split each path once; comparing pre-split parts gives the same order as comparePaths.
   for (const album of groups.values())
-    album.tracks.sort((a, b) => comparePaths(a.artistPath ?? a.title, b.artistPath ?? b.title));
+    if (album.tracks.length > 1)
+      album.tracks = album.tracks
+        .map((t) => ({ t, parts: pathParts(t.artistPath ?? t.title) }))
+        .sort((a, b) => compareParts(a.parts, b.parts))
+        .map((entry) => entry.t);
   const albums = [...groups.values()],
-    folder = (a, b) =>
-      comparePaths(a.folderArtist, b.folderArtist) || comparePaths(a.folder, b.folder);
+    folderParts = new Map(
+      albums.map((album) => [album, [pathParts(album.folderArtist), pathParts(album.folder)]]),
+    ),
+    folder = (a, b) => {
+      const left = folderParts.get(a),
+        right = folderParts.get(b);
+      return compareParts(left[0], right[0]) || compareParts(left[1], right[1]);
+    };
   if (sort === 'manual') return albums;
   if (sort === 'random') {
     const ranks = new Map(albums.map((a) => [a.key, randomRank(a.key, seed)]));

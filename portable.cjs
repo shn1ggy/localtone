@@ -3,6 +3,7 @@ const fs = require('node:fs'),
 const locations = new WeakMap(),
   files = [
     'collection.json',
+    'collection-state.json',
     'playback-history.json',
     'playback-session.json',
     'browsing-session.json',
@@ -184,7 +185,7 @@ function cleanupExternal(app) {
         items.push({ path: relative, type: 'link', target: fs.readlinkSync(file) });
       else if (stat.isDirectory()) {
         items.push({ path: relative, type: 'directory' });
-        items.push(...inspect(file, base));
+        for (const item of inspect(file, base)) items.push(item); // covers/ can exceed spread limits
       } else if (stat.isFile()) items.push({ path: relative, type: 'file', hash: hash(file) });
       else
         throw new Error(

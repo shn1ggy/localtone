@@ -1,6 +1,6 @@
 {
   "name": "localtone",
-  "version": "0.131.0",
+  "version": "0.132.0",
   "private": true,
   "description": "A local-first desktop music player",
   "author": "Localtone",
@@ -42,6 +42,7 @@
     "files": [
       "main.cjs",
       "preload.cjs",
+      "mini-preload.cjs",
       "scanner.mjs",
       "app/**/*",
       "package.json",

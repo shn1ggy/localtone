@@ -5,6 +5,7 @@ import './rules/playlist-rules.js';
 export const {
   validateDynamic,
   matchingTracks,
+  matchesTrack,
   fields: filterFields,
   textOps,
   numberOps,
@@ -13,20 +14,43 @@ export const {
   dateOps,
   emptyOps,
 } = globalThis.LocaltoneRules;
+// The renderer replaces state.tracks wholesale on every collection change, so one
+// id lookup per tracks array can be shared by every playlist and every render.
+const trackLookups = new WeakMap();
+export function trackLookupFor(tracks) {
+  let lookup = trackLookups.get(tracks);
+  if (!lookup) {
+    lookup = new Map(tracks.map((t) => [t.id, t]));
+    trackLookups.set(tracks, lookup);
+  }
+  return lookup;
+}
 export function playlistTracks(state, playlist) {
   if (playlist?.dynamic?.enabled) return matchingTracks(state, playlist.dynamic);
-  const lookup = new Map(state.tracks.map((t) => [t.id, t]));
+  const lookup = trackLookupFor(state.tracks);
   return (playlist?.trackIds || []).map((id) => lookup.get(id)).filter((t) => t && !t.missing);
 }
+// Same answer as playlistTracks(state, playlist).some((t) => t.id === track.id),
+// without materialising the playlist.
+export function playlistIncludes(state, playlist, track) {
+  const known = track && trackLookupFor(state.tracks).get(track.id);
+  if (!known || known.missing) return false;
+  if (playlist?.dynamic?.enabled) return matchesTrack(state, playlist.dynamic, known);
+  return (playlist?.trackIds || []).includes(known.id);
+}
 const naturalCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-export function comparePaths(a, b) {
-  const left = String(a || '').split('/'),
-    right = String(b || '').split('/');
+// Same ordering as String.prototype.localeCompare without arguments.
+const defaultCollator = new Intl.Collator();
+export const pathParts = (value) => String(value || '').split('/');
+export function compareParts(left, right) {
   for (let i = 0; i < Math.min(left.length, right.length); i++) {
     const cmp = naturalCollator.compare(left[i], right[i]);
     if (cmp) return cmp;
   }
   return left.length - right.length;
+}
+export function comparePaths(a, b) {
+  return compareParts(pathParts(a), pathParts(b));
 }
 export function randomRank(key, seed = 0) {
   let hash = (2166136261 ^ seed) >>> 0;
@@ -89,14 +113,25 @@ export function selectTracks(
       (a, b) => ranks.get(a.id) - ranks.get(b.id) || String(a.id).localeCompare(String(b.id)),
     );
   }
+  // Folder order compares split paths; split each track's paths once instead of on
+  // every comparison (decorate, stable-sort, undecorate keeps the same order).
+  if (sort === 'folder')
+    return tracks
+      .map((t) => ({
+        t,
+        a: pathParts(t.folderArtist),
+        b: pathParts(t.artistPath),
+        id: String(t.id),
+      }))
+      .sort(
+        (left, right) =>
+          (compareParts(left.a, right.a) ||
+            compareParts(left.b, right.b) ||
+            defaultCollator.compare(left.id, right.id)) * direction,
+      )
+      .map((entry) => entry.t);
   return tracks.toSorted((a, b) => {
     let cmp;
-    if (sort === 'folder')
-      return (
-        (comparePaths(a.folderArtist, b.folderArtist) ||
-          comparePaths(a.artistPath, b.artistPath) ||
-          String(a.id).localeCompare(String(b.id))) * direction
-      );
     if (['year', 'duration', 'track', 'rating'].includes(sort))
       cmp =
         sort === 'rating'

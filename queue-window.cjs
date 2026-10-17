@@ -65,8 +65,11 @@ function createQueueWindow() {
       return result?.then ? result.then(finished) : finished();
     },
     normalBounds(win) {
-      const now = win.getNormalBounds?.() || win.getBounds();
-      if (!prior) return now;
+      return this.baseBounds(win.getNormalBounds?.() || win.getBounds());
+    },
+    // Bounds without the queue extension (what a restarted window should use).
+    baseBounds(now) {
+      if (!prior) return { ...now };
       return boundsMatch(now, expanded)
         ? { ...prior }
         : { ...now, width: Math.max(prior.width, now.width - extension) };

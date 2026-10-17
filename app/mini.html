@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"
+  ><head
+    ><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' localtone:; object-src 'none'; base-uri 'none'" />
+    <title>Localtone</title
+    ><link rel="stylesheet" href="style.css"
+  /></head>
+  <body class="mini-player mini-window" tabindex="-1">
+    <div class="shell"
+      ><aside class="sidebar"
+        ><section class="sidebar-player" aria-label="Now playing"></section></aside
+    ></div>
+    <div id="toast" role="status" hidden></div>
+    <script type="module" src="mini.js"></script>
+  </body>
+</html>

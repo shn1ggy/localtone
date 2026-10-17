@@ -105,8 +105,213 @@ if (typeof app.setPath === 'function') {
     return;
   }
 }
+// ---- Detached mini window (Windows) -----------------------------------------------
+// Mini mode never resizes the main window. A small window owned by the main window is
+// kept shown but fully transparent and click-through; it renders a live mirror of the
+// player. Entering/leaving mini swaps which of the two windows is opaque, so neither
+// window has to resize or redraw, and there is no Windows show/hide animation.
+const detachedMini = { window: null, ready: null, loaded: false, active: false, lastSync: null };
+let paintProbeId = 0;
+const paintProbes = new Map();
+function waitPainted(contents, timeout = 300) {
+  return new Promise((resolve) => {
+    const id = ++paintProbeId;
+    const timer = setTimeout(() => {
+      paintProbes.delete(id);
+      resolve(false);
+    }, timeout);
+    paintProbes.set(id, {
+      contents,
+      done: () => {
+        clearTimeout(timer);
+        resolve(true);
+      },
+    });
+    contents.send('paint-probe', id);
+  });
+}
+function createDetachedMini() {
+  if (detachedMini.window && !detachedMini.window.isDestroyed()) return detachedMini.ready;
+  const mini = new BrowserWindow({
+    show: false,
+    parent: win,
+    useContentSize: true,
+    width: 244,
+    height: 360,
+    opacity: 0,
+    // Same frame style as the main window (resizable keeps the same border width),
+    // with resizing itself blocked below.
+    resizable: true,
+    maximizable: false,
+    fullscreenable: false,
+    backgroundColor: '#101213',
+    title: 'Localtone',
+    icon: path.join(__dirname, 'build/icon.png'),
+    autoHideMenuBar: true,
+    paintWhenInitiallyHidden: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'mini-preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      backgroundThrottling: false,
+    },
+  });
+  detachedMini.window = mini;
+  mini.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  mini.webContents.on('will-navigate', (event) => event.preventDefault());
+  mini.on('will-resize', (event) => event.preventDefault());
+  mini.on('close', (event) => {
+    if (!quitting) {
+      event.preventDefault();
+      app.quit();
+    }
+  });
+  // An owned window would minimize to a stub; minimize the app (main window) instead,
+  // which hides the owned mini window with it.
+  mini.on('minimize', () => {
+    mini.restore();
+    win?.minimize();
+  });
+  mini.on('closed', () => {
+    if (detachedMini.window === mini)
+      Object.assign(detachedMini, { window: null, ready: null, loaded: false });
+  });
+  detachedMini.ready = (async () => {
+    await mini.loadURL('localtone://app/mini.html');
+    detachedMini.loaded = true;
+    if (detachedMini.lastSync) mini.webContents.send('mini-sync', detachedMini.lastSync);
+    mini.setIgnoreMouseEvents(true);
+    mini.showInactive();
+    // Let Windows finish its window-show transition while the window is transparent.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  })();
+  return detachedMini.ready;
+}
+// Place the mini window so its client area shares the main window's bottom-left
+// client corner to the physical pixel. Bounds are integer DIPs, which at fractional
+// scaling (e.g. 130%) round to physical pixels; so candidates are evaluated with the
+// same DIP->physical conversion Electron uses for setBounds, and the main window's
+// exact client size comes from its renderer (fractional CSS viewport x scale).
+function physicalRect(target, rect) {
+  return typeof screen?.dipToScreenRect === 'function'
+    ? screen.dipToScreenRect(target, rect)
+    : rect;
+}
+function placeDetachedMini(mini, size) {
+  const width = Math.round(Math.max(140, Math.min(400, Number(size?.width) || 244))),
+    height = Math.round(Math.max(120, Math.min(800, Number(size?.height) || 360)));
+  const scale = Number(size?.scale),
+    clientWidth = Number(size?.clientWidth),
+    clientHeight = Number(size?.clientHeight);
+  const fallback = () => {
+    const content = win.getContentBounds();
+    mini.setContentBounds({ x: content.x, y: content.y + content.height - height, width, height });
+  };
+  if (
+    typeof screen?.dipToScreenRect !== 'function' ||
+    !(scale >= 1 && scale <= 4) ||
+    !(clientWidth > 0) ||
+    !(clientHeight > 0)
+  )
+    return fallback();
+  const bounds = win.getBounds(),
+    main = physicalRect(win, bounds),
+    frameWidth = main.width - Math.round(clientWidth * scale),
+    frameHeight = main.height - Math.round(clientHeight * scale),
+    bottom = main.y + main.height,
+    needWidth = Math.ceil(width * scale - 0.01),
+    needHeight = Math.ceil(height * scale - 0.01);
+  if (frameWidth < 0 || frameHeight < 0) return fallback();
+  const w0 = Math.round((needWidth + frameWidth) / scale),
+    h0 = Math.round((needHeight + frameHeight) / scale);
+  let best = null;
+  for (let h = h0 - 1; h <= h0 + 3; h++)
+    for (let w = w0 - 1; w <= w0 + 3; w++) {
+      const y0 = Math.round(bottom / scale - h);
+      for (const dy of [0, -1, 1, -2, 2]) {
+        const rect = { x: bounds.x, y: y0 + dy, width: w, height: h },
+          physical = physicalRect(null, rect);
+        if (physical.x !== main.x || physical.y + physical.height !== bottom) continue;
+        if (physical.width - frameWidth < needWidth || physical.height - frameHeight < needHeight)
+          continue;
+        const area = physical.width + physical.height;
+        if (!best || area < best.area) best = { rect, area };
+      }
+    }
+  if (!best) return fallback();
+  // Windows can still land the window a pixel or two away from the requested rect
+  // (seen at 130%: 2px low). Read back where it went and correct until the physical
+  // bottom-left corner matches the main window's.
+  const attempts = [];
+  let request = best.rect;
+  for (let i = 0; i < 4; i++) {
+    mini.setBounds(request);
+    const actual = mini.getBounds(),
+      physical = physicalRect(mini, actual),
+      errorX = main.x - physical.x,
+      errorBottom = bottom - (physical.y + physical.height);
+    attempts.push({ request, actual, physical });
+    if (!errorX && !errorBottom) break;
+    const step = (error) =>
+      error ? Math.sign(error) * Math.max(1, Math.round(Math.abs(error) / scale)) : 0;
+    request = { ...request, x: request.x + step(errorX), y: request.y + step(errorBottom) };
+  }
+  detachedMini.lastPlacement = { target: { x: main.x, bottom }, frameWidth, frameHeight, attempts };
+}
+// If the mini window was moved, move the (transparent) main window by the same amount
+// so the full view comes back where the mini player is, kept on that screen.
+function followMiniPosition(mini) {
+  const placed = detachedMini.placed,
+    now = mini.getBounds();
+  if (!placed || normalMaximized || win.isMaximized()) return;
+  const dx = now.x - placed.x,
+    dy = now.y - placed.y;
+  if (!dx && !dy) return;
+  const bounds = win.getBounds(),
+    area = screen?.getDisplayMatching?.(now)?.workArea;
+  let x = bounds.x + dx,
+    y = bounds.y + dy;
+  if (area) {
+    if (bounds.width <= area.width)
+      x = Math.min(Math.max(x, area.x), area.x + area.width - bounds.width);
+    if (bounds.height <= area.height)
+      y = Math.min(Math.max(y, area.y), area.y + area.height - bounds.height);
+  }
+  win.setBounds({ ...bounds, x, y });
+}
+async function toggleDetachedMini(size) {
+  await createDetachedMini();
+  const mini = detachedMini.window;
+  if (!detachedMini.active) {
+    normalMaximized = win.isMaximized();
+    placeDetachedMini(mini, size);
+    detachedMini.placed = mini.getBounds();
+    // The main renderer sent the mirror before this request; wait until it is drawn.
+    await waitPainted(mini.webContents);
+    mini.setOpacity(1);
+    mini.setIgnoreMouseEvents(false);
+    win.setOpacity(0);
+    win.setIgnoreMouseEvents(true);
+    detachedMini.active = miniMode = true;
+    mini.focus();
+  } else {
+    followMiniPosition(mini);
+    win.setIgnoreMouseEvents(false);
+    win.setOpacity(1);
+    mini.setOpacity(0);
+    mini.setIgnoreMouseEvents(true);
+    detachedMini.active = miniMode = false;
+    detachedMini.placed = null;
+    win.focus();
+  }
+  return detachedMini.active;
+}
 app.on('second-instance', () => {
-  if (win) {
+  if (detachedMini.active && detachedMini.window && !detachedMini.window.isDestroyed()) {
+    if (win?.isMinimized()) win.restore();
+    detachedMini.window.focus();
+  } else if (win) {
     if (win.isMinimized()) win.restore();
     win.focus();
   }
@@ -125,6 +330,7 @@ let miniMode = false,
 let win,
   db,
   dbPath,
+  statePath,
   covers,
   busy = false,
   trackIndex = new Map();
@@ -132,9 +338,59 @@ const fresh = () => ({ libraries: [], tracks: [], playlists: [] });
 function index() {
   trackIndex = new Map(db.tracks.map((t) => [t.id, t]));
 }
-async function save() {
-  await fs.writeFile(dbPath + '.tmp', JSON.stringify(db));
-  await fs.rename(dbPath + '.tmp', dbPath);
+// Settings and ratings change often but are tiny next to the track list, so they are
+// also kept in collection-state.json. saveLight() rewrites only that file; save()
+// rewrites both (state first, so the state file is never older than the collection).
+// On load the state file is applied only when it is at least as new as
+// collection.json, which keeps collection.json authoritative after a full save, after
+// a restore from backup, and for older Localtone versions.
+const lightKeys = ['settings', 'ratings', 'pendingRatings', 'ratingStorageVersion'];
+let writeLane = Promise.resolve();
+function serialWrite(task) {
+  // One writer at a time: concurrent saves would otherwise share the same .tmp file.
+  const run = writeLane.catch(() => {}).then(task);
+  writeLane = run.catch(() => {});
+  return run;
+}
+async function writeAtomic(file, data) {
+  await fs.writeFile(file + '.tmp', data);
+  await fs.rename(file + '.tmp', file);
+}
+const lightState = () =>
+  JSON.stringify({ version: 1, ...Object.fromEntries(lightKeys.map((key) => [key, db[key]])) });
+function saveLight() {
+  return serialWrite(() => writeAtomic(statePath, lightState()));
+}
+function save() {
+  return serialWrite(async () => {
+    await writeAtomic(statePath, lightState());
+    await writeAtomic(dbPath, JSON.stringify(db));
+  });
+}
+async function applyLightState() {
+  let light, lightTime, collectionTime;
+  try {
+    [light, lightTime] = await Promise.all([
+      fs.readFile(statePath, 'utf8'),
+      fs.stat(statePath).then((info) => info.mtimeMs),
+    ]);
+    light = JSON.parse(light);
+  } catch (error) {
+    if (error.code !== 'ENOENT')
+      console.warn('Ignoring unreadable collection-state.json:', error.message);
+    return;
+  }
+  try {
+    collectionTime = (await fs.stat(dbPath)).mtimeMs;
+  } catch {
+    collectionTime = -Infinity;
+  }
+  if (!light || light.version !== 1 || lightTime < collectionTime) return;
+  const isRecord = (value) => !!value && typeof value === 'object' && !Array.isArray(value);
+  if (isRecord(light.settings)) db.settings = light.settings;
+  if (isRecord(light.ratings)) db.ratings = light.ratings;
+  if (isRecord(light.pendingRatings)) db.pendingRatings = light.pendingRatings;
+  if (light.ratingStorageVersion === 1) db.ratingStorageVersion = 1;
 }
 // One projection for browsing, dynamic membership, and freezing a dynamic playlist.
 function presentTrack({ path: filename, mtime, size, ...track }, libraries) {
@@ -177,28 +433,37 @@ function check(event) {
   if (!event.senderFrame || event.senderFrame.url !== 'localtone://app/index.html')
     throw new Error('Untrusted caller');
 }
-function handle(name, fn) {
+// Default rollback: a deep copy of the whole collection. That costs a full clone of
+// every track per call, so handlers that never touch db pass `backup: null`, and
+// handlers with a small, known footprint pass a narrower backup that returns its
+// own restore function.
+function fullBackup() {
+  const before = structuredClone(db);
+  return () => {
+    db = before;
+    index();
+  };
+}
+function handle(name, fn, { backup = fullBackup } = {}) {
   ipcMain.handle(name, async (event, ...args) => {
     check(event);
     await startupReady;
     if (busy || quitting)
       throw new Error('Localtone is updating your music or saving changes. Please wait a moment.');
     busy = true;
-    let before;
+    let restore;
     try {
-      before = structuredClone(db);
+      restore = backup?.(...args);
       return await fn(...args);
     } catch (error) {
-      if (before) {
-        db = before;
-        index();
-      }
+      restore?.();
       throw error;
     } finally {
       busy = false;
     }
   });
 }
+const readOnly = { backup: null };
 function scan(
   library,
   files = null,
@@ -232,7 +497,13 @@ function scan(
     });
   });
 }
-async function importLibrary(library, files = null, preserveRatings = false, quiet = false) {
+async function importLibrary(
+  library,
+  files = null,
+  preserveRatings = false,
+  quiet = false,
+  { withState = true } = {},
+) {
   const before = quiet ? JSON.stringify(db) : null;
   const result = await scan(library, files, undefined, quiet);
   if (files) {
@@ -264,7 +535,9 @@ async function importLibrary(library, files = null, preserveRatings = false, qui
   }
   index();
   if (!quiet || JSON.stringify(db) !== before) await save();
-  return { state: snapshot(), warnings: result.warnings };
+  // Building the renderer snapshot is a full pass over the collection; skip it for
+  // callers that only need the warnings.
+  return { ...(withState ? { state: snapshot() } : {}), warnings: result.warnings };
 }
 function validName(name) {
   if (typeof name !== 'string' || !name.trim() || name.length > 100)
@@ -274,6 +547,7 @@ function validName(name) {
 app.whenReady().then(async () => {
   appReadyAt = Date.now();
   dbPath = path.join(app.getPath('userData'), 'collection.json');
+  statePath = path.join(app.getPath('userData'), 'collection-state.json');
   covers = path.join(app.getPath('userData'), 'covers');
   await fs.mkdir(app.getPath('userData'), { recursive: true });
   tagHistory = require('./tag-history.cjs').createTagHistory(
@@ -295,6 +569,7 @@ app.whenReady().then(async () => {
     }
     db = fresh();
   }
+  await applyLightState();
   try {
     playbackSession = validatePlaybackSession(
       JSON.parse(
@@ -340,6 +615,8 @@ app.whenReady().then(async () => {
       if (
         ![
           'index.html',
+          'mini.html',
+          'mini.js',
           'style.css',
           'renderer.js',
           'design-defaults.js',
@@ -556,7 +833,10 @@ app.whenReady().then(async () => {
     try {
       check(event);
       if (JSON.stringify(value).length > 2 * 1024 * 1024) throw Error('Session too large.');
-      const bounds = miniMode && normalBounds ? normalBounds : queueWindow.normalBounds(win);
+      const bounds =
+        miniMode && normalBounds
+          ? queueWindow.baseBounds(normalBounds)
+          : queueWindow.normalBounds(win);
       browsingSession = validateSession({
         ...value,
         window: { bounds, maximized: miniMode ? normalMaximized : win.isMaximized() },
@@ -620,6 +900,8 @@ app.whenReady().then(async () => {
     };
     if (action === 'queue-open') return !miniMode && queueWindow.open(win, screen, 224, resize);
     if (action === 'queue-close') {
+      // The queue is parked (not closed) while mini; leaving mini restores it.
+      if (miniMode) return;
       if (queueWindow.extended) {
         normalMinimum = [Math.max(1, normalMinimum[0] - 224), normalMinimum[1]];
         win.setMinimumSize(...normalMinimum);
@@ -627,8 +909,11 @@ app.whenReady().then(async () => {
       await queueWindow.close(win, resize);
       return;
     }
+    if (action === 'mini' && size?.detached === true && process.platform === 'win32')
+      return toggleDetachedMini(size);
     if (action === 'mini') {
-      await queueWindow.close(win);
+      // An extended queue stays part of the normal bounds: mini mode shrinks straight
+      // from the current window and leaving it restores the queue width as well.
       if (!miniMode) {
         const bounds = miniBoundsMemory.capture(win);
         normalVisualBounds = { ...bounds };
@@ -690,15 +975,109 @@ app.whenReady().then(async () => {
     }
     throw new Error('Invalid window action.');
   };
+  // Source runs only (npm start): keep the last 40 window transitions with native and
+  // renderer geometry in logs/window-transitions.json, to diagnose pixel shifts.
+  const transitionLog = [];
+  const nativeGeometry = () => ({
+    bounds: win.getBounds(),
+    content: win.getContentSize(),
+    physical: physicalRect(win, win.getBounds()),
+    scale: screen?.getDisplayMatching?.(win.getBounds())?.scaleFactor ?? null,
+    mini:
+      detachedMini.window && !detachedMini.window.isDestroyed()
+        ? {
+            bounds: detachedMini.window.getBounds(),
+            content: detachedMini.window.getContentSize(),
+            physical: physicalRect(detachedMini.window, detachedMini.window.getBounds()),
+          }
+        : null,
+    placement: detachedMini.lastPlacement ?? null,
+  });
+  ipcMain.on('mini-sync', (event, payload) => {
+    try {
+      check(event);
+      if (JSON.stringify(payload).length > 2 * 1024 * 1024) return;
+      // Kept so a mini window that is still loading starts from the current state.
+      detachedMini.lastSync = payload;
+      const mini = detachedMini.window;
+      if (mini && !mini.isDestroyed() && detachedMini.loaded)
+        mini.webContents.send('mini-sync', payload);
+    } catch {}
+  });
+  ipcMain.on('mini-input', (event, input) => {
+    const mini = detachedMini.window;
+    if (
+      !mini ||
+      event.sender !== mini.webContents ||
+      event.senderFrame?.url !== 'localtone://app/mini.html' ||
+      !detachedMini.active ||
+      !input ||
+      typeof input !== 'object'
+    )
+      return;
+    let clean = null;
+    if (
+      input.type === 'click' &&
+      [0, 1].includes(input.root) &&
+      Array.isArray(input.path) &&
+      input.path.length <= 64 &&
+      input.path.every((n) => Number.isInteger(n) && n >= 0 && n < 1000)
+    )
+      clean = { type: 'click', root: input.root, path: [...input.path] };
+    else if (input.type === 'key' && typeof input.key === 'string' && input.key.length <= 32)
+      clean = {
+        type: 'key',
+        key: input.key,
+        code: typeof input.code === 'string' ? input.code.slice(0, 32) : '',
+        ...Object.fromEntries(
+          ['ctrlKey', 'shiftKey', 'altKey', 'metaKey', 'repeat'].map((k) => [k, input[k] === true]),
+        ),
+      };
+    if (clean && win && !win.isDestroyed()) win.webContents.send('mini-input', clean);
+  });
+  ipcMain.on('paint-ack', (event, id) => {
+    const probe = paintProbes.get(id);
+    if (probe && probe.contents === event.sender) {
+      paintProbes.delete(id);
+      probe.done();
+    }
+  });
   ipcMain.handle('window-action', (event, action, size) => {
     check(event);
     const job = motionJobs.then(async () => {
       motionActive = true;
+      const logging =
+        !app.isPackaged &&
+        !process.env.NODE_TEST_CONTEXT &&
+        ['mini', 'queue-open', 'queue-close'].includes(action);
+      const entry = logging
+        ? {
+            at: new Date().toISOString(),
+            action,
+            renderer: size?.metrics,
+            before: nativeGeometry(),
+          }
+        : null;
       try {
         const value = await runWindowAction(action, size);
+        if (entry) entry.result = value;
         return size?.report ? { value, contentSize: win.getContentSize() } : value;
       } finally {
         motionActive = false;
+        if (entry) {
+          entry.after = nativeGeometry();
+          transitionLog.push(entry);
+          if (transitionLog.length > 40) transitionLog.shift();
+          const logs = path.join(app.getPath('userData'), 'logs');
+          fs.mkdir(logs, { recursive: true })
+            .then(() =>
+              fs.writeFile(
+                path.join(logs, 'window-transitions.json'),
+                JSON.stringify(transitionLog, null, 1),
+              ),
+            )
+            .catch(() => {});
+        }
       }
     });
     motionJobs = job.catch(() => {});
@@ -721,8 +1100,10 @@ app.whenReady().then(async () => {
     if (answer.response !== 1) return { cancelled: true };
     return portableStorage.cleanupExternal(app);
   });
-  handle('clean-cache', async () =>
-    cleanUnusedCache(app.getPath('userData'), db.tracks, waveforms?.active?.key),
+  handle(
+    'clean-cache',
+    async () => cleanUnusedCache(app.getPath('userData'), db.tracks, waveforms?.active?.key),
+    readOnly,
   );
   handle('settings-transfer', async (action) => {
     if (action === 'export') {
@@ -800,52 +1181,64 @@ app.whenReady().then(async () => {
     win?.webContents.send('global-shortcut-status', playbackShortcuts.status());
     return { settings: db.settings, ...(collections ? { state: snapshot() } : {}) };
   });
-  handle('settings', async (patch) => {
-    let cleanup = false;
-    if (patch.portable === true && !portableStorage.storageStatus(app).portable) {
-      const answer = await dialog.showMessageBox(win, {
-        type: 'question',
-        title: 'Enable portable storage',
-        message: 'Move Localtone data into the program folder?',
-        detail:
-          'After restarting, settings and collection data will be copied into Localtone-data. You can also remove the old app-data folder after a verified backup inside Localtone-data. This does not erase operating-system history or files elsewhere.\n\nOld folder: ' +
-          portableStorage.externalLocation(app),
-        buttons: ['Copy and keep old files', 'Move and remove old files', 'Cancel'],
-        defaultId: 0,
-        cancelId: 2,
-      });
-      if (answer.response === 2) throw new Error('Storage change cancelled.');
-      cleanup = answer.response === 1;
-    }
-    const clean = validateSettings(patch),
-      before = db.settings;
-    if (clean.shuffle === true) clean.repeat = 0;
-    else if (clean.repeat > 0) clean.shuffle = false;
-    if (clean.columns || clean.columnsByView) {
-      const shared = clean.columns || clean.columnsByView.tracks;
-      clean.columns = shared;
-      clean.columnsByView = Object.fromEntries(
-        ['tracks', 'playlists', 'albums'].map((k) => [k, shared.map((c) => ({ ...c }))]),
-      );
-    }
-    db.settings = { ...before, ...clean };
-    try {
-      if (Object.hasOwn(clean, 'globalPlaybackShortcuts') || clean.shortcuts)
-        playbackShortcuts.set(db.settings.globalPlaybackShortcuts, db.settings.shortcuts);
-      await save();
-      if (Object.hasOwn(clean, 'portable') && typeof app.setPath === 'function')
-        portableStorage.requestMode(app, clean.portable, cleanup);
-    } catch (error) {
-      db.settings = before;
+  handle(
+    'settings',
+    async (patch) => {
+      let cleanup = false;
+      if (patch.portable === true && !portableStorage.storageStatus(app).portable) {
+        const answer = await dialog.showMessageBox(win, {
+          type: 'question',
+          title: 'Enable portable storage',
+          message: 'Move Localtone data into the program folder?',
+          detail:
+            'After restarting, settings and collection data will be copied into Localtone-data. You can also remove the old app-data folder after a verified backup inside Localtone-data. This does not erase operating-system history or files elsewhere.\n\nOld folder: ' +
+            portableStorage.externalLocation(app),
+          buttons: ['Copy and keep old files', 'Move and remove old files', 'Cancel'],
+          defaultId: 0,
+          cancelId: 2,
+        });
+        if (answer.response === 2) throw new Error('Storage change cancelled.');
+        cleanup = answer.response === 1;
+      }
+      const clean = validateSettings(patch),
+        before = db.settings;
+      if (clean.shuffle === true) clean.repeat = 0;
+      else if (clean.repeat > 0) clean.shuffle = false;
+      if (clean.columns || clean.columnsByView) {
+        const shared = clean.columns || clean.columnsByView.tracks;
+        clean.columns = shared;
+        clean.columnsByView = Object.fromEntries(
+          ['tracks', 'playlists', 'albums'].map((k) => [k, shared.map((c) => ({ ...c }))]),
+        );
+      }
+      db.settings = { ...before, ...clean };
       try {
-        playbackShortcuts.set(before.globalPlaybackShortcuts, before.shortcuts);
-      } catch {}
-      await save();
-      throw error;
-    }
-    win?.webContents.send('global-shortcut-status', playbackShortcuts.status());
-    return db.settings;
-  });
+        if (Object.hasOwn(clean, 'globalPlaybackShortcuts') || clean.shortcuts)
+          playbackShortcuts.set(db.settings.globalPlaybackShortcuts, db.settings.shortcuts);
+        await saveLight();
+        if (Object.hasOwn(clean, 'portable') && typeof app.setPath === 'function')
+          portableStorage.requestMode(app, clean.portable, cleanup);
+      } catch (error) {
+        db.settings = before;
+        try {
+          playbackShortcuts.set(before.globalPlaybackShortcuts, before.shortcuts);
+        } catch {}
+        await saveLight();
+        throw error;
+      }
+      win?.webContents.send('global-shortcut-status', playbackShortcuts.status());
+      return db.settings;
+    },
+    {
+      // This handler only ever replaces db.settings (it never mutates it in place).
+      backup: () => {
+        const settings = db.settings;
+        return () => {
+          db.settings = settings;
+        };
+      },
+    },
+  );
   async function rateFile(id, value) {
     const track = trackIndex.get(id);
     if (!track) throw new Error('Track not found.');
@@ -861,7 +1254,10 @@ app.whenReady().then(async () => {
         other.modifiedAt = info.mtimeMs;
         other.size = info.size;
       }
-      await save();
+      // Only ratings reach disk here. The changed mtime/size of the rewritten MP3 stay
+      // in memory until the next full save; if the app exits first, the next refresh
+      // simply re-reads the file (and its rating tag).
+      await saveLight();
     };
     let undoToken = null;
     if (track.codec === 'MP3') {
@@ -876,60 +1272,94 @@ app.whenReady().then(async () => {
     } else {
       if (rating) db.ratings[id] = rating;
       else delete db.ratings[id];
-      await save();
+      await saveLight();
     }
     return { id, rating, modifiedAt: track.modifiedAt, undoToken };
   }
-  handle('rating', rateFile);
-  handle('search-web', async (action) => {
-    if (!action || !['track', 'album', 'artist'].includes(action.kind))
-      throw new Error('Invalid search request.');
-    const track = trackIndex.get(action.id);
-    if (!track) throw new Error('Track not found.');
-    const artist = track.artist || track.albumArtist || track.folderArtist || '';
-    const query =
-      action.kind === 'artist'
-        ? artist
-        : [artist, action.kind === 'album' ? track.album : track.title].filter(Boolean).join(' ');
-    await shell.openExternal('https://duckduckgo.com/?q=' + encodeURIComponent('!g ' + query));
-    return null;
+  // rateFile touches db.ratings, db.pendingRatings and a few fields on the tracks that
+  // share the rated file's path, so back up exactly those.
+  handle('rating', rateFile, {
+    backup: (id) => {
+      const track = trackIndex.get(id),
+        ratings = { ...db.ratings },
+        pendingRatings = { ...db.pendingRatings },
+        keys = ['tagRating', 'mtime', 'modifiedAt', 'size'],
+        tracks = track
+          ? db.tracks
+              .filter((t) => t.path === track.path)
+              .map((t) => [t, keys.map((key) => [key, Object.hasOwn(t, key), t[key]])])
+          : [];
+      return () => {
+        db.ratings = ratings;
+        db.pendingRatings = pendingRatings;
+        for (const [t, fields] of tracks)
+          for (const [key, owned, value] of fields)
+            if (owned) t[key] = value;
+            else delete t[key];
+      };
+    },
   });
-  handle('open-folder', async (action) => {
-    if (!action || !['track', 'album', 'artist'].includes(action.kind))
-      throw new Error('Invalid folder request.');
-    const track = trackIndex.get(action.id);
-    if (!track) throw new Error('Track not found.');
-    const library = db.libraries.find((l) => l.id === track.libraryId);
-    if (!library) throw new Error('Library not found.');
-    const parts = path.relative(library.root, track.path).split(path.sep);
-    let folder = path.dirname(track.path);
-    if (action.kind === 'artist')
-      folder = parts.length > 1 ? path.join(library.root, parts[0]) : library.root;
-    if (action.kind === 'album')
-      folder =
-        parts.length > 2
-          ? path.join(library.root, parts[0], parts[1])
-          : parts.length > 1
-            ? path.join(library.root, parts[0])
-            : library.root;
-    if (!(await fs.stat(folder)).isDirectory()) throw new Error('Folder is unavailable.');
-    shell.showItemInFolder(action.kind === 'track' ? track.path : folder);
-    return null;
-  });
+  handle(
+    'search-web',
+    async (action) => {
+      if (!action || !['track', 'album', 'artist'].includes(action.kind))
+        throw new Error('Invalid search request.');
+      const track = trackIndex.get(action.id);
+      if (!track) throw new Error('Track not found.');
+      const artist = track.artist || track.albumArtist || track.folderArtist || '';
+      const query =
+        action.kind === 'artist'
+          ? artist
+          : [artist, action.kind === 'album' ? track.album : track.title].filter(Boolean).join(' ');
+      await shell.openExternal('https://duckduckgo.com/?q=' + encodeURIComponent('!g ' + query));
+      return null;
+    },
+    readOnly,
+  );
+  handle(
+    'open-folder',
+    async (action) => {
+      if (!action || !['track', 'album', 'artist'].includes(action.kind))
+        throw new Error('Invalid folder request.');
+      const track = trackIndex.get(action.id);
+      if (!track) throw new Error('Track not found.');
+      const library = db.libraries.find((l) => l.id === track.libraryId);
+      if (!library) throw new Error('Library not found.');
+      const parts = path.relative(library.root, track.path).split(path.sep);
+      let folder = path.dirname(track.path);
+      if (action.kind === 'artist')
+        folder = parts.length > 1 ? path.join(library.root, parts[0]) : library.root;
+      if (action.kind === 'album')
+        folder =
+          parts.length > 2
+            ? path.join(library.root, parts[0], parts[1])
+            : parts.length > 1
+              ? path.join(library.root, parts[0])
+              : library.root;
+      if (!(await fs.stat(folder)).isDirectory()) throw new Error('Folder is unavailable.');
+      shell.showItemInFolder(action.kind === 'track' ? track.path : folder);
+      return null;
+    },
+    readOnly,
+  );
   handle('track-numbers', async () => {
     for (const library of db.libraries) {
       const files = db.tracks
         .filter((t) => t.libraryId === library.id && typeof t.trackRaw !== 'string')
         .map((t) => t.path);
-      if (files.length) await importLibrary(library, files);
+      if (files.length) await importLibrary(library, files, false, false, { withState: false });
     }
     return snapshot();
   });
-  handle('read-tags', async (id) => {
-    const track = trackIndex.get(id);
-    if (!track) throw new Error('Track not found.');
-    return tagEditor.readTags(track.path);
-  });
+  handle(
+    'read-tags',
+    async (id) => {
+      const track = trackIndex.get(id);
+      if (!track) throw new Error('Track not found.');
+      return tagEditor.readTags(track.path);
+    },
+    readOnly,
+  );
   handle('write-tags', async (id, values, token) => {
     const track = trackIndex.get(id);
     if (!track) throw new Error('Track not found.');
@@ -1046,6 +1476,9 @@ app.whenReady().then(async () => {
         await importLibrary(
           db.libraries.find((l) => l.id === id),
           saved.filter((t) => t.libraryId === id).map((t) => t.path),
+          false,
+          false,
+          { withState: false },
         );
       } catch (error) {
         failures.push({ message: 'Tags saved, but refresh failed: ' + error.message });
@@ -1058,24 +1491,28 @@ app.whenReady().then(async () => {
       undoToken: tagHistory.register(records),
     };
   });
-  handle('read-tags-batch', async (ids) => {
-    const tracks = tagTracks(ids),
-      results = new Array(tracks.length);
-    let next = 0;
-    const worker = async () => {
-      while (next < tracks.length) {
-        const index = next++,
-          track = tracks[index];
-        results[index] = {
-          id: track.id,
-          name: path.basename(track.path),
-          ...(await tagEditor.readTags(track.path)),
-        };
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(4, tracks.length) }, worker));
-    return results;
-  });
+  handle(
+    'read-tags-batch',
+    async (ids) => {
+      const tracks = tagTracks(ids),
+        results = new Array(tracks.length);
+      let next = 0;
+      const worker = async () => {
+        while (next < tracks.length) {
+          const index = next++,
+            track = tracks[index];
+          results[index] = {
+            id: track.id,
+            name: path.basename(track.path),
+            ...(await tagEditor.readTags(track.path)),
+          };
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(4, tracks.length) }, worker));
+      return results;
+    },
+    readOnly,
+  );
   handle('write-tags-batch', async (entries, patch, remove) => {
     if (
       !patch ||
@@ -1168,6 +1605,9 @@ app.whenReady().then(async () => {
         await importLibrary(
           db.libraries.find((l) => l.id === id),
           targets.filter((t) => t.libraryId === id && saved.includes(t.id)).map((t) => t.path),
+          false,
+          false,
+          { withState: false },
         );
       } catch (error) {
         failures.push({
@@ -1183,7 +1623,11 @@ app.whenReady().then(async () => {
     index();
     await save();
   };
-  handle('find-duplicates', async (mode) => duplicates.review(db.tracks, db.libraries, mode));
+  handle(
+    'find-duplicates',
+    async (mode) => duplicates.review(db.tracks, db.libraries, mode),
+    readOnly,
+  );
   handle('remove-duplicates', async (token, ids) => {
     const result = await duplicates.remove(token, ids, {
       confirm: async (files, mode) => {
@@ -1248,7 +1692,7 @@ app.whenReady().then(async () => {
     }
     return { ...result, state: snapshot() };
   });
-  handle('preview-file-names', async (ids, config) => naming.preview(ids, config, db));
+  handle('preview-file-names', async (ids, config) => naming.preview(ids, config, db), readOnly);
   handle('apply-file-names', async (token, selectedIds) => {
     const result = await naming.apply(token, commitNames, selectedIds);
     return { ...result, state: snapshot() };
@@ -1276,6 +1720,9 @@ app.whenReady().then(async () => {
             .map((id) => trackIndex.get(id))
             .filter((t) => t.libraryId === libraryId)
             .map((t) => t.path),
+          false,
+          false,
+          { withState: false },
         );
       return { state: snapshot(), saved: ids };
     } catch (error) {
@@ -1319,8 +1766,8 @@ app.whenReady().then(async () => {
             ids = new Set([...external.missing, ...external.unavailable]);
           known.forEach((t) => (t.missing = ids.has(t.id)));
           const files = external.changed.get(library.id) || [];
-          if (files.length) await importLibrary(library, files, false, true);
-        } else await importLibrary(library, null, false, true);
+          if (files.length) await importLibrary(library, files, false, true, { withState: false });
+        } else await importLibrary(library, null, false, true, { withState: false });
       } catch (error) {
         warnings.push({ libraryId: library.id, message: error.message });
         const missing = await libraryRepair.findMissing(
@@ -1722,6 +2169,10 @@ app.whenReady().then(async () => {
     },
   });
   if (browsingSession?.window?.maximized) win.maximize();
+  // Last session ended in mini mode: start preparing the mini window right away, in
+  // parallel with the main window, so restoring mini does not delay startup.
+  if (process.platform === 'win32' && !process.env.NODE_TEST_CONTEXT && browsingSession?.mini)
+    createDetachedMini().catch((error) => console.warn('Mini window:', error.message));
   // Route the title-bar close through the same session/pending-preferences drain
   // as Ctrl/Cmd+Q, while the renderer is still alive to capture its state.
   win.on?.('close', (event) => {
@@ -1739,10 +2190,22 @@ app.whenReady().then(async () => {
     check(event);
     finishSessionSave?.();
   });
-  ipcMain.on('ui-ready', (event) => {
+  // While the detached mini player is shown, the transparent main window should
+  // never hold focus (for example after Alt+Tab).
+  win.on?.('focus', () => {
+    if (detachedMini.active && detachedMini.window && !detachedMini.window.isDestroyed())
+      detachedMini.window.focus();
+  });
+  ipcMain.on('ui-ready', (event, marks) => {
     check(event);
     rendererReady = true;
     if (!win.isDestroyed()) win.show();
+    // Prepare the mini window in the background so M is instant (not under node --test).
+    if (process.platform === 'win32' && !process.env.NODE_TEST_CONTEXT)
+      setTimeout(
+        () => createDetachedMini().catch((error) => console.warn('Mini window:', error.message)),
+        1500,
+      );
     const timings = {
       version: app.getVersion(),
       platform: process.platform,
@@ -1750,6 +2213,19 @@ app.whenReady().then(async () => {
       windowLoadMs: windowLoadAt - startupStarted,
       visibleMs: Date.now() - startupStarted,
       tracks: db.tracks.length,
+      // Renderer timeline relative to app start: navigation start, then its own marks.
+      ...(marks && typeof marks === 'object' && Number.isFinite(marks.timeOrigin)
+        ? {
+            renderer: Object.fromEntries(
+              [
+                ['navigationStart', 0],
+                ...Object.entries(marks).filter(
+                  ([key, value]) => key !== 'timeOrigin' && Number.isFinite(value),
+                ),
+              ].map(([key, value]) => [key, Math.round(marks.timeOrigin - startupStarted + value)]),
+            ),
+          }
+        : {}),
     };
     const logs = path.join(app.getPath('userData'), 'logs');
     fs.mkdir(logs, { recursive: true })
@@ -1839,6 +2315,7 @@ app.whenReady().then(async () => {
           library.importedFiles ? files : null,
           false,
           true,
+          { withState: false },
         );
         startupRefresh.changed +=
           files.length +

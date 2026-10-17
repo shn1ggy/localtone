@@ -19,8 +19,13 @@ contextBridge.exposeInMainWorld('localtone', {
     return () => ipcRenderer.removeListener('update-progress', listener);
   },
   prepareUpdate: () => ipcRenderer.invoke('prepare-update'),
-  uiReady: () => ipcRenderer.send('ui-ready'),
+  uiReady: (marks) => ipcRenderer.send('ui-ready', marks),
   windowAction: (action, size) => ipcRenderer.invoke('window-action', action, size),
+  // Detached mini window (Windows): mirror the player out, receive its clicks/keys back.
+  miniSync: (payload) => ipcRenderer.send('mini-sync', payload),
+  onMiniInput: (callback) => {
+    ipcRenderer.on('mini-input', (_event, input) => callback(input));
+  },
   layoutMinimum: (width, height, viewport) =>
     ipcRenderer.send('layout-minimum', width, height, viewport),
   saveBrowsing: (value) => ipcRenderer.sendSync('save-browsing', value),

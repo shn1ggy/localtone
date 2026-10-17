@@ -1,3 +1,13 @@
+# 0.132.0
+
+- Faster browsing with large libraries: the Albums view opens, switches and searches in under half a second instead of 15–20 s at 50,000 tracks; Covers view loads artwork only near the viewport; folder sorting, sidebar totals and track starts no longer rescan the whole collection.
+- Settings and ratings save to a small `collection-state.json` instead of rewriting the full collection file; read-only actions no longer copy the whole collection first.
+- Library scans read four files at a time with unchanged results; very large folders no longer overflow the stack.
+- Windows mini player is a separate, always-drawn window: M switches instantly without resizing or redrawing the main window, keeps the play queue as it was, and the full window follows the mini player when it is moved.
+- First-launch buttons, sort menu and toolbar chips share the main-window 12px text and 5px corners; dialog labels and primary buttons follow the shared dialog styles; empty artist-pane messages align with artist names.
+- Remove 547 stylesheet declarations that could never apply (computed styles verified identical across 16 screens).
+- Startup timeline in `logs/startup.json`; window-transition diagnostics in source runs.
+
 # 0.131.0
 
 - Restore complete playback queues, current song/time and browsing sessions across exit/restart, including duplicate queue entries and pane scrolls.

@@ -14,7 +14,9 @@ export function createWindowPresentation({
     miniTransition = false;
   let queueBaseLayout = null,
     retainedLayout = null,
-    queueWidth = 224;
+    queueWidth = 224,
+    // Queue state parked while the mini player is shown; restored on leaving mini.
+    heldQueue = null;
   function viewportSize() {
     return {
       width: window.visualViewport?.width || window.innerWidth,
@@ -26,6 +28,164 @@ export function createWindowPresentation({
     return bounds?.width && bounds?.height
       ? { width: bounds.width, height: bounds.height }
       : viewportSize();
+  }
+  // Renderer-side geometry sent with window actions (logged by source builds only).
+  function geometry() {
+    const rect = (selector) => {
+      const r = document.querySelector(selector)?.getBoundingClientRect();
+      return r ? [r.left, r.top, r.width, r.height].map((v) => Math.round(v * 100) / 100) : null;
+    };
+    return {
+      viewport: viewportSize(),
+      retained: retainedLayout,
+      offset: document.documentElement.style.getPropertyValue('--player-bottom-offset'),
+      shell: rect('.shell'),
+      player: rect('.sidebar-player'),
+      content: rect('.content-scroll'),
+      ratio: window.devicePixelRatio,
+    };
+  }
+  // ---- Detached mini window (Windows) -------------------------------------------
+  // The main window is never resized for mini mode. A second, always-rendered window
+  // shows a live mirror of the player; switching swaps the two windows' visibility, so
+  // neither has to redraw. The mirror is a JSON tree of the player and the toast;
+  // clicks and keys from the mini window are replayed here.
+  const detachedSupported = api.platform === 'win32' && typeof api.miniSync === 'function';
+  let detached = false,
+    mirrorObserver = null,
+    mirrorQueued = false,
+    miniSize = null;
+  const mirrorRoots = () => [document.querySelector('.sidebar-player'), $('toast')];
+  const mirrorChildren = (node) =>
+    [...node.childNodes].filter((n) => n.nodeType === 1 || n.nodeType === 3);
+  function serialize(node, { dropStyle = false } = {}) {
+    if (node.nodeType === 3) return node.nodeValue;
+    const attrs = [];
+    for (const { name, value } of node.attributes)
+      if (!(dropStyle && name === 'style')) attrs.push([name, value]);
+    return {
+      t: node.localName,
+      ...(node.namespaceURI !== 'http://www.w3.org/1999/xhtml' ? { n: node.namespaceURI } : {}),
+      a: attrs,
+      c: mirrorChildren(node).map((child) => serialize(child)),
+    };
+  }
+  function mirrorPayload() {
+    const [player, toastNode] = mirrorRoots();
+    return {
+      size: miniSize,
+      root: {
+        style: document.documentElement.getAttribute('style') || '',
+        data: { ...document.documentElement.dataset },
+        lang: document.documentElement.lang,
+      },
+      bodyClass: [...document.body.classList].filter(
+        (name) =>
+          ![
+            'window-transition',
+            'player-transition',
+            'queue-extended',
+            'mini-player',
+            'mini-detached',
+            'resizing-columns',
+            'resizing-panes',
+            'album-multi-selection',
+          ].includes(name),
+      ),
+      trees: [
+        player ? serialize(player) : null,
+        toastNode ? serialize(toastNode, { dropStyle: true }) : null,
+      ],
+    };
+  }
+  function sendMirror() {
+    mirrorQueued = false;
+    if (mirrorObserver) api.miniSync(mirrorPayload());
+  }
+  function queueMirror() {
+    if (mirrorQueued) return;
+    mirrorQueued = true;
+    // Microtask batching: rAF does not run while the main window is not shown.
+    Promise.resolve().then(sendMirror);
+  }
+  function startMirror() {
+    if (mirrorObserver) return;
+    mirrorObserver = new window.MutationObserver(queueMirror);
+    for (const root of mirrorRoots())
+      if (root)
+        mirrorObserver.observe(root, {
+          subtree: true,
+          childList: true,
+          attributes: true,
+          characterData: true,
+        });
+    mirrorObserver.observe(document.documentElement, { attributes: true });
+    mirrorObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    sendMirror();
+  }
+  function stopMirror() {
+    mirrorObserver?.disconnect();
+    mirrorObserver = null;
+  }
+  function replayMiniInput(input) {
+    if (!detached || !input) return;
+    if (input.type === 'click') {
+      let node = mirrorRoots()[input.root];
+      for (const index of input.path || []) node = node && mirrorChildren(node)[index];
+      if (node?.nodeType === 1) node.click();
+    } else if (input.type === 'key') {
+      const target = document.activeElement || document.body;
+      target.dispatchEvent(
+        new window.KeyboardEvent('keydown', {
+          key: input.key,
+          code: input.code,
+          ctrlKey: input.ctrlKey,
+          shiftKey: input.shiftKey,
+          altKey: input.altKey,
+          metaKey: input.metaKey,
+          repeat: input.repeat,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }
+  }
+  if (detachedSupported) api.onMiniInput?.(replayMiniInput);
+  async function toggleDetachedMini() {
+    miniTransition = true;
+    const entering = !detached;
+    try {
+      if (entering) {
+        const sidebar = document.querySelector('.sidebar'),
+          player = document.querySelector('.sidebar-player');
+        const offset =
+          parseFloat(document.documentElement.style.getPropertyValue('--player-bottom-offset')) ||
+          0;
+        miniSize = {
+          width: Math.round(sidebar.getBoundingClientRect().width),
+          height: Math.ceil(player.getBoundingClientRect().height + 20 + offset),
+        };
+        startMirror();
+      }
+      const viewport = viewportSize();
+      const result = await api.windowAction('mini', {
+        ...miniSize,
+        // Exact client size and scale, for physical-pixel placement of the mini window.
+        clientWidth: viewport.width,
+        clientHeight: viewport.height,
+        scale: window.devicePixelRatio,
+        detached: true,
+        report: true,
+        metrics: geometry(),
+      });
+      detached = !!motionValue(result);
+      document.body.classList.toggle('mini-detached', detached);
+      if (!detached) stopMirror();
+    } catch (error) {
+      toast(error.message);
+    } finally {
+      miniTransition = false;
+    }
   }
   function retainLayout(layout) {
     const shell = document.querySelector('.shell');
@@ -173,10 +333,18 @@ export function createWindowPresentation({
   }
   async function toggleMini() {
     if (miniTransition || windowTransition) return;
+    if (detachedSupported) return toggleDetachedMini();
     miniTransition = true;
     const entering = !document.body.classList.contains('mini-player');
+    const panel = $('queue-panel');
     try {
-      if (!$('queue-panel').hidden) await setQueueVisible(false);
+      // The queue is not collapsed first (that was a second native resize plus an
+      // animation). Mini mode is entered straight from the current window, and the
+      // queue, extended or not, is parked and comes back exactly as it was.
+      if (entering)
+        heldQueue = panel.hidden
+          ? null
+          : { extended: document.body.classList.contains('queue-extended') };
       const sidebar = document.querySelector('.sidebar'),
         player = document.querySelector('.sidebar-player'),
         style = document.documentElement.style;
@@ -185,14 +353,26 @@ export function createWindowPresentation({
         height: Math.ceil(player.getBoundingClientRect().height + 20),
         animate: false,
         report: true,
+        metrics: geometry(),
       };
       if (entering) {
         normalLayout = layoutSize();
         style.setProperty('--mini-width', `${size.width}px`);
+        // finishLayout() sizes an extended layout as base + queue width; keep a base
+        // even if a manual resize released the one recorded when the queue opened.
+        if (heldQueue?.extended && !queueBaseLayout)
+          queueBaseLayout = {
+            width: normalLayout.width - queueWidth,
+            height: normalLayout.height,
+          };
       }
       const layout = normalLayout || layoutSize();
       freezeLayout(layout.width, layout.height, { player: true });
       document.body.classList.remove('mini-player');
+      if (entering && heldQueue) {
+        panel.hidden = true;
+        document.body.classList.remove('queue-extended');
+      }
       // A single rAF runs before paint. Commit the chrome suppression before
       // Windows resizes/crops the existing compositor surface.
       await paintFrame({ committed: true });
@@ -200,14 +380,29 @@ export function createWindowPresentation({
       await waitForViewport(result);
       const active = motionValue(result);
       document.body.classList.toggle('mini-player', !!active);
-      await finishLayout();
+      await finishLayout(() => {
+        if (!active) restoreHeldQueue();
+      });
     } catch (error) {
       document.body.classList.toggle('mini-player', !entering);
-      await finishLayout();
+      await finishLayout(() => {
+        if (!document.body.classList.contains('mini-player')) restoreHeldQueue();
+      });
       toast(error.message);
     } finally {
       miniTransition = false;
     }
+  }
+  function restoreHeldQueue() {
+    const held = heldQueue;
+    heldQueue = null;
+    if (!held) return;
+    const panel = $('queue-panel');
+    document.body.classList.toggle('queue-extended', held.extended);
+    panel.hidden = false;
+    panel.style.clipPath = '';
+    alignQueueClose();
+    revealPlayingQueueItem();
   }
 
   function revealPlayingQueueItem() {
@@ -224,7 +419,9 @@ export function createWindowPresentation({
   let queueWindowJobs = Promise.resolve();
   let queueRequested = false;
   function setQueueVisible(show, { animate = true } = {}) {
-    if (show && document.body.classList.contains('mini-player')) return Promise.resolve();
+    // The queue is parked while mini; it returns when mini mode is left.
+    if (document.body.classList.contains('mini-player') || detached || miniTransition)
+      return Promise.resolve();
     queueRequested = show;
     const wasExtended = document.body.classList.contains('queue-extended');
     if (!wasExtended) {
@@ -262,6 +459,7 @@ export function createWindowPresentation({
             const result = await api.windowAction?.(extend ? 'queue-open' : 'queue-close', {
               animate: animate && motionEnabled(),
               report: true,
+              metrics: geometry(),
             });
             await waitForViewport(result);
             const docked = extend && motionValue(result);
@@ -317,7 +515,14 @@ export function createWindowPresentation({
     get transitioning() {
       return windowTransition;
     },
+    get queueHeld() {
+      return !!heldQueue;
+    },
+    get mini() {
+      return detached || document.body.classList.contains('mini-player');
+    },
     dispose() {
+      stopMirror();
       window.removeEventListener('resize', onResize);
       playerObserver?.disconnect();
     },

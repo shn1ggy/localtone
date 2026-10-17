@@ -32,9 +32,12 @@ import {
   selectTracks,
   formatTime,
   playlistTracks,
+  playlistIncludes,
   dateFields,
   openingArtist,
 } from './core.js';
+// Startup timeline (ms since navigation), reported with ui-ready and saved in logs/startup.json.
+const startupMarks = { modules: Math.round(performance.now()) };
 const $ = (id) => document.getElementById(id),
   api = window.localtone;
 
@@ -200,9 +203,13 @@ function el(tag, text, className) {
 }
 function cover(track) {
   const box = el('div', null, 'cover');
-  box.append(icon('music'));
-  if (track?.cover) {
+  // Build the placeholder icon only when it is shown (no artwork, or artwork failed).
+  if (!track?.cover) box.append(icon('music'));
+  else {
     const img = new Image();
+    // Covers view can hold thousands of these; only fetch/decode the ones near the viewport.
+    img.loading = 'lazy';
+    img.decoding = 'async';
     img.src = `localtone://cover/${track.id}`;
     img.alt = '';
     img.draggable = false;
@@ -339,6 +346,15 @@ function renderSidebar() {
   const all = $('all');
   all.classList.toggle('active', scope.kind === 'all');
   all.classList.toggle('playing-source', !!currentTrack() && playingOrigin?.kind === 'all');
+  // One pass for every library's totals instead of filtering all tracks per library.
+  const libraryTotals = new Map();
+  for (const t of state.tracks) {
+    if (t.missing || t.excluded) continue;
+    const total = libraryTotals.get(t.libraryId) || { count: 0, seconds: 0 };
+    total.count++;
+    total.seconds += Number(t.duration) || 0;
+    libraryTotals.set(t.libraryId, total);
+  }
   for (const [container, items, kind] of [
     ['libraries', state.libraries.filter((l) => !l.importedFiles), 'library'],
     ['playlists', state.playlists, 'playlist'],
@@ -358,12 +374,14 @@ function renderSidebar() {
         !!currentTrack() && playingOrigin?.kind === kind && playingOrigin.id === item.id,
       );
       button.setAttribute('aria-label', dynamic ? `${item.name}, dynamic playlist` : item.name);
-      const tracks =
-        kind === 'playlist'
-          ? playlistTracks(state, item)
-          : state.tracks.filter((t) => !t.missing && !t.excluded && t.libraryId === item.id);
-      const minutes = Math.round(tracks.reduce((n, t) => n + (Number(t.duration) || 0), 0) / 60);
-      button.title = `${item.name}${dynamic ? ' · Dynamic playlist' : ''}\n${tracks.length.toLocaleString()} tracks · ${minutes.toLocaleString()} minutes`;
+      let count, seconds;
+      if (kind === 'playlist') {
+        const tracks = playlistTracks(state, item);
+        count = tracks.length;
+        seconds = tracks.reduce((n, t) => n + (Number(t.duration) || 0), 0);
+      } else ({ count, seconds } = libraryTotals.get(item.id) || { count: 0, seconds: 0 });
+      const minutes = Math.round(seconds / 60);
+      button.title = `${item.name}${dynamic ? ' · Dynamic playlist' : ''}\n${count.toLocaleString()} tracks · ${minutes.toLocaleString()} minutes`;
       button.classList.toggle('active', scope.kind === kind && scope.id === item.id);
       button.onclick = () => setScope({ kind, id: item.id });
       button.ondblclick = () => playRandomCollection({ kind, id: item.id });
@@ -650,8 +668,7 @@ async function startTrack(resume = null, scheduled = false, { preserveQueueScrol
       state.playbackHistory[track.libraryId] = track.id;
       state.playbackHistory.all = track.id;
       for (const p of state.playlists)
-        if (playlistTracks(state, p).some((t) => t.id === track.id))
-          state.playbackHistory[`playlist:${p.id}`] = track.id;
+        if (playlistIncludes(state, p, track)) state.playbackHistory[`playlist:${p.id}`] = track.id;
       api
         ?.rememberPlayed?.(track.id)
         .catch((error) => toast('Could not remember the last artist: ' + error.message));
@@ -865,7 +882,8 @@ $('search').onkeydown = (event) => {
     selection.tracks.anchor = null;
     render();
     searchResultIds = query.trim() && !compileSearch(query).error ? visible.map((t) => t.id) : null;
-    renderBrowser();
+    // Only the results button changed; rebuilding the whole browser here doubled the work.
+    syncSearchPlaylistButton();
     selection.pane = 'tracks';
     focusBrowseSelection(true);
     event.stopPropagation();
@@ -1529,7 +1547,9 @@ setIcon(document.querySelector('.search>span'), 'search');
 if (api) {
   api.onProgress((count) => toast(`Indexing your music… ${count.toLocaleString()} files`, true));
   try {
+    startupMarks.loadRequested = Math.round(performance.now());
     state = await api.load({ cached: true });
+    startupMarks.loaded = Math.round(performance.now());
     initialLibraryRefresh = api.load();
     globalShortcutStatus = state.globalShortcutStatus || globalShortcutStatus;
     prefs = { ...prefs, ...state.settings };
@@ -1545,6 +1565,7 @@ if (api) {
     if (!restoreBrowsingState(state.browsingSession)) chooseOpeningArtist();
     applyPreferences();
     render();
+    startupMarks.rendered = Math.round(performance.now());
     restorePlayback();
     if (state.startupRefresh?.warnings?.length)
       toast(state.startupRefresh.warnings.join(' · '), true);
@@ -1707,6 +1728,15 @@ function renderArtistPane() {
     } else list.scrollTop = 0;
   }
 }
+function syncSearchPlaylistButton() {
+  $('create-search-playlist')?.remove();
+  if (!searchResultIds) return;
+  const button = el('button', 'Create playlist from results', 'chip browse-action');
+  button.id = 'create-search-playlist';
+  button.disabled = !searchResultIds.length;
+  button.onclick = () => openPlaylistSettings(null, [...searchResultIds]);
+  $('browse-navigation').append(button);
+}
 function renderBrowser(viewportTop = document.querySelector('.content-scroll').scrollTop) {
   const container = $('browser'),
     nav = $('browse-navigation');
@@ -1743,13 +1773,7 @@ function renderBrowser(viewportTop = document.querySelector('.content-scroll').s
     note.setAttribute('role', 'status');
     nav.append(note);
   }
-  if (searchResultIds) {
-    const button = el('button', 'Create playlist from results', 'chip browse-action');
-    button.id = 'create-search-playlist';
-    button.disabled = !searchResultIds.length;
-    button.onclick = () => openPlaylistSettings(null, [...searchResultIds]);
-    nav.append(button);
-  }
+  syncSearchPlaylistButton();
   if (view === 'tracks') return;
   const breadcrumb = (label, handler) => {
     const button = el('button', null, 'chip browse-action');
@@ -1828,6 +1852,10 @@ function renderBrowser(viewportTop = document.querySelector('.content-scroll').s
     container._disposeAlbums = null;
   };
   let offset = 0;
+  // Read the viewport height once. Reading clientHeight inside the loop below forces a
+  // synchronous layout after every appended section, which is quadratic in album count
+  // (around 18 s for 5,000 albums).
+  const viewportHeight = scroller.clientHeight || 600;
   const selectionSource = displayed
     .filter(
       (a) =>
@@ -1954,8 +1982,7 @@ function renderBrowser(viewportTop = document.querySelector('.content-scroll').s
     container.append(section);
     if (
       !lazy ||
-      (offset + height >= viewportTop - 600 &&
-        offset <= viewportTop + (scroller.clientHeight || 600) + 600)
+      (offset + height >= viewportTop - 600 && offset <= viewportTop + viewportHeight + 600)
     )
       section._mountAlbum();
     else observer.observe(section);
@@ -5657,8 +5684,11 @@ await new Promise((resolve) =>
     ? window.requestAnimationFrame(() => window.requestAnimationFrame(resolve))
     : resolve(),
 );
+startupMarks.revealed = Math.round(performance.now());
 await restoreBrowsingViewport();
-api?.uiReady?.();
+startupMarks.ready = Math.round(performance.now());
+startupMarks.timeOrigin = performance.timeOrigin;
+api?.uiReady?.(startupMarks);
 
 function restoreBrowsingState(saved) {
   if (!saved || saved.version !== 1) return false;
@@ -5709,6 +5739,7 @@ async function restoreBrowsingViewport() {
   if (!saved) return;
   pendingBrowsingRestore = null;
   if (saved.queueOpen) await setQueueVisible(true, { animate: false });
+  startupMarks.queueRestored = Math.round(performance.now());
   const panes = [
     ['content', document.querySelector('.content-scroll')],
     ['artists', $('artist-list')],
@@ -5721,9 +5752,11 @@ async function restoreBrowsingViewport() {
     node.scrollTop = saved.scroll?.[key] || 0;
     node.dispatchEvent(new Event('scroll'));
   }
-  await new Promise((resolve) =>
-    window.requestAnimationFrame ? window.requestAnimationFrame(resolve) : resolve(),
-  );
+  // The window is still hidden here; never let a throttled frame hold up startup.
+  await new Promise((resolve) => {
+    window.requestAnimationFrame?.(resolve);
+    setTimeout(resolve, window.requestAnimationFrame ? 50 : 0);
+  });
   paintPaneFocus(false);
   const pane = selection.pane;
   let target;
@@ -5749,6 +5782,7 @@ async function restoreBrowsingViewport() {
   }
   for (const [key, node] of panes) if (node) node.scrollTop = saved.scroll?.[key] || 0;
   if (saved.mini) await toggleMini();
+  startupMarks.miniRestored = Math.round(performance.now());
 }
 function saveBrowsingState() {
   api?.saveBrowsing?.({
@@ -5771,8 +5805,8 @@ function saveBrowsingState() {
     coverFocus: selection.coverFocus,
     coverReturnScroll,
     expanded: [...expandedAlbums],
-    queueOpen: !$('queue-panel').hidden,
-    mini: document.body.classList.contains('mini-player'),
+    queueOpen: !$('queue-panel').hidden || windowPresentation.queueHeld,
+    mini: windowPresentation.mini,
     deselected: { ...deselectedBrowsePositions },
     scroll: {
       content: document.querySelector('.content-scroll').scrollTop,

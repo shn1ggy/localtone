@@ -6,6 +6,7 @@ const { digest } = require('./release.cjs');
 // tag undo and native crash files belong to the old running instance.
 const persistentNames = [
   'collection.json',
+  'collection-state.json',
   'playback-history.json',
   'playback-session.json',
   'browsing-session.json',
