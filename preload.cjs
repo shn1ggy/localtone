@@ -25,6 +25,15 @@ contextBridge.exposeInMainWorld('localtone', {
     ipcRenderer.send('layout-minimum', width, height, viewport),
   saveBrowsing: (value) => ipcRenderer.sendSync('save-browsing', value),
   savePlayback: (value) => ipcRenderer.sendSync('save-playback', value),
+  onPrepareQuit: (callback) => {
+    ipcRenderer.on('prepare-quit', async () => {
+      try {
+        await callback();
+      } finally {
+        ipcRenderer.send('session-saved');
+      }
+    });
+  },
   rememberPlayed: (id) => ipcRenderer.invoke('remember-played', id),
   decodeGapless: (id, sampleRate) => ipcRenderer.invoke('decode-gapless', id, sampleRate),
   cancelGapless: () => ipcRenderer.invoke('cancel-gapless'),

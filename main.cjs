@@ -1,3 +1,6 @@
+const startupStarted = Date.now();
+let appReadyAt = 0,
+  windowLoadAt = 0;
 const {
   app,
   BrowserWindow,
@@ -30,8 +33,11 @@ const { changedTracks } = require('./startup-refresh.cjs');
 const { cleanUnusedCache } = require('./cache-cleanup.cjs');
 let startupRefresh = { changed: 0, unavailable: 0, warnings: [] };
 let startupReady = Promise.resolve();
-const { validateSession } = require('./browsing-session.cjs');
-let browsingSession = null;
+const { validateSession, validatePlaybackSession } = require('./browsing-session.cjs');
+let browsingSession = null,
+  rendererReady = false,
+  finishSessionSave = null,
+  quitJob = null;
 const { createQueueWindow, createBoundsMemory, setStableBounds } = require('./queue-window.cjs');
 const queueWindow = createQueueWindow();
 const miniBoundsMemory = createBoundsMemory();
@@ -67,6 +73,7 @@ let waveforms,
   historyWrites = Promise.resolve();
 const { LastfmService, metadataFor } = require('./lastfm.cjs');
 let lastfm,
+  lastfmReady,
   tagHistory,
   quitting = false;
 const { createAudioSources } = require('./media.cjs');
@@ -265,10 +272,10 @@ function validName(name) {
   return name.trim();
 }
 app.whenReady().then(async () => {
+  appReadyAt = Date.now();
   dbPath = path.join(app.getPath('userData'), 'collection.json');
   covers = path.join(app.getPath('userData'), 'covers');
   await fs.mkdir(app.getPath('userData'), { recursive: true });
-  await audioSources.init();
   tagHistory = require('./tag-history.cjs').createTagHistory(
     path.join(app.getPath('userData'), 'tag-backups'),
   );
@@ -289,8 +296,10 @@ app.whenReady().then(async () => {
     db = fresh();
   }
   try {
-    playbackSession = JSON.parse(
-      await fs.readFile(path.join(app.getPath('userData'), 'playback-session.json'), 'utf8'),
+    playbackSession = validatePlaybackSession(
+      JSON.parse(
+        await fs.readFile(path.join(app.getPath('userData'), 'playback-session.json'), 'utf8'),
+      ),
     );
   } catch {}
   try {
@@ -398,10 +407,11 @@ app.whenReady().then(async () => {
     fetch: (...args) => net.fetch(...args),
     openExternal: (url) => shell.openExternal(url),
   });
-  await lastfm.init();
+  lastfmReady = lastfm.init();
   const metadataCache = new Map();
   ipcMain.handle('lastfm', async (event, action) => {
     check(event);
+    await lastfmReady;
     if (!action || typeof action !== 'object') throw new Error('Invalid Last.fm action.');
     if (action.type === 'status') return lastfm.status();
     if (action.type === 'credentials')
@@ -422,6 +432,7 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle('lastfm-playback', async (event, kind, play) => {
     check(event);
+    await lastfmReady;
     if (!lastfm.status().enabled) return lastfm.status();
     if (!['now', 'scrobble'].includes(kind) || !play || typeof play.id !== 'string')
       throw new Error('Invalid playback event.');
@@ -562,22 +573,10 @@ app.whenReady().then(async () => {
   ipcMain.on('save-playback', (event, value) => {
     try {
       check(event);
-      if (
-        !value ||
-        !trackIndex.has(value.id) ||
-        !Number.isFinite(value.position) ||
-        value.position < 0
-      )
-        throw new Error('Invalid playback position');
-      const origin = value.origin;
-      playbackSession = {
-        id: value.id,
-        position: value.position,
-        origin:
-          origin && ['all', 'library', 'playlist'].includes(origin.kind)
-            ? { kind: origin.kind, id: typeof origin.id === 'string' ? origin.id : undefined }
-            : null,
-      };
+      if (JSON.stringify(value).length > 16 * 1024 * 1024) throw Error('Session too large.');
+      const clean = validatePlaybackSession(value);
+      if (clean.id && !trackIndex.has(clean.id)) throw Error('Invalid playback track.');
+      playbackSession = clean;
       const file = path.join(app.getPath('userData'), 'playback-session.json'),
         sync = require('node:fs');
       sync.writeFileSync(file + '.tmp', JSON.stringify(playbackSession));
@@ -1711,9 +1710,26 @@ app.whenReady().then(async () => {
     if (miniMode && !motionActive) event.preventDefault();
   });
   // Never expose fallback markup or colors before saved preferences are applied.
+  ipcMain.on('session-saved', (event) => {
+    check(event);
+    finishSessionSave?.();
+  });
   ipcMain.on('ui-ready', (event) => {
     check(event);
+    rendererReady = true;
     if (!win.isDestroyed()) win.show();
+    const timings = {
+      version: app.getVersion(),
+      platform: process.platform,
+      appReadyMs: appReadyAt - startupStarted,
+      windowLoadMs: windowLoadAt - startupStarted,
+      visibleMs: Date.now() - startupStarted,
+      tracks: db.tracks.length,
+    };
+    const logs = path.join(app.getPath('userData'), 'logs');
+    fs.mkdir(logs, { recursive: true })
+      .then(() => fs.writeFile(path.join(logs, 'startup.json'), JSON.stringify(timings, null, 2)))
+      .catch(() => {});
   });
   // Content-driven desktop minimum, including platform window decorations.
   ipcMain.on?.('layout-minimum', (event, width, height = 740, viewport) => {
@@ -1814,29 +1830,44 @@ app.whenReady().then(async () => {
   })().catch((error) => {
     startupRefresh.warnings.push(error.message);
   });
+  windowLoadAt = Date.now();
   await win.loadURL('localtone://app/index.html');
+  audioSources.init().catch((error) => console.warn('Playback cache:', error.message));
   await startupReady;
 });
 app.on('will-quit', () => {
   playbackShortcuts.set(false);
 });
 app.on('before-quit', (event) => {
-  gaplessDecoder.cancel();
-  waveforms?.cancel();
-  if (!quitting) {
-    event.preventDefault();
+  if (quitting) return;
+  event.preventDefault();
+  if (quitJob) return;
+  quitJob = (async () => {
+    if (rendererReady && win && !win.isDestroyed() && !win.webContents.isDestroyed?.()) {
+      await new Promise((resolve) => {
+        const timer = setTimeout(() => finishSessionSave?.(), 5000);
+        finishSessionSave = () => {
+          clearTimeout(timer);
+          finishSessionSave = null;
+          resolve();
+        };
+        win.webContents.send('prepare-quit');
+      });
+    }
     quitting = true;
-    Promise.allSettled([
+    gaplessDecoder.cancel();
+    waveforms?.cancel();
+    await Promise.allSettled([
       onlineUpdates.shutdown(),
       startupReady,
       audioSources.dispose(),
       historyWrites,
-      lastfm?.close(),
+      lastfmReady?.then(() => lastfm.close()),
       (async () => {
         while (busy) await new Promise((resolve) => setTimeout(resolve, 25));
         await tagHistory?.cleanup();
       })(),
-    ]).finally(() => app.quit());
-  }
+    ]);
+  })().finally(() => app.quit());
 });
 app.on('window-all-closed', () => app.quit());

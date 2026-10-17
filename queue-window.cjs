@@ -87,10 +87,11 @@ function setStableBounds(win, target) {
   for (let attempt = 0; attempt < 3; attempt++) {
     win.setBounds(requested);
     const actual = win.getBounds();
+    // Width changes can also move or resize the Windows frame on another axis.
     const next = Object.fromEntries(
-      Object.entries(requested)
-        .filter(([key]) => actual[key] !== target[key])
-        .map(([key, value]) => [key, value + target[key] - actual[key]]),
+      Object.entries(target)
+        .filter(([key, value]) => actual[key] !== value)
+        .map(([key, value]) => [key, (requested[key] ?? value) + value - actual[key]]),
     );
     if (!Object.keys(next).length) return;
     requested = next;

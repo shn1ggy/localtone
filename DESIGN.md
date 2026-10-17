@@ -311,3 +311,9 @@ Show the saved collection and preferences before disk/cloud-folder reconciliatio
 Empty artist, album, cover and track states use the same 25px top inset and align their leading edge with their pane toolbar. Headings and explanatory text must share that edge, including first launch, empty playlists and no search results. Do not indent only the heading or only the secondary line. Verify actual text and element alignment in Electron, with column headings both shown and hidden.
 
 Every normal audio range response owns its own read stream and descriptor. Chromium aborts older requests while seeking; cancellation must not close or corrupt later or concurrent responses from the immutable playback copy. Retire copies only after all response streams close. Gapless remains a separate predecoded mode; preserve the user's saved choice and verify both paths.
+
+## Session restoration and window geometry
+
+Restore browsing collection, tab, selections/anchors, album expansion, focus, pane scrolls, queue visibility and playback order. Restore the current song and position paused. Preserve duplicate queue entries and origins; never rebuild a saved queue from a filtered collection. Manual queue clicks and unrelated browsing redraws retain queue scroll. Opening the queue or explicit playback reveals may scroll to the active item.
+
+Horizontal queue extension preserves window x/y position and height while open, including at fractional Windows scaling. Verify open geometry as well as round trips. Startup must not wait for directory checks, stale audio-cache deletion or Last.fm credentials; session restoration must not replay queue entrance animation.

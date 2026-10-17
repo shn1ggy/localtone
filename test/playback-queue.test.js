@@ -18,3 +18,10 @@ test('history restoration keeps a currently playing added song and pruning retai
 test('missing-entry repair remaps queue references without losing the active occurrence or origins',()=>{
  const queue=createPlaybackQueue();queue.seed(['before','duplicate','missing','after'],library,{chosen:'duplicate'});queue.insert(['duplicate'],playlist);const origins=queue.origins.map(o=>o.kind);queue.remapReferences({duplicate:'original',missing:null});assert.deepEqual(queue.queue,['before','original','original','after']);assert.equal(queue.cursor,1);assert.equal(queue.queue[queue.cursor],'original');assert.deepEqual(queue.origins.map(o=>o.kind),origins.filter((_,i)=>i!==3));queue.setShuffled(false);assert.equal(queue.queue[queue.cursor],'original');queue.remapReferences({original:null});assert.equal(queue.cursor,-1);assert.deepEqual(queue.queue,['before','after']);
 });
+
+test('session restoration keeps duplicate occurrences, origins and exact cursor',()=>{
+ const original=createPlaybackQueue();original.seed(['a','b','c'],library,{chosen:'b'});original.insert(['b'],playlist);original.move(3,0);original.select(3);
+ const saved=original.capture(),restored=createPlaybackQueue();restored.restoreSession(saved,()=>true);assert.deepEqual(restored.capture(),saved);
+ restored.restoreSession(saved,id=>id!=='a');assert.equal(restored.queue[restored.cursor],saved.queue[saved.cursor]);assert.equal(restored.origins[restored.cursor].kind,saved.origins[saved.cursor].kind);
+ restored.restoreSession({queue:[],origins:[],ordered:[],cursor:-1},()=>true);assert.deepEqual(restored.capture(),{queue:[],origins:[],ordered:[],cursor:-1});
+});

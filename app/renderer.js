@@ -482,7 +482,7 @@ function render({ preserveScroll = false } = {}) {
   }
   renderBrowser(position?.top);
   syncPlaybackMarkers();
-  renderQueue();
+  renderQueue({ reveal: false });
   renderPlayerRating();
   syncScrollbarControls();
   syncPaneBounds();
@@ -574,7 +574,7 @@ function playVisible(id) {
   if (!source.length) return;
   startTrack();
 }
-async function startTrack(resume = null, scheduled = false) {
+async function startTrack(resume = null, scheduled = false, { preserveQueueScroll = false } = {}) {
   const generation = ++playGeneration,
     track = currentTrack();
   if (!track) {
@@ -621,7 +621,7 @@ async function startTrack(resume = null, scheduled = false) {
         button.dataset.sourceId === playingOrigin.id,
     );
   syncPlaybackMarkers();
-  renderQueue();
+  renderQueue({ reveal: !preserveQueueScroll });
   renderPlayerRating();
   if (resume !== null) {
     const position = Math.max(0, Math.min(Number(resume) || 0, track.duration || Infinity));
@@ -663,16 +663,27 @@ async function startTrack(resume = null, scheduled = false) {
 }
 function savePlayback() {
   const track = currentTrack();
-  if (!track || !audio.getAttribute('src')) return;
   api?.savePlayback?.({
-    id: track.id,
-    position: pendingPlaybackPosition ?? (audio.currentTime || 0),
+    id: track?.id || null,
+    position: track ? (pendingPlaybackPosition ?? (audio.currentTime || 0)) : 0,
     origin: playingOrigin,
+    ...playback.capture(),
+    shuffle,
+    repeat,
   });
 }
 function restorePlayback() {
   const saved = state.playbackSession,
     track = trackLookup.get(saved?.id);
+  if (saved?.queue && saved.origins && saved.ordered) {
+    playback.restoreSession(saved, (id) => trackLookup.has(id));
+    if (typeof saved.shuffle === 'boolean') shuffle = prefs.shuffle = saved.shuffle;
+    if ([0, 1, 2].includes(saved.repeat)) repeat = prefs.repeat = saved.repeat;
+    applyPreferences();
+    if (currentTrack()) startTrack(saved.position || 0);
+    else renderQueue();
+    return;
+  }
   if (!track) return;
   const origin = saved.origin;
   const valid =
@@ -725,13 +736,14 @@ function toggle() {
   else audio.pause();
 }
 const queueViewCache = createQueueViewCache();
-function renderQueue() {
+function renderQueue({ reveal = true } = {}) {
   prepareGaplessNext();
   if (
     !queueViewCache.changed(playback.queue, playback.cursor, trackLookup, prefs.queueDisplayCount)
   )
     return;
-  const container = $('queue-list');
+  const container = $('queue-list'),
+    scrollTop = container.scrollTop;
   container.replaceChildren();
   if (!playback.queue.length) container.append(el('p', 'Your queue is empty.'));
   // Only render a window around the current item for large collections.
@@ -770,7 +782,7 @@ function renderQueue() {
     item.onclick = () => {
       selection.tracks.current = track.id;
       playback.select(i);
-      startTrack();
+      startTrack(null, false, { preserveQueueScroll: true });
     };
     makeDraggable(item, () => ({ ids: [track.id], queueIndex: i }));
     bindDrop(item, (payload) => dropOnQueue(payload, i));
@@ -784,7 +796,8 @@ function renderQueue() {
         : Math.max(0, playback.cursor + 1),
     ),
   );
-  if (!$('queue-panel').hidden) revealPlayingQueueItem();
+  container.scrollTop = scrollTop;
+  if (reveal && !$('queue-panel').hidden) revealPlayingQueueItem();
 }
 $('all').onclick = () => setScope({ kind: 'all' });
 $('all').ondblclick = () => playRandomCollection({ kind: 'all' });
@@ -5678,6 +5691,7 @@ function restoreBrowsingState(saved) {
     if (albumKeys.has(key)) expandedAlbums.set(key, open);
   selection.pane = saved.pane;
   coverReturnScroll = saved.coverReturnScroll || 0;
+  Object.assign(deselectedBrowsePositions, saved.deselected || {});
   revealOpeningArtist = false;
   pendingBrowsingRestore = saved;
   return true;
@@ -5686,11 +5700,12 @@ async function restoreBrowsingViewport() {
   const saved = pendingBrowsingRestore;
   if (!saved) return;
   pendingBrowsingRestore = null;
-  if (saved.queueOpen) await setQueueVisible(true);
+  if (saved.queueOpen) await setQueueVisible(true, { animate: false });
   const panes = [
     ['content', document.querySelector('.content-scroll')],
     ['artists', $('artist-list')],
     ['playlists', $('playlists')],
+    ['libraries', $('libraries')],
     ['queue', $('queue-list')],
   ];
   for (const [key, node] of panes) {
@@ -5725,6 +5740,7 @@ async function restoreBrowsingViewport() {
     target.focus({ preventScroll: true });
   }
   for (const [key, node] of panes) if (node) node.scrollTop = saved.scroll?.[key] || 0;
+  if (saved.mini) await toggleMini();
 }
 function saveBrowsingState() {
   api?.saveBrowsing?.({
@@ -5748,15 +5764,23 @@ function saveBrowsingState() {
     coverReturnScroll,
     expanded: [...expandedAlbums],
     queueOpen: !$('queue-panel').hidden,
+    mini: document.body.classList.contains('mini-player'),
+    deselected: { ...deselectedBrowsePositions },
     scroll: {
       content: document.querySelector('.content-scroll').scrollTop,
       artists: $('artist-list').scrollTop,
       playlists: $('playlists').scrollTop,
+      libraries: $('libraries').scrollTop,
       queue: $('queue-list').scrollTop,
     },
   });
 }
 window.addEventListener('beforeunload', saveBrowsingState);
+api?.onPrepareQuit?.(async () => {
+  savePlayback();
+  saveBrowsingState();
+  await preferenceWrites;
+});
 
 // Quiet directory reconciliation after returning from Explorer/Finder, and while open.
 if (api.refreshLibraries) {

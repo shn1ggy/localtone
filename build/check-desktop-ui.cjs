@@ -207,6 +207,12 @@ app.on('browser-window-created', (_event, win) => {
             'Queue reveal must animate',
           );
         assert.equal(await js("document.body.classList.contains('queue-extended')"), true);
+        const extendedBounds = win.getBounds();
+        for (const key of ['x', 'y', 'height'])
+          assert.ok(
+            Math.abs(extendedBounds[key] - bounds[key]) <= 1,
+            `Opening the queue changed window ${key}: ${JSON.stringify(bounds)} → ${JSON.stringify(extendedBounds)}`,
+          );
         await js("document.getElementById('queue').click()");
         await settled();
         stableBounds();

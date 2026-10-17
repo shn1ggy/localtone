@@ -10,7 +10,7 @@ const mainPath=fileURLToPath(new URL('../main.cjs',import.meta.url));
 const source=await readFile(mainPath,'utf8'),require=createRequire(mainPath);
 async function launch(userData,music,dialogs={}) {
  const handlers=new Map(),events=new Map(),opened=[];let quitCount=0;let ready,windowInstance,assetHandler;
- class Window {constructor(options){windowInstance=this;this.visible=options.show!==false;this.size=[options.width,options.height];this.minimum=[options.minWidth,options.minHeight];this.webContents={capturePage:async()=>({toDataURL:()=> 'data:image/png;base64,snapshot'}),setWindowOpenHandler(){},on(){},send(){}};}getBounds(){return {x:this.x??20,y:this.y??20,width:this.size[0],height:this.size[1]};}getNormalBounds(){return this.restoreBounds||this.getBounds();}setBounds(b){const next={...this.getBounds(),...b};this.x=next.x;this.y=next.y;this.size=[next.width,next.height];}setResizable(value){this.resizable=value;}setContentSize(w,h){this.size=[w+16,h+32];}isMaximized(){return !!this.maximized;}maximize(){this.restoreBounds=this.getBounds();this.maximized=true;this.setBounds({x:0,y:0,width:1920,height:1080});}unmaximize(){this.maximized=false;if(this.restoreBounds)this.setBounds(this.restoreBounds);}getSize(){return this.size;}getContentSize(){return [this.size[0]-16,this.size[1]-32];}setMinimumSize(w,h){this.minimum=[w,h];}setSize(w,h){this.size=[w,h];}show(){this.visible=true;}async loadURL(){await dialogs.onLoad?.((name,...args)=>handlers.get(name)({senderFrame:{url:'localtone://app/index.html'}},...args));}isDestroyed(){return false;}}
+ class Window {constructor(options){windowInstance=this;this.visible=options.show!==false;this.size=[options.width,options.height];this.minimum=[options.minWidth,options.minHeight];this.webContents={capturePage:async()=>({toDataURL:()=> 'data:image/png;base64,snapshot'}),setWindowOpenHandler(){},on(){},send(name){dialogs.onSend?.(name,(channel,...args)=>handlers.get(channel)({senderFrame:{url:'localtone://app/index.html'}},...args));}};}getBounds(){return {x:this.x??20,y:this.y??20,width:this.size[0],height:this.size[1]};}getNormalBounds(){return this.restoreBounds||this.getBounds();}setBounds(b){const next={...this.getBounds(),...b};this.x=next.x;this.y=next.y;this.size=[next.width,next.height];}setResizable(value){this.resizable=value;}setContentSize(w,h){this.size=[w+16,h+32];}isMaximized(){return !!this.maximized;}maximize(){this.restoreBounds=this.getBounds();this.maximized=true;this.setBounds({x:0,y:0,width:1920,height:1080});}unmaximize(){this.maximized=false;if(this.restoreBounds)this.setBounds(this.restoreBounds);}getSize(){return this.size;}getContentSize(){return [this.size[0]-16,this.size[1]-32];}setMinimumSize(w,h){this.minimum=[w,h];}setSize(w,h){this.size=[w,h];}show(){this.visible=true;}async loadURL(){await dialogs.onLoad?.((name,...args)=>handlers.get(name)({senderFrame:{url:'localtone://app/index.html'}},...args));}isDestroyed(){return false;}}
  const electron={
   app:{getVersion:()=>'0.81.0',requestSingleInstanceLock:()=>true,on:(name,fn)=>events.set(name,fn),getPath:()=>userData,whenReady:()=>({then:fn=>{ready=fn();return ready;}}),quit(){let prevented=false;events.get('before-quit')?.({preventDefault(){prevented=true;}});if(!prevented)quitCount++;}},BrowserWindow:Window,
   ipcMain:{handle:(name,fn)=>handlers.set(name,fn),on:(name,fn)=>handlers.set(name,fn)},protocol:{registerSchemesAsPrivileged(){},handle:(_scheme,handler)=>assetHandler=handler},net:{fetch:async url=>new Response(await readFile(new URL(url)))},session:{defaultSession:{setPermissionRequestHandler(){}}},shell:{trashItem:dialogs.trashItem||(()=>{throw Error('Trash mock not configured');}),openExternal:async url=>opened.push(url),showItemInFolder:target=>opened.push(target),openPath:async folder=>{opened.push(folder);return '';}},
@@ -511,4 +511,23 @@ test('library and Explorer-imported playlist audio keep serving seek ranges afte
    const backwards=await request('bytes=200000-209999');assert.deepEqual(Buffer.from(await backwards.arrayBuffer()),bytes.subarray(200000,210000));
   }
  }finally{await invoke?.shutdown();await rm(dir,{recursive:true,force:true});}
+});
+
+test('full queues persist across restart including repeated entries and reject inconsistent sessions',async()=>{
+ const dir=await realpath(await mkdtemp(path.join(tmpdir(),'localtone-queue-session-')));try{
+  const data=path.join(dir,'data'),music=path.join(dir,'music');await mkdir(music);await copyFile(new URL('./fixtures/tone.mp3',import.meta.url),path.join(music,'tone.mp3'));
+  let invoke=await launch(data,music);const added=await invoke('add-library','Music'),id=added.state.tracks[0].id,origin={kind:'library',id:added.state.libraries[0].id};
+  const session={id,position:42.5,origin,queue:[id,id,id],origins:[origin,{kind:'all'},origin],ordered:[id,id,id],cursor:1,shuffle:true,repeat:0};
+  await invoke('save-playback',session);invoke=await launch(data,music);assert.deepEqual(JSON.parse(JSON.stringify((await invoke('load')).playbackSession)),session);
+  await invoke('save-playback',{...session,cursor:9});assert.equal((await invoke('load')).playbackSession.cursor,1);
+  const empty={id:null,position:0,origin:null,queue:[],origins:[],ordered:[],cursor:-1,shuffle:false,repeat:1};await invoke('save-playback',empty);invoke=await launch(data,music);assert.deepEqual(JSON.parse(JSON.stringify((await invoke('load')).playbackSession)),empty);
+ }finally{await rm(dir,{recursive:true,force:true});}
+});
+
+test('application quit captures the renderer session before closing playback resources',async()=>{
+ const dir=await realpath(await mkdtemp(path.join(tmpdir(),'localtone-quit-session-')));let captured=false;
+ try{const music=path.join(dir,'music'),data=path.join(dir,'data');await mkdir(music);await copyFile(new URL('./fixtures/tone.mp3',import.meta.url),path.join(music,'tone.mp3'));
+  let session;const invoke=await launch(data,music,{onSend(name,send){if(name==='prepare-quit')setTimeout(()=>{send('save-playback',session);captured=true;send('session-saved');},20);}});const added=await invoke('add-library','Music'),id=added.state.tracks[0].id;session={id,position:23,origin:{kind:'all'},queue:[id,id],origins:[{kind:'all'},{kind:'all'}],ordered:[id,id],cursor:1,shuffle:false,repeat:1};
+  await invoke('ui-ready');await invoke.shutdown();assert.equal(captured,true);assert.deepEqual(JSON.parse(await readFile(path.join(data,'playback-session.json'),'utf8')),session);
+ }finally{await rm(dir,{recursive:true,force:true});}
 });

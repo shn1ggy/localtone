@@ -37,3 +37,8 @@ test('Windows endpoint correction is bounded when an odd logical size cannot be 
  const win={getBounds:()=>({...bounds}),setBounds:patch=>{calls++;bounds={...bounds,...patch};bounds.width=Math.round(bounds.width/2)*2;}};
  queue.setStableBounds(win,{...bounds,width:1213});assert.ok(calls<=3);assert.ok(Math.abs(bounds.width-1213)<=1);
 });
+
+test('Windows width-only queue resizing corrects coupled height drift while open',async()=>{
+ let bounds={x:20,y:40,width:1200,height:800};const original={...bounds},win={getBounds:()=>({...bounds}),setBounds:patch=>{bounds={...bounds,...patch};if(patch.width!==undefined)bounds.height+=3;},isMaximized:()=>false},screen={getDisplayMatching:()=>({workArea:{x:0,y:0,width:3000,height:2000}})},controller=queue.createQueueWindow();
+ for(let i=0;i<10;i++){await controller.open(win,screen,224,target=>queue.setStableBounds(win,target));assert.deepEqual(bounds,{...original,width:1424});await controller.close(win,target=>queue.setStableBounds(win,target));assert.deepEqual(bounds,original);}
+});

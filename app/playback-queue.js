@@ -159,6 +159,18 @@ export function createPlaybackQueue({ random = Math.random } = {}) {
         cursor: state.cursor,
       };
     },
+    restoreSession(target, hasTrack) {
+      const keep = target.queue.map((id) => hasTrack(id));
+      const cursor = keep[target.cursor]
+        ? keep.slice(0, target.cursor + 1).filter(Boolean).length - 1
+        : -1;
+      commit(
+        target.queue.filter((_, i) => keep[i]),
+        target.origins.filter((_, i) => keep[i]),
+        target.ordered.filter(hasTrack),
+        cursor,
+      );
+    },
     restoreEdit(target, hasTrack) {
       const playing = state.queue[state.cursor],
         origin = state.origins[state.cursor];

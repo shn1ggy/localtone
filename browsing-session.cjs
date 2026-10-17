@@ -39,8 +39,8 @@ function validateSession(value) {
   )
     throw Error('Invalid browsing state.');
   const scroll = {};
-  for (const name of ['content', 'artists', 'playlists', 'queue']) {
-    const top = value.scroll?.[name];
+  for (const name of ['content', 'artists', 'playlists', 'libraries', 'queue']) {
+    const top = value.scroll?.[name] ?? (name === 'libraries' ? 0 : undefined);
     if (!Number.isFinite(top) || top < 0 || top > 1e9) throw Error('Invalid session scroll.');
     scroll[name] = top;
   }
@@ -70,6 +70,17 @@ function validateSession(value) {
       ]),
     ),
     queueOpen: value.queueOpen === true,
+    mini: value.mini === true,
+    deselected: {
+      artists: text(value.deselected?.artists) ? value.deselected.artists : null,
+      tracks:
+        value.deselected?.tracks &&
+        (text(value.deselected.tracks.id) || text(value.deselected.tracks.key))
+          ? text(value.deselected.tracks.id)
+            ? { id: value.deselected.tracks.id }
+            : { key: value.deselected.tracks.key }
+          : null,
+    },
   };
   if (value.scope.kind !== 'all' && !text(value.scope.id))
     throw Error('Invalid session collection.');
@@ -99,4 +110,41 @@ function validateSession(value) {
   }
   return clean;
 }
-module.exports = { validateSession };
+function validatePlaybackSession(value) {
+  if (!value || !Number.isFinite(value.position) || value.position < 0)
+    throw Error('Invalid playback position.');
+  const id = (v) => typeof v === 'string' && v.length > 0 && v.length <= 32768;
+  const origin = (v) =>
+    v && ['all', 'library', 'playlist'].includes(v.kind) && (v.kind === 'all' || id(v.id))
+      ? { kind: v.kind, ...(v.kind !== 'all' ? { id: v.id } : {}) }
+      : null;
+  const clean = {
+    id: id(value.id) ? value.id : null,
+    position: value.position,
+    origin: origin(value.origin),
+  };
+  if (value.queue !== undefined) {
+    if (
+      ![value.queue, value.ordered].every(
+        (a) => Array.isArray(a) && a.length <= 100000 && a.every(id),
+      ) ||
+      !Array.isArray(value.origins) ||
+      value.origins.length !== value.queue.length ||
+      !Number.isInteger(value.cursor) ||
+      value.cursor < -1 ||
+      value.cursor >= value.queue.length ||
+      (value.cursor >= 0 ? value.queue[value.cursor] !== clean.id : clean.id !== null)
+    )
+      throw Error('Invalid playback queue.');
+    Object.assign(clean, {
+      queue: [...value.queue],
+      origins: value.origins.map(origin),
+      ordered: [...value.ordered],
+      cursor: value.cursor,
+    });
+    if (typeof value.shuffle === 'boolean') clean.shuffle = value.shuffle;
+    if ([0, 1, 2].includes(value.repeat)) clean.repeat = value.repeat;
+  } else if (!clean.id) throw Error('Invalid playback track.');
+  return clean;
+}
+module.exports = { validateSession, validatePlaybackSession };

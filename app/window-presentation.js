@@ -221,7 +221,7 @@ export function createWindowPresentation({
 
   let queueWindowJobs = Promise.resolve();
   let queueRequested = false;
-  function setQueueVisible(show) {
+  function setQueueVisible(show, { animate = true } = {}) {
     if (show && document.body.classList.contains('mini-player')) return Promise.resolve();
     queueRequested = show;
     const wasExtended = document.body.classList.contains('queue-extended');
@@ -247,7 +247,7 @@ export function createWindowPresentation({
           freezeLayout(viewport.width + (extend && !wasDocked ? queueWidth : 0), viewport.height);
           document.body.classList.add('queue-extended');
           $('queue-panel').hidden = false;
-          if (extend && !wasDocked && queueRevealEnabled())
+          if (animate && extend && !wasDocked && queueRevealEnabled())
             $('queue-panel').style.clipPath = 'inset(0 100% 0 0)';
           alignQueueClose();
           await paintFrame();
@@ -256,9 +256,9 @@ export function createWindowPresentation({
             $('queue-panel').hidden = !wasDocked;
           };
           try {
-            if (!extend && wasDocked) await animateQueue(false);
+            if (animate && !extend && wasDocked) await animateQueue(false);
             const result = await api.windowAction?.(extend ? 'queue-open' : 'queue-close', {
-              animate: motionEnabled(),
+              animate: animate && motionEnabled(),
               report: true,
             });
             await waitForViewport(result);
@@ -274,7 +274,7 @@ export function createWindowPresentation({
               }
             }
             alignQueueClose();
-            if (docked && !wasDocked) await animateQueue(true);
+            if (animate && docked && !wasDocked) await animateQueue(true);
             commit = () => {
               document.body.classList.toggle('queue-extended', !!docked && show);
               $('queue-panel').hidden = !show;
