@@ -186,7 +186,8 @@ app.on('browser-window-created', (_event, win) => {
       await js(`window.__playerFrames=[];window.__watchPlayer=true;
         (()=>{const sample=()=>{if(!window.__watchPlayer)return;
           const player=document.querySelector('.sidebar-player'),p=player.getBoundingClientRect();
-          const frame={mini:document.body.classList.contains('mini-player'),transition:document.body.classList.contains('window-transition'),parts:{}};
+          const root=document.documentElement,brand=document.querySelector('.brand');
+          const frame={mini:document.body.classList.contains('mini-player'),transition:document.body.classList.contains('window-transition'),parts:{},playerTransition:document.body.classList.contains('player-transition'),brandVisible:getComputedStyle(brand).visibility,brandOpacity:getComputedStyle(brand).opacity,rootGaps:[innerWidth-root.clientWidth,innerHeight-root.clientHeight],rootScroll:[scrollX,scrollY]};
           for(const selector of ['#now-art','.player-meta','.now-text','.transport-controls']){
             const r=player.querySelector(selector).getBoundingClientRect();
             frame.parts[selector]=[r.x-p.x,r.y-p.y,r.width,r.height];
@@ -233,6 +234,14 @@ app.on('browser-window-created', (_event, win) => {
         frames.some((frame) => frame.transition),
         'Must sample during transitions',
       );
+      for (const frame of frames) {
+        assert.deepEqual(frame.rootGaps, [0, 0], 'No document scrollbar may steal viewport space');
+        assert.deepEqual(frame.rootScroll, [0, 0], 'Only panes may scroll');
+        if (frame.playerTransition) {
+          assert.equal(frame.brandVisible, 'hidden');
+          assert.equal(frame.brandOpacity, '0');
+        }
+      }
       for (const frame of frames)
         for (const [selector, rect] of Object.entries(frame.parts))
           for (let i = 0; i < rect.length; i++)
@@ -252,6 +261,33 @@ app.on('browser-window-created', (_event, win) => {
         for (const key of ['x', 'y', 'width', 'height'])
           assert.ok(Math.abs(before[id][key] - after[id][key]) <= 1, `${id} ${key} shifted`);
       assert.equal(await js("document.body.classList.contains('window-transition')"), false);
+      if (process.platform === 'win32') {
+        const original = win.getBounds();
+        win.setBounds({ ...original, height: win.getMinimumSize()[1] });
+        await delay(100);
+        const minimumBounds = win.getBounds();
+        for (let cycle = 0; cycle < 4; cycle++) {
+          await js("document.getElementById('queue').click()");
+          await settled();
+          assert.equal(
+            win.getBounds().height,
+            minimumBounds.height,
+            'Queue must preserve height at the native minimum',
+          );
+          await js("document.getElementById('queue').click()");
+          await settled();
+          assert.equal(win.getBounds().height, minimumBounds.height);
+          assert.deepEqual(
+            await js(
+              '[innerWidth-document.documentElement.clientWidth,innerHeight-document.documentElement.clientHeight]',
+            ),
+            [0, 0],
+          );
+        }
+        win.setBounds(original);
+        await delay(100);
+        console.log('UI_CHECK queue at minimum height passed');
+      }
       console.log('UI_CHECK native queue and mini passed');
       const music = path.join(temporary, 'Music');
       fs.mkdirSync(music);

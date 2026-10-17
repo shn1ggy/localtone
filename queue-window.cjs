@@ -84,17 +84,36 @@ function setStableBounds(win, target) {
     Object.entries(target).filter(([key, value]) => value !== before[key]),
   );
   if (!Object.keys(requested).length) return;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    win.setBounds(requested);
-    const actual = win.getBounds();
-    // Width changes can also move or resize the Windows frame on another axis.
-    const next = Object.fromEntries(
-      Object.entries(target)
-        .filter(([key, value]) => actual[key] !== value)
-        .map(([key, value]) => [key, (requested[key] ?? value) + value - actual[key]]),
-    );
-    if (!Object.keys(next).length) return;
-    requested = next;
+  const minimum = win.getMinimumSize?.();
+  let relaxed = false;
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      // At minimum height, Windows would clamp a compensating frame correction
+      // before adding its rounding error. Relax only for the endpoint transaction.
+      if (
+        minimum &&
+        win.setMinimumSize &&
+        ((requested.width !== undefined && requested.width < minimum[0]) ||
+          (requested.height !== undefined && requested.height < minimum[1]))
+      ) {
+        win.setMinimumSize(
+          Math.min(minimum[0], requested.width ?? minimum[0]),
+          Math.min(minimum[1], requested.height ?? minimum[1]),
+        );
+        relaxed = true;
+      }
+      win.setBounds(requested);
+      const actual = win.getBounds();
+      const next = Object.fromEntries(
+        Object.entries(target)
+          .filter(([key, value]) => actual[key] !== value)
+          .map(([key, value]) => [key, (requested[key] ?? value) + value - actual[key]]),
+      );
+      if (!Object.keys(next).length) return;
+      requested = next;
+    }
+  } finally {
+    if (relaxed) win.setMinimumSize(...minimum);
   }
 }
 module.exports = { createQueueWindow, createBoundsMemory, setStableBounds };

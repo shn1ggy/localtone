@@ -109,3 +109,16 @@ test('Delete and Backspace explicitly clear mixed tag rows without changing unto
   }finally{editor.dispose();dom.window.close();}
  }
 });
+
+test('tag saves close immediately, report progress and retain visible partial-failure review',async()=>{
+ const {createTagEditor}=await import('../app/tag-editor.js'),html=await readFile(new URL('../app/index.html',import.meta.url),'utf8');
+ for(const failure of [false,true]){
+  const dom=new JSDOM(html),d=dom.window.document,dialog=d.getElementById('tag-dialog');let complete,progress,unsubscribed=false,working=false,reviewError,applied=false,playing={id:'a'};const notices=[];
+  dialog.close=()=>dialog.open=false;
+  const el=(tag,text)=>{const n=d.createElement(tag);if(text)n.textContent=text;return n;};
+  const editor=createTagEditor({document:d,api:{readTagsBatch:async()=>[{id:'a',token:'token',values:{title:'Before'},extras:[]}],writeTagsBatch:()=>new Promise(r=>complete=r),onTagSaveProgress:callback=>{progress=callback;return()=>unsubscribed=true;}},el,tagLabels:{title:'Title'},dialogs:{open:n=>n.open=true},isBusy:()=>working,setAppBusy:value=>working=value,currentTrack:()=>playing,audio:{},applyTagState:()=>applied=true,getTrack:()=>({title:'Edited',artist:'Old artist'}),toast:(message)=>notices.push(message),clearNotice(){},getLeadingZeros:()=>false,releaseTrack:async(_ids,work)=>work(),showSaveError:(message,reveal)=>reviewError={message,reveal}});
+  try{await editor.open([{id:'a'}]);const input=d.getElementById('tag-value-title');input.value='Edited';input.dispatchEvent(new dom.window.Event('input'));const pending=d.getElementById('tag-form').onsubmit({preventDefault(){}});assert.equal(dialog.open,false);assert.equal(editor.saving,true);assert.equal(working,true);progress({phase:'writing',completed:0,total:1});assert.match(notices.at(-1),/Saving tags… 0\/1/);playing={id:'b'};d.getElementById('now-title').textContent='New song';complete({state:{},saved:failure?[]:['a'],failures:failure?[{name:'a.mp3',message:'Read only'}]:[]});await pending;assert.equal(applied,true);assert.equal(working,false);assert.equal(editor.saving,false);assert.equal(d.getElementById('now-title').textContent,'New song');
+   if(failure){assert.match(reviewError.message,/Read only/);assert.equal(dialog.open,false);reviewError.reveal();assert.equal(dialog.open,true);assert.equal(d.getElementById('tag-save').disabled,true);assert.equal(d.getElementById('tag-close').disabled,false);}else{assert.equal(reviewError,undefined);assert.match(notices.at(-1),/Tags saved for 1 file/);}
+  }finally{editor.dispose();assert.equal(unsubscribed,true);dom.window.close();}
+ }
+});

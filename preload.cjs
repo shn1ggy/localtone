@@ -61,6 +61,11 @@ contextBridge.exposeInMainWorld('localtone', {
   musicbrainzRelease: (id) => ipcRenderer.invoke('musicbrainz-release', id),
   formatTrackNumbers: (ids, mode) => ipcRenderer.invoke('format-track-numbers', ids, mode),
   readTagsBatch: (ids) => ipcRenderer.invoke('read-tags-batch', ids),
+  onTagSaveProgress: (callback) => {
+    const listener = (_event, value) => callback(value);
+    ipcRenderer.on('tag-save-progress', listener);
+    return () => ipcRenderer.removeListener('tag-save-progress', listener);
+  },
   writeTagsBatch: (entries, patch, remove) =>
     ipcRenderer.invoke('write-tags-batch', entries, patch, remove),
   readTags: (id) => ipcRenderer.invoke('read-tags', id),

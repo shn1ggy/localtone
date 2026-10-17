@@ -317,3 +317,11 @@ Every normal audio range response owns its own read stream and descriptor. Chrom
 Restore browsing collection, tab, selections/anchors, album expansion, focus, pane scrolls, queue visibility and playback order. Restore the current song and position paused. Preserve duplicate queue entries and origins; never rebuild a saved queue from a filtered collection. Manual queue clicks and unrelated browsing redraws retain queue scroll. Opening the queue or explicit playback reveals may scroll to the active item.
 
 Horizontal queue extension preserves window x/y position and height while open, including at fractional Windows scaling. Verify open geometry as well as round trips. Startup must not wait for directory checks, stale audio-cache deletion or Last.fm credentials; session restoration must not replay queue entrance animation.
+
+## Native transitions and background tag saves
+
+The document itself never scrolls: constrain html/body to the viewport and clip overflow; scroll only the designated panes/dialog bodies. Check document client width/height during native transitions, not only settled window bounds. Fractional-DPI width changes must preserve native height even at the configured minimum; temporarily relax minimum constraints only while applying a compensating frame correction, then restore them.
+
+Before mini-mode native resizing, suppress all non-player chrome at the compositor level and allow two animation frames for that change to paint. One requestAnimationFrame callback precedes paint and is insufficient. Preserve a short timeout fallback for throttled Windows surfaces; do not use screenshots or replay old interface textures. Keep the suppression until the new viewport and player layout are ready.
+
+After tag-save validation/confirmation, close the editor immediately and show compact background progress through the shared notice. Keep browsing/playback available; serialize conflicting file mutations and wait for writes before exit. Retain undo and all existing write verification. Errors remain visible with a Review action; partial failures cannot silently retry stale tokens. A background completion must not replace the now-playing title if the user has changed tracks.

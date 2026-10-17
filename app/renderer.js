@@ -2013,6 +2013,12 @@ const tagEditor = createTagEditor({
   getLeadingZeros: () => prefs.lookupLeadingZeros,
   saveLeadingZeros: (value) => updateSettings({ lookupLeadingZeros: value }),
   albumKey,
+  showSaveError: (message, reveal) => {
+    toast(message, true);
+    const review = el('button', 'Review…', 'chip');
+    review.onclick = reveal;
+    $('toast').append(document.createTextNode(' '), review);
+  },
   onSaved: (result) => rememberTagEdit(result, result.saved),
   applyTagState: applyFileState,
   getTrack: (id) => trackLookup.get(id),
@@ -3042,6 +3048,7 @@ async function withReleasedTrack(id, work) {
   const position = audio.currentTime,
     wasPlaying = !audio.paused;
   if (active) {
+    pendingPlaybackPosition = position;
     audio.pause();
     audio.removeAttribute('src');
     audio.load();
@@ -3055,6 +3062,7 @@ async function withReleasedTrack(id, work) {
         'loadedmetadata',
         () => {
           if (generation !== playGeneration) return;
+          pendingPlaybackPosition = null;
           try {
             audio.currentTime = position;
           } catch {}
@@ -5779,7 +5787,10 @@ window.addEventListener('beforeunload', saveBrowsingState);
 api?.onPrepareQuit?.(async () => {
   savePlayback();
   saveBrowsingState();
+  await tagEditor.whenSaved();
   await preferenceWrites;
+  savePlayback();
+  saveBrowsingState();
 });
 
 // Quiet directory reconciliation after returning from Explorer/Finder, and while open.

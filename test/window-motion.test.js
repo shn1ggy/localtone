@@ -42,3 +42,10 @@ test('Windows width-only queue resizing corrects coupled height drift while open
  let bounds={x:20,y:40,width:1200,height:800};const original={...bounds},win={getBounds:()=>({...bounds}),setBounds:patch=>{bounds={...bounds,...patch};if(patch.width!==undefined)bounds.height+=3;},isMaximized:()=>false},screen={getDisplayMatching:()=>({workArea:{x:0,y:0,width:3000,height:2000}})},controller=queue.createQueueWindow();
  for(let i=0;i<10;i++){await controller.open(win,screen,224,target=>queue.setStableBounds(win,target));assert.deepEqual(bounds,{...original,width:1424});await controller.close(win,target=>queue.setStableBounds(win,target));assert.deepEqual(bounds,original);}
 });
+
+test('Windows frame-height correction works at minimum height and restores constraints',()=>{
+ let bounds={x:20,y:40,width:1200,height:800},minimum=[1200,800];const changes=[],original={...bounds};
+ const win={getBounds:()=>({...bounds}),getMinimumSize:()=>[...minimum],setMinimumSize:(...v)=>{minimum=v;changes.push(v);},setBounds:patch=>{bounds={...bounds,...patch};bounds.width=Math.max(bounds.width,minimum[0]);bounds.height=Math.max(bounds.height,minimum[1]);if(patch.width!==undefined||patch.height!==undefined)bounds.height+=3;}};
+ for(let i=0;i<5;i++){queue.setStableBounds(win,{...original,width:1424});assert.deepEqual(bounds,{...original,width:1424});assert.deepEqual(minimum,[1200,800]);queue.setStableBounds(win,original);assert.deepEqual(bounds,original);assert.deepEqual(minimum,[1200,800]);}
+ assert.ok(changes.some(([,h])=>h<800));
+});

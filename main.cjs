@@ -1106,6 +1106,16 @@ app.whenReady().then(async () => {
     }
     const targets = tagTracks(entries.map((e) => e.id)),
       entriesById = new Map(entries.map((e) => [e.id, e]));
+    let completed = 0,
+      lastProgress = 0;
+    const progress = (phase, force = false) => {
+      if (force || Date.now() - lastProgress >= 80) {
+        lastProgress = Date.now();
+        if (win && !win.isDestroyed())
+          win.webContents.send('tag-save-progress', { phase, completed, total: targets.length });
+      }
+    };
+    progress('checking', true);
     // Validate all files and edits before writing any. Recheck tokens again at commit.
     await tagEditor.mapTagFiles(targets, async (track) => {
       const entry = entriesById.get(track.id);
@@ -1115,7 +1125,11 @@ app.whenReady().then(async () => {
         remove: remove.filter((k) => (entry.extraKeys || []).includes(k)),
         token: entry.token,
       });
+      completed++;
+      progress('checking');
     });
+    completed = 0;
+    progress('writing', true);
     const saved = [],
       failures = [],
       libraries = new Set(),
@@ -1136,6 +1150,9 @@ app.whenReady().then(async () => {
         return {
           failure: { id: track.id, name: path.basename(track.path), message: error.message },
         };
+      } finally {
+        completed++;
+        progress('writing', completed === targets.length);
       }
     });
     for (const outcome of outcomes) {

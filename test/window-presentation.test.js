@@ -47,3 +47,10 @@ test('fractional CSS viewport is frozen without rounding to innerWidth at 130% s
  const presentation=createWindowPresentation({window:w,document:d,api:{platform:'win32',windowAction:async(action)=>{widths.push(d.documentElement.style.getPropertyValue('--motion-width'));viewport.width=action==='queue-open'?1424.609375:1200.765625;return {value:action==='queue-open'};}},getPreferences:()=>({queuePresentation:'extend'}),syncPaneBounds(){},toast(message){throw Error(message);}});
  try{await presentation.setQueueVisible(true);assert.equal(presentation.queueWidth,223.84375);assert.equal(d.documentElement.style.getPropertyValue('--queue-width'),'223.84375px');assert.equal(d.documentElement.style.getPropertyValue('--motion-height'),'760.765625px');await presentation.setQueueVisible(false);assert.equal(widths[0],'1424.765625px');assert.equal(widths[1],'1424.609375px');}finally{presentation.dispose();w.close();}
 });
+
+test('Windows mini resize waits for two committed frames with chrome suppression already active',async()=>{
+ const dom=new JSDOM('<body><div class="shell"><div class="sidebar"><div class="sidebar-player"></div></div></div><button id="queue"></button><section id="queue-panel" hidden><button id="close-queue"></button><div id="queue-list"></div></section></body>'),w=dom.window,d=w.document;let frames=0,nativeFrame=0;
+ w.requestAnimationFrame=callback=>w.setTimeout(()=>{frames++;callback();},0);d.querySelector('.sidebar').getBoundingClientRect=()=>({width:242});d.querySelector('.sidebar-player').getBoundingClientRect=()=>({height:360});
+ const presentation=createWindowPresentation({window:w,document:d,api:{platform:'win32',windowAction:async action=>{assert.equal(action,'mini');assert.ok(d.body.classList.contains('player-transition'));assert.ok(frames>=2);nativeFrame=frames;return {value:true};}},getPreferences:()=>({}),syncPaneBounds(){},toast(message){throw Error(message);}});
+ try{await presentation.toggleMini();assert.ok(frames>=nativeFrame+2);assert.equal(d.body.classList.contains('mini-player'),true);assert.equal(d.body.classList.contains('player-transition'),false);}finally{presentation.dispose();w.close();}
+});

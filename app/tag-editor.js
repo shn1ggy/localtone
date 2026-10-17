@@ -13,6 +13,7 @@ export function createTagEditor({
   getTrack,
   toast,
   clearNotice,
+  showSaveError = (message) => toast(message, true),
   albumKey,
   getLeadingZeros,
   saveLeadingZeros,
@@ -37,7 +38,13 @@ export function createTagEditor({
   let editingTag = null,
     tagSaving = false,
     disposed = false,
-    openRevision = 0;
+    openRevision = 0,
+    saveJob = Promise.resolve();
+  const removeProgress = api.onTagSaveProgress?.((value) => {
+    if (disposed || !tagSaving) return;
+    const label = value.phase === 'checking' ? 'Preparing tags' : 'Saving tags';
+    toast(`${label}… ${value.completed}/${value.total}`, true);
+  });
   const changed = () => {
     if (editingTag) editingTag.confirmed = false;
     $('tag-save').textContent = 'Save';
@@ -108,7 +115,7 @@ export function createTagEditor({
               ? 'This tag will be removed from all selected files.'
               : '',
           );
-          editingTag.confirmed = false;
+          if (editingTag) editingTag.confirmed = false;
           $('tag-save').textContent = 'Save';
           $('tag-error').hidden = true;
         };
@@ -154,7 +161,7 @@ export function createTagEditor({
     if (tagSaving) event.preventDefault();
   };
   $('tag-dialog').addEventListener('cancel', cancel);
-  $('tag-form').onsubmit = async (event) => {
+  const saveTags = async (event) => {
     event.preventDefault();
     if (tagSaving || isBusy() || !editingTag) return;
     const target = editingTag,
@@ -182,6 +189,10 @@ export function createTagEditor({
     $('tag-form')
       .querySelectorAll('input,select,button')
       .forEach((input) => (input.disabled = true));
+    $('tag-dialog').close();
+    toast('Preparing tags…', true);
+    let saveError = null,
+      savedCount = 0;
     const activeId = currentTrack()?.id,
       active = planned.some((e) => e.id === activeId);
     if (active && !releaseTrack) {
@@ -218,30 +229,15 @@ export function createTagEditor({
       if (disposed) return;
       onSaved(result);
 
+      savedCount = result.saved?.length ?? planned.length;
       if (result.failures?.length) {
-        $('tag-error').textContent =
-          `${result.saved.length} files saved. ${result.failures.map((f) => `${f.name}: ${f.message}`).join(' ')} Close and reopen the editor before retrying.`;
+        saveError = `${savedCount} files saved. ${result.failures.map((f) => `${f.name || 'Save'}: ${f.message}`).join(' ')} Close and reopen the editor before retrying failed files.`;
+        $('tag-error').textContent = saveError;
         $('tag-error').hidden = false;
         editingTag = null;
-      } else {
-        $('tag-dialog').close();
-        // Let the dialog disappear before a large library view is rebuilt.
-        const view = document.defaultView,
-          frame = view?.requestAnimationFrame;
-        if (frame && document.visibilityState !== 'hidden')
-          await new Promise((resolve) => {
-            // A minimized/background window may stop animation frames mid-save.
-            const timer = view.setTimeout(resolve, 50);
-            frame.call(view, () =>
-              frame.call(view, () => {
-                view.clearTimeout(timer);
-                resolve();
-              }),
-            );
-          });
       }
       applyTagState(result.state);
-      if (active) {
+      if (active && currentTrack()?.id === activeId) {
         $('now-title').textContent = getTrack(activeId)?.title || '';
         $('now-artist').textContent = getTrack(activeId)?.artist || '';
       }
@@ -252,6 +248,7 @@ export function createTagEditor({
         '',
       );
       $('tag-error').hidden = false;
+      saveError = $('tag-error').textContent;
     } finally {
       if (disposed) {
         tagSaving = false;
@@ -268,19 +265,36 @@ export function createTagEditor({
       setAppBusy(false);
       $('tag-form')
         .querySelectorAll('input,select,button')
-        .forEach((input) => (input.disabled = false));
-      review?.refresh();
+        .forEach(
+          (input) =>
+            (input.disabled = !editingTag && !['tag-close', 'tag-cancel'].includes(input.id)),
+        );
+      $('tag-close').disabled = $('tag-cancel').disabled = false;
+      if ($('tag-dialog').open) review?.refresh();
       $('tag-save').disabled = !editingTag;
+      if (saveError) showSaveError(saveError, () => dialogs.open($('tag-dialog')));
+      else toast(`Tags saved for ${savedCount} ${savedCount === 1 ? 'file' : 'files'}.`);
     }
+  };
+
+  $('tag-form').onsubmit = (event) => {
+    if (tagSaving) {
+      event.preventDefault();
+      return saveJob;
+    }
+    saveJob = saveTags(event);
+    return saveJob;
   };
 
   return {
     open: openTagEditor,
+    whenSaved: () => saveJob,
     get saving() {
       return tagSaving;
     },
     dispose() {
       review?.dispose();
+      removeProgress?.();
       for (const [id] of sections) $(id)?.removeEventListener('toggle', sectionChanged);
       disposed = true;
       openRevision++;

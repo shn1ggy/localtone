@@ -88,7 +88,7 @@ export function createWindowPresentation({
     if (!$('queue-panel').hidden) alignQueueClose();
   };
   window.addEventListener('resize', onResize);
-  function paintFrame() {
+  function paintFrame({ committed = false } = {}) {
     return new Promise((resolve) => {
       if (typeof window.requestAnimationFrame !== 'function') {
         resolve();
@@ -102,9 +102,9 @@ export function createWindowPresentation({
       };
       // A partially offscreen/native-resizing Windows surface can throttle Chromium frames.
       // Give it one paint opportunity, without letting that throttle block window restoration.
-      if (fastNativeResize) timer = window.setTimeout(finish, 32);
+      if (fastNativeResize) timer = window.setTimeout(finish, committed ? 64 : 32);
       frame = window.requestAnimationFrame(() => {
-        if (fastNativeResize) finish();
+        if (fastNativeResize && !committed) finish();
         else frame = window.requestAnimationFrame(finish);
       });
     });
@@ -153,7 +153,7 @@ export function createWindowPresentation({
     if (player) document.body.classList.add('player-transition');
   }
   async function finishLayout(commit = () => {}) {
-    await paintFrame();
+    await paintFrame({ committed: document.body.classList.contains('player-transition') });
     commit();
     const mini = document.body.classList.contains('mini-player');
     const base = queueBaseLayout || normalLayout;
@@ -193,7 +193,9 @@ export function createWindowPresentation({
       const layout = normalLayout || layoutSize();
       freezeLayout(layout.width, layout.height, { player: true });
       document.body.classList.remove('mini-player');
-      await paintFrame();
+      // A single rAF runs before paint. Commit the chrome suppression before
+      // Windows resizes/crops the existing compositor surface.
+      await paintFrame({ committed: true });
       const result = await api.windowAction('mini', size);
       await waitForViewport(result);
       const active = motionValue(result);
