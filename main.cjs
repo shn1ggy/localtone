@@ -1705,6 +1705,14 @@ app.whenReady().then(async () => {
     },
   });
   if (browsingSession?.window?.maximized) win.maximize();
+  // Route the title-bar close through the same session/pending-preferences drain
+  // as Ctrl/Cmd+Q, while the renderer is still alive to capture its state.
+  win.on?.('close', (event) => {
+    if (!quitting) {
+      event.preventDefault();
+      app.quit();
+    }
+  });
   // Keep Windows frame styles unchanged: toggling resizable changes its native border geometry.
   win.on?.('will-resize', (event) => {
     if (miniMode && !motionActive) event.preventDefault();
