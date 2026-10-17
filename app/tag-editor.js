@@ -64,10 +64,13 @@ export function createTagEditor({
     : null;
   async function openTagEditor(tracks) {
     if (disposed || !tracks.length) return;
-    if (isBusy()) {
+    if (tagSaving || isBusy()) {
       toast('Wait for the current operation.');
       return;
     }
+    $('tag-form')
+      .querySelectorAll('input,select,button')
+      .forEach((input) => (input.disabled = false));
     for (const [id, key] of sections) if ($(id)) $(id).open = getSections()[key] !== false;
     const revision = ++openRevision;
     editingTag = null;
