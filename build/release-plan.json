@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "0.127.0",
-  "commit": "d05b3c80245747dd290aeaf55a349861a8a50619",
-  "buildRun": 38323305861,
-  "tag": "v0.127.0",
+  "version": "0.131.0",
+  "commit": "f942cd0efc2cf2967cedb812d4e1022162fba375",
+  "buildRun": 38991786728,
+  "tag": "v0.131.0",
   "attempt": 1,
-  "title": "Localtone 0.127.0 \u2014 Library settings and Windows window fixes"
+  "title": "Localtone 0.131.0 — Playback, Windows and session reliability"
 }
