@@ -1,6 +1,6 @@
 # Contributing to Localtone
 
-Localtone is preparing for an open-source early-access release. The public license and repository location still need to be chosen; see LICENSING.md. Do not infer reuse rights from a source download.
+Localtone is a public, early-access project at https://github.com/shn1ggy/localtone. Localtone-owned code and original assets are licensed under GPL-3.0-or-later; see LICENSE and LICENSING.md. Third-party components retain their own applicable licenses.
 
 Use Node 24 LTS (24.15+, tested with .nvmrc), run `npm ci`, then `npm start`. Use an isolated folder and disposable copies of music for development: ratings and tag/naming operations modify real files. Never commit Localtone-data, settings exports, credentials, signing files or copyrighted music.
 
