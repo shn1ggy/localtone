@@ -4,7 +4,7 @@ Localtone 0.131.0 is an early-access release. The public GitHub repository, GPL-
 
 Remaining priorities are broader independent hardware/audio testing, signing/notarization, accessibility and newcomer testing, clearer public documentation, and playlist interoperability. Passing automated checks does not establish every device, Linux desktop or screen-reader workflow. No broad stable-release claim is made.
 
-**Historical audit follows.** The older statements below about choosing a license, creating a repository, unpublished downloads and old shortcuts describe earlier development states. Use the current README, release notes and this status section for the present release; the older audit remains background for the roadmap.
+**Historical audit follows.** The older statements below about choosing a license, creating a repository, unpublished downloads and old shortcuts describe earlier development states. Use the current README, release notes and this status section for the present release; the older audit remains background. The current priorities are in [ROADMAP.md](ROADMAP.md).
 
 ---
 
