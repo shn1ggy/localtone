@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "0.132.0",
-  "commit": "277c0456b056595a4084b178f7395b021566a54c",
-  "buildRun": 39081013520,
-  "tag": "v0.132.0",
+  "version": "1.0.0",
+  "commit": "59a60dc3403e9b530e12afb9a36b3a8e7319418a",
+  "buildRun": 39146438643,
+  "tag": "v1.0.0",
   "attempt": 1,
-  "title": "Localtone 0.132.0 — Library performance and Windows mini player"
+  "title": "Localtone 1.0.0 — First stable release"
 }
