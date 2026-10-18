@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {mkdtemp,mkdir,writeFile,readFile,rm,symlink} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {cleanUnusedCache} from '../cache-cleanup.cjs';
-import {waveformCacheKey} from '../waveform.cjs';
+import {cleanUnusedCache} from '../src/cache-cleanup.cjs';
+import {waveformCacheKey} from '../src/waveform.cjs';
 test('cache cleanup removes only obsolete cache files and protects current data and symlinks',async()=>{
  const dir=await mkdtemp(path.join(tmpdir(),'localtone-cache-'));
  try{

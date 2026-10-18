@@ -1,4 +1,4 @@
-const defaults = structuredClone(require('./app/design-defaults.js').designDefaults.columns);
+const defaults = structuredClone(require('../app/design-defaults.js').designDefaults.columns);
 function validateColumns(value) {
   if (
     !Array.isArray(value) ||

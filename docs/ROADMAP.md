@@ -1,8 +1,8 @@
 # Localtone roadmap
 
-[← Project home](README.md)
+[← Project home](../README.md)
 
-Localtone focuses on local music collections, compact browsing and keyboard control. It is in early access. This is a direction, not a release schedule; feedback and reliability take priority over feature count.
+Localtone focuses on local music collections, compact browsing and keyboard control. Version 1.0.0 is the first stable release. This is a direction, not a release schedule; feedback and reliability take priority over feature count.
 
 ## Now — confidence for more listeners
 
@@ -11,7 +11,7 @@ Localtone focuses on local music collections, compact browsing and keyboard cont
 - Keep the README, screenshots, user guide and release notes current.
 - Collect reproducible reports for different grouping, sorting, multi-disc and compilation workflows.
 
-Automated coverage already runs across all three operating systems, including Windows window checks at several display scales. That does not establish sound quality, universal hardware compatibility or screen-reader accessibility. See [release readiness](RELEASE-READINESS.md) for the technical record.
+Automated coverage already runs across all three operating systems, including Windows window checks at several display scales. That does not establish sound quality, universal hardware compatibility or screen-reader accessibility. See [release readiness](development/RELEASE-READINESS.md) for the technical record.
 
 ## Next — installation and usability
 
@@ -26,7 +26,7 @@ Automated coverage already runs across all three operating systems, including Wi
 - **ReplayGain:** read existing gain tags, clear playback controls and headroom/clipping behavior; verify on real audio outputs.
 - Further large-library performance work guided by measurements and representative collections.
 
-Streaming integrations, a plugin platform and a stable 1.0 release are not currently promised. They should not weaken the local-library experience.
+Streaming integrations and a plugin platform are not currently promised. They should not weaken the local-library experience.
 
 ## Suggest something
 

@@ -6,7 +6,7 @@ on:
     branches: [main, 'test/**']
     paths:
       - 'package.json'
-      - 'online-updates.cjs'
+      - 'src/online-updates.cjs'
       - 'build/**'
       - '.github/workflows/build-preview.yml' 
 permissions:

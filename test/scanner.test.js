@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
-function scan(data) { return new Promise((resolve,reject) => { const w = new Worker(new URL('../scanner.mjs', import.meta.url), {workerData:data}); w.on('message', m => { if (m.tracks || m.error) resolve(m); }); w.on('error',reject); }); }
+function scan(data) { return new Promise((resolve,reject) => { const w = new Worker(new URL('../src/scanner.mjs', import.meta.url), {workerData:data}); w.on('message', m => { if (m.tracks || m.error) resolve(m); }); w.on('error',reject); }); }
 test('scanner reads real WAV, reuses stable IDs and reports inaccessible roots', async () => {
  const temp = await mkdtemp(path.join(tmpdir(),'localtone-test-'));
  try {

@@ -1,3 +1,18 @@
+# 1.0.0
+
+- Play queue: Shift+Enter opens a song menu you can navigate with the arrow keys; Left/Right now reach the open queue from the neighbouring panes (Tab still never enters it); the queue no longer jumps on every track change and only scrolls once the playing song leaves the view.
+- All panes share one theme-aware scrollbar colour that follows the background brightness setting.
+- Faster browsing with large libraries: the Albums view opens, switches and searches in under half a second instead of 15–20 s at 50,000 tracks; Covers view loads artwork only near the viewport; folder sorting, sidebar totals and track starts no longer rescan the whole collection.
+- Settings and ratings save to a small `collection-state.json` instead of rewriting the full collection file; read-only actions no longer copy the whole collection first.
+- Library scans read four files at a time with unchanged results; very large folders no longer overflow the stack.
+- The mini player is a separate, always-drawn window on Windows, macOS and Linux: M switches instantly without resizing or redrawing the main window, keeps the play queue as it was, and the full window follows the mini player when it is moved.
+- Play queue: single click selects, double click or Enter plays; Shift/Ctrl-click and Shift+arrows select ranges; Delete/Backspace removes selected songs (undoable). New Focus play queue shortcut (Shift+P) with the pane highlight; Left/Right/Tab leave the queue.
+- Creating playlists, changing settings or maximizing no longer fails with “Localtone is updating your music…” while the background library refresh runs; such requests now wait their turn.
+- Repository reorganized: main-process code in `src/`, developer scripts in `scripts/`, design and maintenance notes in `docs/development/`, earlier release notes in `docs/release-notes/`.
+- First-launch buttons, sort menu and toolbar chips share the main-window 12px text and 5px corners; dialog labels and primary buttons follow the shared dialog styles; empty artist-pane messages align with artist names.
+- Remove 547 stylesheet declarations that could never apply (computed styles verified identical across 16 screens).
+- Startup timeline in `logs/startup.json`; window-transition diagnostics in source runs.
+
 # 0.132.0
 
 - Faster browsing with large libraries: the Albums view opens, switches and searches in under half a second instead of 15–20 s at 50,000 tracks; Covers view loads artwork only near the viewport; folder sorting, sidebar totals and track starts no longer rescan the whole collection.
@@ -17,7 +32,7 @@
 - Save confirmed tag edits in the background after closing the editor, with progress, persistent error review and unchanged undo/write verification.
 - Preserve settings and music. 384 tests pass across the three operating systems; native Windows UI checks cover 100%, 125% and 130% display scaling.
 
-See [release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.132.0) for downloads and update instructions.
+See [release notes](https://github.com/shn1ggy/localtone/releases/tag/v1.0.0) for downloads and update instructions.
 
 ## 0.114.0
 

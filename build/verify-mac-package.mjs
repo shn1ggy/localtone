@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { inspectRelease } = require('../release.cjs');
+const { inspectRelease } = require('../src/release.cjs');
 if (process.platform !== 'darwin') throw Error('Mac package verification requires macOS.');
 const version = require('../package.json').version;
 const archive = path.resolve(`dist/Localtone-${version}-mac-${process.arch}.zip`);

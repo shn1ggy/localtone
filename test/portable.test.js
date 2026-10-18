@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import portable from '../portable.cjs';
+import portable from '../src/portable.cjs';
 test('portable roots follow the installed program on each platform, outside bundles and mounts',()=>{
  const base={packaged:true,source:'/source',env:{}};
  assert.equal(portable.portableRoot({...base,platform:'darwin',exe:'/Apps/Localtone.app/Contents/MacOS/Localtone'}),'/Apps');

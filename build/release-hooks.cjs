@@ -1,6 +1,6 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { createManifest, digest } = require('../release.cjs');
+const { createManifest, digest } = require('../src/release.cjs');
 const { writePackageAudit } = require('./package-audit.cjs');
 
 exports.afterPack = async (context) => {

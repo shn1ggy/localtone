@@ -162,8 +162,15 @@
                   ></div> </div></section></div></main
           ><aside id="queue-panel" hidden
             ><div class="section-label"
-              >PLAY QUEUE<button id="close-queue" aria-label="Close queue">×</button></div
-            ><div id="queue-list"></div></aside></div
+              >PLAY QUEUE<button id="close-queue" aria-label="Close queue" tabindex="-1"
+                >×</button
+              ></div
+            ><div
+              id="queue-list"
+              role="listbox"
+              aria-label="Play queue"
+              aria-multiselectable="true"
+            ></div></aside></div
         ><footer class="waveform-dock"
           ><div
             id="seek-height-resize"

@@ -4,7 +4,7 @@ import {createRequire} from 'node:module';
 import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
 import path from 'node:path';
 import {tmpdir} from 'node:os';
-const {createDuplicates}=createRequire(import.meta.url)('../duplicates.cjs');
+const {createDuplicates}=createRequire(import.meta.url)('../src/duplicates.cjs');
 test('duplicate review hashes only size candidates and separates exact from possible recordings',async()=>{
  const dir=await mkdtemp(path.join(tmpdir(),'localtone-duplicates-'));
  try{

@@ -4,3 +4,7 @@
 *.png binary
 *.ico binary
 *.icns binary
+*.cmd text eol=crlf
+*.jpg binary
+*.webp binary
+*.gif binary

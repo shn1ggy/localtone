@@ -1,6 +1,6 @@
 const columns = require('./columns.cjs');
 const { validateReplacements } = require('./file-naming.cjs');
-const { designDefaults } = require('./app/design-defaults.js');
+const { designDefaults } = require('../app/design-defaults.js');
 const shortcutDefaults = {
   addPlaylist: 'Plus',
   contextMenu: 'Shift+Enter',
@@ -25,6 +25,7 @@ const shortcutDefaults = {
   random: 'Mod+Shift+ArrowRight',
   play: 'Space',
   queue: 'p',
+  focusQueue: 'Shift+p',
   mini: 'm',
   maximize: 'f',
   quit: 'Mod+q',
@@ -291,6 +292,7 @@ function upgradeShortcuts(bindings) {
     ['resetSort', 'Shift+o'],
     ['newPlaylist', 'Mod+n'],
     ['newLibrary', 'Mod+l'],
+    ['focusQueue', 'Shift+p'],
   ])
     if (!Object.hasOwn(upgraded, action)) {
       const binding = [

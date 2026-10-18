@@ -103,7 +103,7 @@ class LastfmService {
         {
           method: auth ? 'GET' : 'POST',
           headers: {
-            'User-Agent': 'Localtone/' + require('./package.json').version,
+            'User-Agent': 'Localtone/' + require('../package.json').version,
             ...(!auth ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
           },
           ...(auth ? {} : { body: body.toString() }),

@@ -13,6 +13,9 @@ if (
   plan.tag !== 'v' + plan.version
 )
   throw Error('Invalid release plan.');
+// Numeric 0.x releases remain early access; 1.x and later are stable.
+const prerelease = plan.version.startsWith('0.');
+const makeLatest = prerelease ? 'false' : 'true';
 const token = process.env.GH_TOKEN;
 if (!token) throw Error('GitHub job token is required.');
 const base = 'https://api.github.com/repos/' + plan.repository;
@@ -98,8 +101,8 @@ if (!process.argv.includes('--wait')) {
     name: plan.title,
     body,
     draft: true,
-    prerelease: true,
-    make_latest: 'false',
+    prerelease,
+    make_latest: makeLatest,
   };
   if (!release) release = await api(base + '/releases', 'POST', metadata);
   else if (release.draft) release = await api(base + '/releases/' + release.id, 'PATCH', metadata);
@@ -136,10 +139,13 @@ if (!process.argv.includes('--wait')) {
     throw Error('Release assets are incomplete.');
   const published = await api(base + '/releases/' + release.id, 'PATCH', {
     draft: false,
-    prerelease: true,
-    make_latest: 'false',
+    prerelease,
+    make_latest: makeLatest,
   });
-  if (published.draft || !published.prerelease)
+  if (published.draft || published.prerelease !== prerelease)
     throw Error('Unexpected release publication state.');
-  console.log('Published verified early-access release:', published.html_url);
+  console.log(
+    `Published verified ${prerelease ? 'early-access' : 'stable'} release:`,
+    published.html_url,
+  );
 }

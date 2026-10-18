@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-const { createOnlineUpdates, newerVersion, trustedURL } = createRequire(import.meta.url)('../online-updates.cjs');
+const { createOnlineUpdates, newerVersion, trustedURL } = createRequire(import.meta.url)('../src/online-updates.cjs');
 const payload = Buffer.from('A verified desktop archive');
 const sha256 = createHash('sha256').update(payload).digest('hex');
 const url = name => `https://github.com/shn1ggy/localtone/releases/download/v0.112.0/${name}`;

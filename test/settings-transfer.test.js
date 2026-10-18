@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import transfer from '../settings-transfer.cjs';
-import preferences from '../preferences.cjs';
-import queueWindow from '../queue-window.cjs';
+import transfer from '../src/settings-transfer.cjs';
+import preferences from '../src/preferences.cjs';
+import queueWindow from '../src/queue-window.cjs';
 test('settings export round trips preferences without paths, collection or device/storage settings',()=>{const source={...preferences.defaults,backgroundHue:140,queuePresentation:'extend',portable:false,audioOutputId:'device',libraries:[{path:'/private'}],lastfm:'secret'};const result=transfer.exportSettings(source);assert.equal(result.settings.backgroundHue,140);assert.equal(result.settings.queuePresentation,'extend');for(const key of ['portable','audioOutputId','audioOutputName','libraries','lastfm'])assert.equal(Object.hasOwn(result.settings,key),false);assert.deepEqual(transfer.importSettings(JSON.parse(JSON.stringify(result))),result.settings);});
 test('settings imports reject malformed versions, unsafe fields and invalid values',()=>{for(const file of [{format:'other',version:1,settings:{}},{format:'localtone-settings',version:2,settings:{}},{format:'localtone-settings',version:1,settings:{portable:false}},{format:'localtone-settings',version:1,settings:{backgroundHue:999}},{format:'localtone-settings',version:1,settings:{libraries:[]}},{format:'localtone-settings',version:1,settings:{}}])assert.throws(()=>transfer.importSettings(file));});
 test('queue extends right, stays on screen, restores bounds, and falls back when space is unavailable',()=>{let bounds={x:100,y:30,width:1100,height:760},max=false;const original={...bounds},win={getBounds:()=>({...bounds}),setBounds:b=>bounds={...b},isMaximized:()=>max},screen={getDisplayMatching:()=>({workArea:{x:0,y:0,width:1600,height:1000}})},controller=queueWindow.createQueueWindow();assert.equal(controller.open(win,screen),true);assert.equal(bounds.width,1324);assert.equal(bounds.x,100);controller.close(win);assert.deepEqual(bounds,original);bounds.x=500;assert.equal(controller.open(win,screen),false);assert.equal(bounds.x,500);controller.close(win);assert.equal(bounds.x,500);max=true;assert.equal(controller.open(win,screen),false);max=false;bounds.width=1500;assert.equal(controller.open(win,screen),false);});

@@ -1,4 +1,4 @@
-name: Publish verified early access
+name: Publish verified release
 on:
   push:
     branches: [main]

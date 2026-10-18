@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
 import path from 'node:path';
 import {tmpdir} from 'node:os';
-import {WaveformService} from '../waveform.cjs';
+import {WaveformService} from '../src/waveform.cjs';
 import {waveformPath} from '../app/waveform-view.js';
 import {validateDynamic,matchingTracks,playlistTracks} from '../app/core.js';
 test('dynamic rules combine ratings, tags and sources, and reflect later edits',()=>{

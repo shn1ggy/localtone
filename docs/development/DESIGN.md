@@ -273,7 +273,7 @@ On Windows, perform one native bounds update for queue and mini transitions rath
 
 ## Startup actions and stable desktop transitions
 
-Paired first-launch Add library / Import settings buttons have **equal widths and heights**, identical 12px font size, 400 text weight, 18px line height, 10px horizontal padding and 5px radii. Use a shared equal-column grid; do not let label length or primary-action weight change their geometry. Preserve dark text-on-accent for the primary action after Escape/native picker cancellation. Keyboard focus restoration must never add text underlines to buttons, tabs or disclosure labels; use the existing restrained color feedback. These are app styles, not OS styles.
+Paired first-launch Add library / Import settings buttons have **equal widths and heights**, identical 12px font size, 400 text weight, 20px line height, 10px horizontal padding and 5px radii. Use a shared equal-column grid; do not let label length or primary-action weight change their geometry. Preserve dark text-on-accent for the primary action after Escape/native picker cancellation. Keyboard focus restoration must never add text underlines to buttons, tabs or disclosure labels; use the existing restrained color feedback. These are app styles, not OS styles.
 
 Empty artist, album and track messages use the same muted text token, 600 weight, shared font size and a final period. Do not use primary white for one empty pane and muted gray for another.
 
@@ -329,3 +329,16 @@ After tag-save validation/confirmation, close the editor immediately and show co
 ## Main-window control text and corners
 
 Toolbar controls (view tabs, sort select, icon chips) and first-launch actions use the 12px `--font-normal` text and `--radius` (5px) corners; dialogs keep their 13px text. Chips no longer use a separate 4px radius.
+
+## Play queue selection and focus
+
+Queue rows select on single click (Ctrl/Cmd toggles, Shift extends from the anchor) and play on double click or Enter. Selection is held by queue position, so repeated entries stay distinct; any change to the queue's contents clears it. Delete/Backspace removes selected rows except the playing one, as one undoable queue edit, then selects the next row. Rows and the close button are outside the Tab order. The Focus play queue shortcut (default Shift+P) enters the queue, opening it if closed; while the queue is open it also joins the Left/Right pane cycle between the content pane and the sidebar (Right from the content pane, Left from the sidebar). Entry shows the shared pane-focus pulse over the queue panel and the 2px accent underline on its heading. From the queue, Left returns to the content pane, Right to the sidebar, Tab/Shift+Tab to the content pane; Tab never enters it. Shift+Enter, the context-menu key or Shift+F10 open the row menu with keyboard focus on its first item.
+
+On track changes the queue keeps its scroll position while the playing row stays fully visible; once the row leaves the view it is pinned to the top. A listener who scrolled the queue away from the playing song is not pulled back when the next song starts; starting a new list, opening the queue or Shift+P reveals the playing song again.
+
+Every scroll surface uses the shared `--scrollbar-thumb` / `--scrollbar-thumb-hover` tokens, derived from the background hue and brightness; panes do not set their own scrollbar colours.
+
+## Mini player window
+
+On every platform M swaps to a separate, always-rendered mini window that mirrors the player and forwards clicks and keys to the main window; the main window is never resized. Windows owns the mini window from the main window and swaps opacity; macOS swaps opacity with an independent window (child windows would follow parent moves); Linux swaps by showing/hiding, since its window managers ignore opacity. Moving the mini window moves the full window by the same offset, clamped to the work area.
+

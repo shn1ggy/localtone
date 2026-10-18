@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { realpath, mkdtemp, mkdir, copyFile, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-const mainPath=fileURLToPath(new URL('../main.cjs',import.meta.url));
+const mainPath=fileURLToPath(new URL('../src/main.cjs',import.meta.url));
 const source=await readFile(mainPath,'utf8'),require=createRequire(mainPath);
 async function launch(userData,music,dialogs={}) {
  const handlers=new Map(),events=new Map(),opened=[];let quitCount=0;let ready,windowInstance,assetHandler;
@@ -37,7 +37,7 @@ test('legacy pending ratings survive rescans until an explicit rating writes the
   let invoke=await launch(userData,music);const added=await invoke('add-library','Music'),id=added.state.tracks[0].id;
   const dbPath=path.join(userData,'collection.json'),old=JSON.parse(await readFile(dbPath,'utf8'));old.ratings={[id]:4};delete old.ratingStorageVersion;delete old.pendingRatings;await writeFile(dbPath,JSON.stringify(old));
   invoke=await launch(userData,music);const migrated=await invoke('load');assert.equal(migrated.pendingRatings[id],4);await invoke('rescan',added.state.libraries[0].id);assert.equal((await invoke('load')).ratings[id],4);await invoke('rating',id,4);assert.equal((await invoke('load')).pendingRatings[id],undefined);
-  const {default:ratingTags}=await import('../rating-tags.cjs');assert.equal(ratingTags.readRating(await readFile(file)),4);
+  const {default:ratingTags}=await import('../src/rating-tags.cjs');assert.equal(ratingTags.readRating(await readFile(file)),4);
   const fresh=await launch(path.join(dir,'fresh'),music);const imported=await fresh('add-library','Fresh');assert.equal(imported.state.ratings[imported.state.tracks[0].id],4);
  }finally{await rm(dir,{recursive:true,force:true});}
 });

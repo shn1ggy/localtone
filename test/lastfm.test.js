@@ -6,7 +6,7 @@ import path from 'node:path';
 import {createCipheriv,createDecipheriv,createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
 import {ListenTracker} from '../app/listen.js';
-const require=createRequire(import.meta.url),{LastfmService,signature,metadataFor}=require('../lastfm.cjs'),ID3=require('node-id3');
+const require=createRequire(import.meta.url),{LastfmService,signature,metadataFor}=require('../src/lastfm.cjs'),ID3=require('node-id3');
 const key='a'.repeat(32),secret='b'.repeat(32),token='c'.repeat(32);
 const storage={isEncryptionAvailable:()=>true,getSelectedStorageBackend:()=> 'test',encryptString:value=>{const cipher=createCipheriv('aes-256-cbc',Buffer.alloc(32,7),Buffer.alloc(16,8));return Buffer.concat([cipher.update(value),cipher.final()]);},decryptString:bytes=>{const cipher=createDecipheriv('aes-256-cbc',Buffer.alloc(32,7),Buffer.alloc(16,8));return Buffer.concat([cipher.update(bytes),cipher.final()]).toString();}};
 const metadata={artist:'Nine Inch Nails',track:'A song',album:'Album',duration:100};

@@ -4,7 +4,7 @@ import {createRequire} from 'node:module';
 import {mkdtemp,mkdir,writeFile,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-const {format,createFileNaming,relocated}=createRequire(import.meta.url)('../file-naming.cjs');
+const {format,createFileNaming,relocated}=createRequire(import.meta.url)('../src/file-naming.cjs');
 test('naming formulas preserve punctuation, exclude totals and reject unsafe/unknown names',()=>{
  const track={artist:'Artist',albumArtist:'Album artist',album:'Album',year:2009,trackRaw:'07/19',title:'Song',genre:'Ambient',disc:2};assert.equal(format('%year% - %album%',track),'2009 - Album');assert.equal(format('%discnumber%.%tracknumber% - %title%',track),'2.07 - Song');assert.equal(format('%albumartist%, %artist% (%genre%)',track),'Album artist, Artist (Ambient)');assert.equal(format('%title%',{title:'A/B: C?'}),'A_B_ C_');assert.equal(format('%title%',{title:'100% Pure'}),'100% Pure');assert.equal(format('../',track),'.._');assert.throws(()=>format('.',track),/empty|reserved/);assert.throws(()=>format('%unknown%',track),/Unknown field/);assert.throws(()=>format('CON',track),/reserved/);
 });

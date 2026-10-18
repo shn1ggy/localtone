@@ -1,6 +1,6 @@
 # Localtone user guide
 
-[← Project home](../README.md) · [Downloads](https://github.com/shn1ggy/localtone/releases/tag/v0.132.0) · [Report a bug](https://github.com/shn1ggy/localtone/issues/new/choose)
+[← Project home](../README.md) · [Downloads](https://github.com/shn1ggy/localtone/releases/tag/v1.0.0) · [Report a bug](https://github.com/shn1ggy/localtone/issues/new/choose)
 
 ## First run
 
@@ -41,13 +41,20 @@ These are defaults; change them in **Settings → Shortcuts**. Ctrl means Ctrl o
 | Cycle sort / reset to default order | O / Shift+O |
 | Show/hide column headings | Shift+X |
 | Collapse/expand selection / all albums | C / Shift+C |
-| Queue / mini player / maximize | P / M / F |
+| Queue / focus queue | P / Shift+P |
+| Mini player / maximize | M / F |
 | Settings / quit | Ctrl+P / Ctrl+Q |
 | New playlist / library | Ctrl+N / Ctrl+L |
 | Undo / redo | Ctrl+Z / Ctrl+Shift+Z |
 | Open context menu | Shift+Enter |
 
-Tab switches between artist and content panes. Shift+Tab enters the library/playlist pane; arrows move and Enter opens a collection. Left/Right also cycle panes. In the artist/content panes, Up/Down navigate, Shift extends selection, and Ctrl+A selects all in that pane. Enter on an artist focuses its content; Enter on a track plays it. Backspace clears selection while retaining focus and navigation position. Escape clears selection and returns to the preceding pane; in search it cancels the search. Delete removes tracks from a regular playlist; file deletion is a separate confirmed action.
+Tab switches between artist and content panes. Shift+P focuses the open play queue; Left/Right can also enter it. In the queue, arrows and Shift select songs, Enter plays, and Delete/Backspace removes the selection with undo. Shift+Tab enters the library/playlist pane; arrows move and Enter opens a collection. Left/Right also cycle panes. In the artist/content panes, Up/Down navigate, Shift extends selection, and Ctrl+A selects all in that pane. Enter on an artist focuses its content; Enter on a track plays it. Backspace clears selection while retaining focus and navigation position. Escape clears selection and returns to the preceding pane; in search it cancels the search. Delete removes tracks from a regular playlist; file deletion is a separate confirmed action.
+
+In the play queue, a single click selects a song (Ctrl/Cmd+click toggles, Shift+click selects a range) and a double click plays it. Shift+P moves keyboard focus into the queue, opening it if needed, with the same short highlight as the other panes. There, Up/Down move (Shift extends), Enter plays, Delete or Backspace removes the selected songs (the playing song stays; Ctrl+Z restores), Ctrl+A selects all and Escape clears the selection. Shift+Enter opens the song menu, navigable with the arrow keys. Left returns to the content pane, Right to the library/playlist pane and Tab to the content pane. While the queue is open, Left/Right also reach it from the neighbouring panes; Tab never moves into it.
+
+While a song plays, the queue stays put as long as the playing song is visible, and scrolls it to the top once it moves out of view. If you scrolled elsewhere in the queue, it is left where you put it.
+
+M switches to the mini player instantly and back; the play queue keeps its state. If you move the mini player, the full window returns at its new position.
 
 Context menus use Up/Down and Enter. Right enters a playlist submenu; Left returns. Escape closes the innermost menu/help/dialog first. Checkmarked menu options generally remain open so you can change several; single-option logo/column-heading menus close after toggling.
 
@@ -138,6 +145,6 @@ For mixed tag values, focus the row and press Delete or Backspace to clear it fo
 
 ## Privacy and troubleshooting
 
-Optional Last.fm scrobbling, MusicBrainz lookups and update checks use online services. See [Privacy](../PRIVACY.md) for what is sent and stored. Audio output selection is in Settings → Audio; available devices depend on your system.
+Optional Last.fm scrobbling, MusicBrainz lookups and update checks use online services. See [Privacy](PRIVACY.md) for what is sent and stored. Audio output selection is in Settings → Audio; available devices depend on your system.
 
-For a bug report, include the version/OS/processor from About, reproduction steps, view/grouping/sort and audio format. Remove private paths and credentials. [Open a report](https://github.com/shn1ggy/localtone/issues/new/choose). Broader hardware and accessibility validation is ongoing; see [release readiness](../RELEASE-READINESS.md).
+For a bug report, include the version/OS/processor from About, reproduction steps, view/grouping/sort and audio format. Remove private paths and credentials. [Open a report](https://github.com/shn1ggy/localtone/issues/new/choose). Broader hardware and accessibility validation is ongoing; see [release readiness](development/RELEASE-READINESS.md).

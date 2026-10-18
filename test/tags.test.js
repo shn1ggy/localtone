@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import NodeID3 from 'node-id3';
 import { parseFile } from 'music-metadata';
-import editor from '../tags.cjs';
+import editor from '../src/tags.cjs';
 const fixture=await readFile(new URL('./fixtures/tone.mp3',import.meta.url));
 async function setup(fn) {const dir=await mkdtemp(path.join(tmpdir(),'localtone-tags-'));try{const file=path.join(dir,'test.mp3');await writeFile(file,fixture);await fn(file,path.join(dir,'backups'));}finally{await rm(dir,{recursive:true,force:true});}}
 test('MP3 save preserves audio, artwork, comments, and an exact original backup',async()=>setup(async(file,backupDir)=>{
@@ -35,7 +35,7 @@ test('ID3v2.4 recording year edits agree with scanner metadata',async()=>setup(a
 }));
 
 test('MP3 ratings write both star bytes and RATING, preserve audio, and clear',async()=>setup(async(file,backupDir)=>{
- const {default:ratingTags}=await import('../rating-tags.cjs');
+ const {default:ratingTags}=await import('../src/rating-tags.cjs');
  const original=await readFile(file);
  for(const [rating,byte] of [[1,1],[2,64],[3,128],[4,196],[5,255],[0,0]]){
   await ratingTags.writeRating({file,backupDir,rating});const content=await readFile(file),tags=NodeID3.read(content);
@@ -46,7 +46,7 @@ test('MP3 ratings write both star bytes and RATING, preserve audio, and clear',a
 }));
 
 test('selective batch patch preserves differing fields and unknown binary frames; explicit removal removes only its frame',async()=>setup(async(file,backupDir)=>{
- const frames=(await import('../tag-frames.cjs')).default;
+ const frames=(await import('../src/tag-frames.cjs')).default;
  const original=NodeID3.update({artist:'Shared',comment:{language:'eng',text:'Keep comment'},userDefinedText:[{description:'RATING',value:'4'},{description:'JUNK',value:'Remove me'}]},fixture);
  const p=frames.parse(original),raw=Buffer.concat([Buffer.from('XABC'),Buffer.from([0,0,0,4,0,0,0,1,2,255])]);
  await writeFile(file,frames.encode(p.version,[...p.frames,{raw}],p.audio));
@@ -68,7 +68,7 @@ test('tag-only removal, explicit clearing, and unsupported ID3 headers are safe'
 }));
 
 test('legacy ID3v1 and APE metadata blocks are visible and explicitly removable without audio changes',async()=>setup(async(file,backupDir)=>{
- const frames=(await import('../tag-frames.cjs')).default;
+ const frames=(await import('../src/tag-frames.cjs')).default;
  const legacy=Buffer.alloc(128);legacy.write('TAG');legacy.write('Legacy title',3);
  const ape=Buffer.alloc(32);ape.write('APETAGEX');ape.writeUInt32LE(2000,8);ape.writeUInt32LE(32,12);
  await writeFile(file,Buffer.concat([fixture,ape,legacy]));const tags=await editor.readTags(file);

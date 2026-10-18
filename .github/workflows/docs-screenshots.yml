@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'docs/capture-presentation.cjs'
+      - 'scripts/capture-presentation.cjs'
       - 'docs/demo-art/**'
       - '.github/workflows/docs-screenshots.yml'
 permissions:
@@ -23,7 +23,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Capture actual Electron UI at 100% zoom
-        run: ./node_modules/.bin/electron docs/capture-presentation.cjs
+        run: ./node_modules/.bin/electron scripts/capture-presentation.cjs
       - uses: actions/upload-artifact@v7
         with:
           name: documentation-screenshots

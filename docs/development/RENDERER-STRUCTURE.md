@@ -2,17 +2,17 @@
 
 | Area | Owner |
 | --- | --- |
-| Native lifecycle, trusted IPC, serialized database mutations | `main.cjs`, `preload.cjs` |
-| Indexing, local media and waveform/decoded audio work | `scanner.mjs`, `media.cjs`, `waveform.cjs`, `gapless-decoder.cjs` |
-| Validated preferences, portable migration and settings transfer | `preferences.cjs`, `portable.cjs`, `settings-transfer.cjs` |
-| Safe MP3 writes, metadata snapshots, rename transactions | `tags.cjs`, `tag-history.cjs`, `file-naming.cjs` |
-| Duplicate review and safe Trash removal | `duplicates.cjs`, `app/duplicates-dialog.js` |
-| Session restore, quiet refresh and cache lifecycle | `browsing-session.cjs`, `startup-refresh.cjs`, `cache-cleanup.cjs` |
-| Release manifests and update preparation | `release.cjs`, `update-preparation.cjs`, `build/release.mjs`, `build/release-hooks.cjs` |
+| Native lifecycle, trusted IPC, serialized database mutations | `src/main.cjs`, `src/preload.cjs` |
+| Indexing, local media and waveform/decoded audio work | `src/scanner.mjs`, `src/media.cjs`, `src/waveform.cjs`, `src/gapless-decoder.cjs` |
+| Validated preferences, portable migration and settings transfer | `src/preferences.cjs`, `src/portable.cjs`, `src/settings-transfer.cjs` |
+| Safe MP3 writes, metadata snapshots, rename transactions | `src/tags.cjs`, `src/tag-history.cjs`, `src/file-naming.cjs` |
+| Duplicate review and safe Trash removal | `src/duplicates.cjs`, `app/duplicates-dialog.js` |
+| Session restore, quiet refresh and cache lifecycle | `src/browsing-session.cjs`, `src/startup-refresh.cjs`, `src/cache-cleanup.cjs` |
+| Release manifests and update preparation | `src/release.cjs`, `src/update-preparation.cjs`, `build/release.mjs`, `build/release-hooks.cjs` |
 | Collection rules and search | `app/core.js`, `app/rules/search.js`, `app/rules/playlist-rules.js` |
 | Browsing models, selection and virtual rows | `app/browse.js`, `app/browse-selection.js`, `app/virtual-tracks.js` |
 | Queue state, bounded queue pages, window presentation | `app/playback-queue.js`, `app/queue-view.js`, `app/window-presentation.js` |
-| Audio buffer lifecycle and listening/scrobble tracking | `app/buffered-audio.js`, `app/listen.js`, `lastfm.cjs` |
+| Audio buffer lifecycle and listening/scrobble tracking | `app/buffered-audio.js`, `app/listen.js`, `src/lastfm.cjs` |
 | Dialog focus, preferences tabs, contextual help | `app/dialog-coordinator.js`, `app/settings-tabs.js`, `app/settings-help.js` |
 | Tag, naming, playlist, connection and audio forms | Their corresponding `app/*-editor.js`, `*-dialog.js`, `*-settings.js` controllers |
 | Optimistic preference writes and rollback | `app/settings-writes.js` |

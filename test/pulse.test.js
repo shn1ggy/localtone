@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
 import {createIcons} from '../app/icons.js';
-import preferences from '../preferences.cjs';
-import transfer from '../settings-transfer.cjs';
+import preferences from '../src/preferences.cjs';
+import transfer from '../src/settings-transfer.cjs';
 function setup() {
  const dom=new JSDOM('<div class="brand"></div>',{pretendToBeVisual:true}),w=dom.window,d=w.document;
  let id=0,now=0;const frames=new Map();

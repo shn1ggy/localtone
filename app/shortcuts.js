@@ -23,6 +23,7 @@ export const shortcutDefaults = {
   random: 'Mod+Shift+ArrowRight',
   play: 'Space',
   queue: 'p',
+  focusQueue: 'Shift+p',
   mini: 'm',
   maximize: 'f',
   quit: 'Mod+q',

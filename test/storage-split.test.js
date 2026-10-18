@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { realpath, mkdtemp, mkdir, copyFile, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-const mainPath=fileURLToPath(new URL('../main.cjs',import.meta.url));
+const mainPath=fileURLToPath(new URL('../src/main.cjs',import.meta.url));
 const source=await readFile(mainPath,'utf8'),require=createRequire(mainPath);
 async function launch(userData,music,dialogs={}) {
  const handlers=new Map(),events=new Map(),opened=[];let quitCount=0;let ready,windowInstance,assetHandler;

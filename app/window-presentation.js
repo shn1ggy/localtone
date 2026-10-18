@@ -45,12 +45,12 @@ export function createWindowPresentation({
       ratio: window.devicePixelRatio,
     };
   }
-  // ---- Detached mini window (Windows) -------------------------------------------
+  // ---- Detached mini window ------------------------------------------------------
   // The main window is never resized for mini mode. A second, always-rendered window
   // shows a live mirror of the player; switching swaps the two windows' visibility, so
   // neither has to redraw. The mirror is a JSON tree of the player and the toast;
   // clicks and keys from the mini window are replayed here.
-  const detachedSupported = api.platform === 'win32' && typeof api.miniSync === 'function';
+  const detachedSupported = typeof api.miniSync === 'function';
   let detached = false,
     mirrorObserver = null,
     mirrorQueued = false,
@@ -405,14 +405,25 @@ export function createWindowPresentation({
     revealPlayingQueueItem();
   }
 
-  function revealPlayingQueueItem() {
+  function queueRowVisible(list, row) {
+    if (!row || !list.clientHeight) return false;
+    const box = list.getBoundingClientRect(),
+      rect = row.getBoundingClientRect();
+    return rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1;
+  }
+
+  // Pins the playing row to the top of the queue. With onlyIfHidden the list is left
+  // alone while that row is still fully in view, so the queue does not jump on every
+  // track change.
+  function revealPlayingQueueItem({ onlyIfHidden = false } = {}) {
     const list = $('queue-list'),
       row = list.querySelector('.active');
     list.style.paddingBottom = '12px';
     if (!row) {
-      list.scrollTop = 0;
+      if (!onlyIfHidden) list.scrollTop = 0;
       return;
     }
+    if (onlyIfHidden && queueRowVisible(list, row)) return;
     list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top;
   }
 
@@ -512,6 +523,7 @@ export function createWindowPresentation({
     setQueueVisible,
     alignQueueClose,
     revealPlayingQueueItem,
+    queueRowVisible,
     get transitioning() {
       return windowTransition;
     },

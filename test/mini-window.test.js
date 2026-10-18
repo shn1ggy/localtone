@@ -7,11 +7,11 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { realpath, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-const mainPath = fileURLToPath(new URL('../main.cjs', import.meta.url));
+const mainPath = fileURLToPath(new URL('../src/main.cjs', import.meta.url));
 const source = await readFile(mainPath, 'utf8'),
   require = createRequire(mainPath);
 const scale = 1.3020833730697632;
-async function launch(userData) {
+async function launch(userData, platform = 'win32') {
   const handlers = new Map(),
     windows = [];
   let ready;
@@ -70,6 +70,7 @@ async function launch(userData) {
     setIgnoreMouseEvents(v) { this.ignore = v; }
     showInactive() { this.visible = true; }
     show() { this.visible = true; }
+    hide() { this.visible = false; }
     focus() { this.focused++; }
     isMaximized() { return false; }
     isMinimized() { return false; }
@@ -98,15 +99,15 @@ async function launch(userData) {
     dialog: { showErrorBox: (_t, e) => { throw new Error(e); } },
     screen: {
       getDisplayMatching: () => display,
-      dipToScreenRect: (_w, r) => ({
+      ...(platform !== 'win32' ? {} : { dipToScreenRect: (_w, r) => ({
         x: Math.round(r.x * scale),
         y: Math.round(r.y * scale),
         width: Math.round(r.width * scale),
         height: Math.round(r.height * scale),
-      }),
+      }) }),
     },
   };
-  const proc = new Proxy(process, { get: (t, k) => (k === 'platform' ? 'win32' : t[k]) });
+  const proc = new Proxy(process, { get: (t, k) => (k === 'platform' ? platform : t[k]) });
   vm.runInNewContext(`(function(){${source}\n})()`, {
     require: (name) => (name === 'electron' ? electron : require(name)),
     __dirname: path.dirname(mainPath),
@@ -197,3 +198,46 @@ test('detached mini swaps window visibility without resizing the main window', a
     await rm(dir, { recursive: true, force: true });
   }
 });
+for (const platform of ['darwin', 'linux'])
+  test(`detached mini on ${platform}: separate window, main never resized, follows moves`, async () => {
+    const dir = await realpath(await mkdtemp(path.join(tmpdir(), 'localtone-mini-' + platform + '-')));
+    try {
+      const { invoke, handlers, windows } = await launch(path.join(dir, 'data'), platform);
+      const [main] = windows,
+        before = main.getBounds();
+      handlers.get('mini-sync')({ senderFrame: { url: 'localtone://app/index.html' } }, { trees: [], size: { width: 242, height: 360 } });
+      const client = main.getContentBounds();
+      const request = { width: 242, height: 363, clientWidth: client.width, clientHeight: client.height, scale: 2, detached: true, report: true };
+      assert.equal((await invoke('window-action', 'mini', request)).value, true);
+      const mini = windows[1];
+      assert.equal(mini.options.parent, undefined, 'stands on its own');
+      assert.equal(mini.options.resizable, false);
+      assert.deepEqual(main.getBounds(), before, 'main window never resized');
+      // Client areas share the bottom-left corner.
+      const mc = main.getContentBounds(), nc = mini.getContentBounds();
+      assert.equal(nc.x, mc.x);
+      assert.equal(nc.y + nc.height, mc.y + mc.height);
+      assert.deepEqual([nc.width, nc.height], [242, 363]);
+      if (platform === 'linux') {
+        assert.equal(main.visible, false, 'linux hides the main window');
+        assert.equal(mini.visible, true);
+      } else {
+        assert.equal(main.opacity, 0);
+        assert.equal(main.ignore, true);
+        assert.equal(mini.opacity, 1);
+        assert.equal(mini.visible, true);
+      }
+      mini.setBounds({ x: mini.getBounds().x + 50, y: mini.getBounds().y - 30 });
+      assert.equal((await invoke('window-action', 'mini', request)).value, false);
+      assert.deepEqual(main.getBounds(), { ...before, x: before.x + 50, y: before.y - 30 });
+      if (platform === 'linux') {
+        assert.equal(main.visible, true);
+        assert.equal(mini.visible, false);
+      } else {
+        assert.equal(main.opacity, 1);
+        assert.equal(mini.opacity, 0);
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });

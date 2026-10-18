@@ -2,7 +2,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { promisify } = require('node:util');
 const { execFile } = require('node:child_process');
-const { digest } = require('../release.cjs');
+const { digest } = require('../src/release.cjs');
 const { verifyDecoder } = require('./ffmpeg/policy.cjs');
 
 // Inspect headers without executing a binary built for a different processor.

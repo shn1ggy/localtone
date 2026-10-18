@@ -26,6 +26,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verify
+      - name: Native macOS UI and detached mini player
+        timeout-minutes: 2
+        if: runner.os == 'macOS'
+        run: npm run verify:desktop-ui
+      - name: Native Linux UI and detached mini player
+        timeout-minutes: 2
+        if: runner.os == 'Linux'
+        run: ./node_modules/.bin/electron --no-sandbox --ozone-platform=headless --disable-dev-shm-usage build/check-desktop-ui.cjs
       - name: Native Windows UI and window transitions
         timeout-minutes: 2
         if: runner.os == 'Windows'

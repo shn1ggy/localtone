@@ -2,13 +2,13 @@
 
 ## Build a desktop app
 
-Install Node.js 24 LTS (24.15+, tested on 24.19.0) and run `npm ci` in the source folder. Before native packaging, build the pinned source decoder using [build/ffmpeg/README.md](build/ffmpeg/README.md). Install the listed toolchain and run the build and finalize commands. Packaging intentionally rejects the development decoder installed by npm. On the target OS:
+Install Node.js 24 LTS (24.15+, tested on 24.19.0) and run `npm ci` in the source folder. Before native packaging, build the pinned source decoder using [build/ffmpeg/README.md](../../build/ffmpeg/README.md). Install the listed toolchain and run the build and finalize commands. Packaging intentionally rejects the development decoder installed by npm. On the target OS:
 
-| System | Command | Result |
-| --- | --- | --- |
-| macOS | `npm run release:mac` | ZIP containing Localtone.app |
-| Windows | `npm run release:win` | App-folder ZIP and standalone portable EXE |
-| Linux | `npm run release:linux` | App-folder ZIP and AppImage |
+| System  | Command                 | Result                                     |
+| ------- | ----------------------- | ------------------------------------------ |
+| macOS   | `npm run release:mac`   | ZIP containing Localtone.app               |
+| Windows | `npm run release:win`   | App-folder ZIP and standalone portable EXE |
+| Linux   | `npm run release:linux` | App-folder ZIP and AppImage                |
 
 These commands run lint, format and tests first. Output appears in `dist` with the version, OS and processor in its filename. The first packaging run may download Electron/build tools. To select a processor, append `-- --arm64` or `-- --x64`. Build on the target OS to use its native tooling. `npm run dist:dir` creates an unpacked desktop app for local smoke checks. `npm run release:source` creates the source ZIP with its release manifest and SHA-256 file.
 
@@ -96,10 +96,10 @@ The command fails for missing, truncated, altered or duplicate files, unsafe fil
 
 Without Node.js, compare one downloaded archive's result with its entry in `SHA256SUMS.txt`:
 
-| System | Command |
-| --- | --- |
-| macOS | `shasum -a 256 "Localtone-0.106.0-mac-arm64.zip"` |
-| Linux | `sha256sum "Localtone-0.106.0-linux-x64.AppImage"` |
+| System             | Command                                                          |
+| ------------------ | ---------------------------------------------------------------- |
+| macOS              | `shasum -a 256 "Localtone-0.106.0-mac-arm64.zip"`                |
+| Linux              | `sha256sum "Localtone-0.106.0-linux-x64.AppImage"`               |
 | Windows PowerShell | `Get-FileHash "Localtone-0.106.0-win-x64.zip" -Algorithm SHA256` |
 
 Use the exact filename shown on the release page; these names are examples. Windows hashes may display uppercase letters; case does not change the hash value.
@@ -151,7 +151,7 @@ Upload every `Localtone-VERSION-ffmpeg-source-PLATFORM-ARCH.tar.gz` alongside th
 
 ## Verified early-access publication
 
-`Publish verified early access` is triggered by an explicit change to `build/release-plan.json`. The plan pins the app commit and its successful native build run. The publishing job downloads that run's combined candidate, creates the source ZIP from the pinned app commit, checks archive CRCs, internal update manifests, decoder/source hashes and dependency notices, then uploads all files to a draft. It verifies GitHub's uploaded asset hashes before publishing as a pre-release. Existing conflicting assets and already-published releases are never overwritten.
+`Publish verified release` is triggered by an explicit change to `build/release-plan.json`. The plan pins the app commit and its successful native build run. The publishing job downloads that run's combined candidate, creates the source ZIP from the pinned app commit, checks archive CRCs, internal update manifests, decoder/source hashes and dependency notices, then uploads all files to a draft. It verifies GitHub's uploaded asset hashes before publishing. Numeric 0.x versions are pre-releases; 1.x and later are stable and become the latest release. Existing conflicting assets and already-published releases are never overwritten.
 
 Only the publishing job has `contents: write`; its GitHub token is ephemeral. Actions used by that job are pinned to reviewed official revisions. No personal token or signing secret is stored. For a later early-access release, complete its native build, update the plan with that version/commit/run and add matching release notes. Physical hardware and signing validation remain separate release gates. Stable in-app update checks intentionally ignore pre-releases.
 

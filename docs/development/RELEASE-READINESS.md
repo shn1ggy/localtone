@@ -1,10 +1,12 @@
 # Current release status — 18 October 2026
 
-Localtone 0.132.0 is an early-access release. The public GitHub repository, GPL-3.0-or-later license, native builds for Apple Silicon Mac, Intel Mac, Windows x64 and Linux x64, matching FFmpeg sources/notices, checksums and GitHub-hosted updates are established. 387 tests pass on Windows, macOS and Linux. Native Windows UI checks cover 100%, 125% and 130% display scaling, including the detached Windows mini player, queue transitions and minimum-height behavior. Settings/rating persistence uses the small collection-state.json file, retained by portable migration and prepared updates. The project owner approved the tested candidates for publication.
+Localtone 1.0.0 is the first stable release selected by the project owner. The public repository and GPL-3.0-or-later license are established. Native packages cover Windows x64, Apple Silicon Mac, Intel Mac and Linux x64, with matching decoder sources, dependency notices and checksums. Stable publishing must set `prerelease: false` and mark 1.0.0 as the latest release; early-access clients and stable clients must discover the appropriate update.
 
-Remaining priorities are broader independent hardware/audio testing, signing/notarization, accessibility and newcomer testing, clearer public documentation, and playlist interoperability. Passing automated checks does not establish every device, Linux desktop or screen-reader workflow. No broad stable-release claim is made.
+The release review checks the reorganized `src/` packaging, settings/rating persistence, serialized collection requests, detached mini player, queue keyboard navigation, platform window behavior and public update discovery. Cross-platform CI and archive verification are required before publication.
 
-**Historical audit follows.** The older statements below about choosing a license, creating a repository, unpublished downloads and old shortcuts describe earlier development states. Use the current README, release notes and this status section for the present release; the older audit remains background. The current priorities are in [ROADMAP.md](ROADMAP.md).
+Remaining work includes broader independent hardware/audio testing, signing/notarization and accessibility review. Windows packages remain unsigned and Mac apps are ad-hoc signed rather than Apple notarized. Passing automated checks does not certify every audio device, Linux desktop or screen-reader workflow.
+
+**Historical audit follows.** Earlier release numbers, first-upload steps and the historical 0.105 “not ready for 1.0” decision below describe that older snapshot, not the owner's current release decision. See the [README](../../README.md), current release notes and [roadmap](../ROADMAP.md) for current status.
 
 ---
 

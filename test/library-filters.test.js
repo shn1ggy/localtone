@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import filters from '../library-filters.cjs';
+import filters from '../src/library-filters.cjs';
 import {selectTracks,matchingTracks} from '../app/core.js';
 test('library exclusions match names at any depth, types and wildcards without matching substrings or paths',()=>{const root=path.resolve('music'),excluded=filters.compileFilters(root,{folders:['Demos'],fileTypes:['.WAV'],fileNames:['preview?.*'],hiddenFolders:true});for(const p of ['Artist/Demos/1.mp3','Artist/.cache/1.mp3','Artist/Album/song.WAV','Artist/Album/preview1.mp3'])assert.equal(excluded(path.join(root,p)),true,p);assert.equal(excluded(path.join(root,'Artist','Demos'),true),true);assert.equal(excluded(path.join(root,'Demos live','song.mp3')),false);assert.equal(excluded(path.join(root,'Artist','Album','preview11.mp3')),false);assert.throws(()=>filters.validateFilters({folders:['../outside']}));assert.throws(()=>filters.validateFilters({fileTypes:['*.mp3']}));});
 test('excluded indexed music stays in regular playlists but not libraries, All music or dynamic playlists',()=>{const state={libraries:[{id:'l'}],tracks:[{id:'a',libraryId:'l',excluded:true,title:'A'},{id:'b',libraryId:'l',title:'B'}],playlists:[{id:'p',trackIds:['a','b']}],ratings:{}};assert.deepEqual(selectTracks(state,{kind:'all'},'','manual').map(t=>t.id),['b']);assert.deepEqual(selectTracks(state,{kind:'library',id:'l'},'','manual').map(t=>t.id),['b']);assert.deepEqual(selectTracks(state,{kind:'playlist',id:'p'},'','manual').map(t=>t.id),['a','b']);assert.deepEqual(matchingTracks(state,{enabled:true,libraryId:'',match:'all',rules:[]}).map(t=>t.id),['b']);});

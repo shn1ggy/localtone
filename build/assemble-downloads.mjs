@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { verifyDownloads } from './verify-downloads.mjs';
-const { digest } = createRequire(import.meta.url)('../release.cjs');
+const { digest } = createRequire(import.meta.url)('../src/release.cjs');
 export async function assembleDownloads(input, output) {
   const folders = await fs.readdir(input, { withFileTypes: true });
   const records = [],

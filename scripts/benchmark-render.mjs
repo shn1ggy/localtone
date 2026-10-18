@@ -1,36 +1,35 @@
-import { createSettingsHelp } from './app/settings-help.js';
-import { createDuplicatesDialog } from './app/duplicates-dialog.js';
-import { createFileNamingDialog } from './app/file-naming-dialog.js';
-import { designDefaults, appearanceDefaults } from './app/design-defaults.js';
-import { createSettingsWrites } from './app/settings-writes.js';
-import { createTagEditor } from './app/tag-editor.js';
-import { createPlaylistEditor } from './app/playlist-editor.js';
-import { createLastfmSettings } from './app/lastfm-settings.js';
-import { createDialogCoordinator } from './app/dialog-coordinator.js';
-import { createSettingsTabs } from './app/settings-tabs.js';
-import { createBrowseSelection } from './app/browse-selection.js';
-import { createPlaybackQueue } from './app/playback-queue.js';
-import { createWindowPresentation } from './app/window-presentation.js';
-import { createAudioOutputSettings } from './app/audio-output-settings.js';
-import { mountVirtualTracks } from './app/virtual-tracks.js';
-import { createIcons } from './app/icons.js';
-import { normalizeMenu } from './app/context-menu.js';
-import { shortcutDefaults } from './app/shortcuts.js';
-import { createQueueViewCache, queuePage } from './app/queue-view.js';
+import { createSettingsHelp } from '../app/settings-help.js';
+import { createDuplicatesDialog } from '../app/duplicates-dialog.js';
+import { createFileNamingDialog } from '../app/file-naming-dialog.js';
+import { designDefaults, appearanceDefaults } from '../app/design-defaults.js';
+import { createSettingsWrites } from '../app/settings-writes.js';
+import { createTagEditor } from '../app/tag-editor.js';
+import { createPlaylistEditor } from '../app/playlist-editor.js';
+import { createLastfmSettings } from '../app/lastfm-settings.js';
+import { createDialogCoordinator } from '../app/dialog-coordinator.js';
+import { createSettingsTabs } from '../app/settings-tabs.js';
+import { createBrowseSelection } from '../app/browse-selection.js';
+import { createPlaybackQueue } from '../app/playback-queue.js';
+import { createWindowPresentation } from '../app/window-presentation.js';
+import { createAudioOutputSettings } from '../app/audio-output-settings.js';
+import { mountVirtualTracks } from '../app/virtual-tracks.js';
+import { createIcons } from '../app/icons.js';
+import { normalizeMenu } from '../app/context-menu.js';
+import { shortcutDefaults } from '../app/shortcuts.js';
+import { createQueueViewCache, queuePage } from '../app/queue-view.js';
 import { readFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 import { JSDOM } from 'jsdom';
-import * as core from './app/core.js';
-import * as browse from './app/browse.js';
-import * as interactions from './app/interactions.js';
-import { createNameDialog } from './app/name-dialog.js';
-import { ListenTracker } from './app/listen.js';
-import { waveformPath } from './app/waveform-view.js';
-const html = await readFile('./app/index.html', 'utf8'),
-  source = (await readFile(process.argv[2] || './app/renderer.js', 'utf8')).replace(
-    /^import[\s\S]*?;\n/gm,
-    '',
-  );
+import * as core from '../app/core.js';
+import * as browse from '../app/browse.js';
+import * as interactions from '../app/interactions.js';
+import { createNameDialog } from '../app/name-dialog.js';
+import { ListenTracker } from '../app/listen.js';
+import { waveformPath } from '../app/waveform-view.js';
+const html = await readFile(new URL('../app/index.html', import.meta.url), 'utf8'),
+  source = (
+    await readFile(process.argv[2] || new URL('../app/renderer.js', import.meta.url), 'utf8')
+  ).replace(/^import[\s\S]*?;\n/gm, '');
 const dom = new JSDOM(html, { runScripts: 'outside-only' }),
   w = dom.window;
 Object.assign(

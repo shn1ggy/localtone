@@ -42,8 +42,11 @@ const fail = (error) => {
 };
 setTimeout(() => fail(Error('Native UI check timed out.')), 60000).unref();
 let primaryWindow = null;
+const createdWindows = new Set();
 app.on('browser-window-created', (_event, win) => {
-  // The detached Windows mini player is a second real window, not another test runner.
+  createdWindows.add(win);
+  win.once('closed', () => createdWindows.delete(win));
+  // The detached mini player is a second real window, not another test runner.
   if (primaryWindow) return;
   primaryWindow = win;
   win.webContents.once('did-finish-load', async () => {
@@ -225,7 +228,7 @@ app.on('browser-window-created', (_event, win) => {
           "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true}))",
         );
         await settled(true);
-        const detached = process.platform === 'win32';
+        const detached = true;
         assert.equal(
           await js(
             `document.body.classList.contains('${detached ? 'mini-detached' : 'mini-player'}')`,
@@ -233,13 +236,18 @@ app.on('browser-window-created', (_event, win) => {
           true,
         );
         if (detached) {
-          const mini = BrowserWindow.getAllWindows().find(
+          const mini = [...createdWindows].find(
             (candidate) =>
               candidate !== win && candidate.webContents.getURL() === 'localtone://app/mini.html',
           );
           assert.ok(mini, 'Detached player must exist');
-          assert.equal(win.getOpacity(), 0);
-          assert.equal(mini.getOpacity(), 1);
+          if (process.platform === 'linux') {
+            assert.equal(win.isVisible(), false);
+            assert.equal(mini.isVisible(), true);
+          } else {
+            assert.equal(win.getOpacity(), 0);
+            assert.equal(mini.getOpacity(), 1);
+          }
           stableBounds();
           assert.equal(
             await mini.webContents.executeJavaScript('window.devicePixelRatio'),
@@ -505,7 +513,7 @@ app.on('browser-window-created', (_event, win) => {
         );
       console.log('UI_CHECK empty pane headings and descriptions aligned in every view');
       console.log('UI_CHECK library and album highlight passed');
-      BrowserWindow.getAllWindows().forEach((window) => window.hide());
+      [...createdWindows].forEach((window) => window.hide());
       app.quit();
     } catch (error) {
       fail(error);

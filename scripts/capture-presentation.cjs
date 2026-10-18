@@ -1,5 +1,5 @@
 const root = require('node:path').resolve(__dirname, '..');
-const { app, BrowserWindow } = require('electron');
+const { app } = require('electron');
 const fs = require('node:fs'),
   path = require('node:path');
 fs.mkdirSync(path.join(root, 'docs', 'images'), { recursive: true });
@@ -16,7 +16,7 @@ app.on('quit', () => {
 });
 app.setPath('userData', data);
 app.requestSingleInstanceLock = () => true;
-require(root + '/portable.cjs').configurePortable = () => {};
+require(root + '/src/portable.cjs').configurePortable = () => {};
 // Synthetic sound and original geometric artwork; no user music or credentials.
 require('node:child_process').execFileSync(require('ffmpeg-static'), [
   '-v',
@@ -30,7 +30,7 @@ require('node:child_process').execFileSync(require('ffmpeg-static'), [
   path.join(base, 'demo.mp3'),
   '-y',
 ]);
-const albums = JSON.parse(fs.readFileSync(path.join(__dirname, 'demo-art', 'albums.json'))),
+const albums = JSON.parse(fs.readFileSync(path.join(root, 'docs', 'demo-art', 'albums.json'))),
   tracks = [];
 const names = [
   'First Light',
@@ -62,7 +62,7 @@ for (let a = 0; a < albums.length; a++) {
       file,
     );
     const stat = fs.statSync(file);
-    fs.copyFileSync(path.join(__dirname, 'demo-art', `${a}.jpg`), path.join(data, 'covers', id));
+    fs.copyFileSync(path.join(root, 'docs', 'demo-art', `${a}.jpg`), path.join(data, 'covers', id));
     tracks.push({
       id,
       path: file,

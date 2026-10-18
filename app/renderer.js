@@ -183,7 +183,7 @@ const windowPresentation = createWindowPresentation({
   syncPaneBounds,
   toast,
 });
-const { toggleMini, setQueueVisible, revealPlayingQueueItem } = windowPresentation;
+const { toggleMini, setQueueVisible, revealPlayingQueueItem, queueRowVisible } = windowPresentation;
 window.addEventListener('beforeunload', () => windowPresentation.dispose());
 function toast(message, persistent = false) {
   clearTimeout(toastTimer);
@@ -753,6 +753,7 @@ function toggle() {
   else audio.pause();
 }
 const queueViewCache = createQueueViewCache();
+let lastPlayingId = null;
 function renderQueue({ reveal = true } = {}) {
   prepareGaplessNext();
   if (
@@ -760,7 +761,21 @@ function renderQueue({ reveal = true } = {}) {
   )
     return;
   const container = $('queue-list'),
-    scrollTop = container.scrollTop;
+    scrollTop = container.scrollTop,
+    previousRow = container.querySelector('.active'),
+    { queue, cursor } = playback,
+    // Stepping to a neighbouring song keeps the queue where the listener left it:
+    // it only follows when the previous song was in view and the new one is not.
+    // Anything else (a newly started list, a jump) reveals the playing song.
+    stepped =
+      lastPlayingId !== null &&
+      queue[cursor] !== lastPlayingId &&
+      (queue[cursor - 1] === lastPlayingId || queue[cursor + 1] === lastPlayingId),
+    following =
+      !previousRow ||
+      queueRowVisible(container, previousRow) ||
+      (queue[cursor] !== lastPlayingId && !stepped);
+  lastPlayingId = queue[cursor] ?? null;
   container.replaceChildren();
   if (!playback.queue.length) container.append(el('p', 'Your queue is empty.'));
   // Only render a window around the current item for large collections.
@@ -770,24 +785,36 @@ function renderQueue({ reveal = true } = {}) {
     if (!track) continue;
     const item = el('button', null, 'queue-item'),
       text = el('span', null, 'queue-track-text');
+    item.dataset.queueIndex = i;
+    item.setAttribute('role', 'option');
+    // The queue is entered only with its own shortcut (or the mouse), never by Tab.
+    item.tabIndex = -1;
     text.append(el('span', track.title, 'queue-track-title'), el('small', track.artist));
     item.append(cover(track), text);
     item.setAttribute('aria-label', `${track.title} — ${track.artist}`);
     item.classList.toggle('active', i === playback.cursor);
     item.oncontextmenu = (event) => {
       event.preventDefault();
+      // Right-clicking outside the queue selection selects this row first.
+      syncQueueSelection();
+      if (!queueSelection.indices.has(i)) setQueueSelection(i);
       showActions(track, event);
-      if (i !== playback.cursor) {
-        const remove = el('button', 'Remove from queue');
+      const removable = [...queueSelection.indices].filter((index) => index !== playback.cursor);
+      if (removable.length) {
+        const remove = el(
+          'button',
+          removable.length === 1
+            ? 'Remove from queue'
+            : `Remove ${removable.length} songs from queue`,
+        );
         remove.onclick = () => {
           closeContextMenu();
-          const before = captureQueue();
-          playback.remove(i);
-          renderQueue();
-          rememberQueueEdit(before, 'Removed track from queue');
+          removeQueueSelection();
         };
         $('track-actions').append(remove);
         normalizeContextMenu();
+        // Rebuilding the menu moves its buttons; keep keyboard focus inside the menu.
+        $('track-actions').querySelector('button:not(:disabled)')?.focus();
       }
     };
     item.onkeydown = (event) => {
@@ -796,11 +823,9 @@ function renderQueue({ reveal = true } = {}) {
         item.oncontextmenu(event);
       }
     };
-    item.onclick = () => {
-      selection.tracks.current = track.id;
-      playback.select(i);
-      startTrack(null, false, { preserveQueueScroll: true });
-    };
+    // Single click selects (Ctrl/Cmd toggles, Shift extends); double click plays.
+    item.onclick = (event) => selectQueueItem(i, event);
+    item.ondblclick = () => playQueueItem(i);
     makeDraggable(item, () => ({ ids: [track.id], queueIndex: i }));
     bindDrop(item, (payload) => dropOnQueue(payload, i));
     container.append(item);
@@ -814,8 +839,187 @@ function renderQueue({ reveal = true } = {}) {
     ),
   );
   container.scrollTop = scrollTop;
-  if (reveal && !$('queue-panel').hidden) revealPlayingQueueItem();
+  paintQueueSelection();
+  if (reveal && following && !$('queue-panel').hidden)
+    revealPlayingQueueItem({ onlyIfHidden: true });
 }
+// ---- Queue selection and keyboard focus -------------------------------------------
+// Selection holds queue positions (the queue may contain the same track twice). Any
+// change to the queue's contents starts a fresh selection.
+const queueSelection = { indices: new Set(), anchor: null, focus: null, queue: null };
+function syncQueueSelection() {
+  if (queueSelection.queue === playback.queue) return;
+  queueSelection.queue = playback.queue;
+  queueSelection.indices.clear();
+  queueSelection.anchor = queueSelection.focus = null;
+}
+function queueItems() {
+  return [...$('queue-list').querySelectorAll('.queue-item')];
+}
+function queueItemAt(index) {
+  return queueItems().find((item) => Number(item.dataset.queueIndex) === index) || null;
+}
+function paintQueueSelection() {
+  syncQueueSelection();
+  for (const item of queueItems()) {
+    const selected = queueSelection.indices.has(Number(item.dataset.queueIndex));
+    item.classList.toggle('selected', selected);
+    item.setAttribute('aria-selected', String(selected));
+  }
+}
+function focusQueueItem(index) {
+  const item = queueItemAt(index);
+  if (!item) return;
+  queueSelection.focus = index;
+  item.focus({ preventScroll: true });
+  item.scrollIntoView?.({ block: 'nearest' });
+}
+function setQueueSelection(index, { extend = false, toggle = false } = {}) {
+  syncQueueSelection();
+  const { indices } = queueSelection;
+  if (extend && queueSelection.anchor !== null) {
+    const shown = queueItems().map((item) => Number(item.dataset.queueIndex)),
+      from = Math.min(queueSelection.anchor, index),
+      to = Math.max(queueSelection.anchor, index);
+    if (!toggle) indices.clear();
+    for (const i of shown) if (i >= from && i <= to) indices.add(i);
+  } else if (toggle) {
+    if (indices.has(index)) indices.delete(index);
+    else indices.add(index);
+    queueSelection.anchor = index;
+  } else {
+    indices.clear();
+    indices.add(index);
+    queueSelection.anchor = index;
+  }
+  paintQueueSelection();
+  focusQueueItem(index);
+}
+function selectQueueItem(index, event) {
+  setQueueSelection(index, {
+    extend: event.shiftKey,
+    toggle: event.ctrlKey || event.metaKey,
+  });
+  markQueueFocus(false);
+}
+function playQueueItem(index) {
+  const id = playback.queue[index];
+  if (!id) return;
+  selection.tracks.current = id;
+  playback.select(index);
+  startTrack(null, false, { preserveQueueScroll: true });
+  setQueueSelection(index);
+}
+function removeQueueSelection() {
+  syncQueueSelection();
+  const chosen = [...queueSelection.indices].filter((i) => i !== playback.cursor);
+  if (!chosen.length) {
+    if (queueSelection.indices.size) toast('The playing track stays in the queue.');
+    return;
+  }
+  const before = captureQueue(),
+    first = Math.min(...chosen);
+  for (const index of chosen.sort((a, b) => b - a)) playback.remove(index);
+  renderQueue({ reveal: false });
+  rememberQueueEdit(
+    before,
+    chosen.length === 1 ? 'Removed track from queue' : `Removed ${chosen.length} tracks from queue`,
+  );
+  const shown = queueItems().map((item) => Number(item.dataset.queueIndex));
+  if (shown.length) setQueueSelection(shown.find((i) => i >= first) ?? shown.at(-1));
+  else leaveQueue('tracks');
+}
+// Shift+P (configurable) moves keyboard focus into the queue, opening it if needed.
+async function enterQueueFocus() {
+  if (windowPresentation.mini) return;
+  if ($('queue-panel').hidden) await setQueueVisible(true);
+  if ($('queue-panel').hidden) return;
+  syncQueueSelection();
+  const shown = queueItems().map((item) => Number(item.dataset.queueIndex));
+  if (!shown.length) {
+    $('queue-list').tabIndex = -1;
+    $('queue-list').focus({ preventScroll: true });
+  } else {
+    const target = [queueSelection.focus, playback.cursor, shown[0]].find((i) => shown.includes(i));
+    if (!queueSelection.indices.size) setQueueSelection(target);
+    else focusQueueItem(target);
+  }
+  markQueueFocus(true);
+}
+function markQueueFocus(pulse) {
+  document.body.dataset.browseFocus = 'queue';
+  if (!pulse) return;
+  const overlay = $('pane-focus-overlay');
+  paintPaneFocus(false);
+  document.body.dataset.browseFocus = 'queue';
+  const target = overlay || $('pane-focus-overlay');
+  // Same accent pulse as the other panes, over the queue panel.
+  const bounds = $('queue-panel').getBoundingClientRect(),
+    bottom = Math.min(
+      bounds.bottom,
+      document.querySelector('.waveform-dock').getBoundingClientRect().top,
+    );
+  target.style.left = `${bounds.left}px`;
+  target.style.width = `${bounds.width}px`;
+  target.style.height = `${document.body.classList.contains('queue-extended') ? window.innerHeight : bottom}px`;
+  target.classList.remove('pane-focus-pulse');
+  void target.offsetWidth;
+  target.classList.add('pane-focus-pulse');
+}
+function leaveQueue(pane) {
+  selection.pane = pane;
+  focusBrowseSelection(true);
+}
+$('queue-list').addEventListener('keydown', (event) => {
+  if (event.isComposing || !event.target.closest?.('#queue-list')) return;
+  const mod = event.ctrlKey || event.metaKey;
+  const handled = () => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const shown = queueItems().map((item) => Number(item.dataset.queueIndex));
+  const at = shown.indexOf(queueSelection.focus ?? playback.cursor);
+  if (event.key === 'Tab' && !mod && !event.altKey) {
+    handled();
+    leaveQueue('tracks');
+  } else if (
+    ['ArrowLeft', 'ArrowRight'].includes(event.key) &&
+    !mod &&
+    !event.altKey &&
+    !event.shiftKey
+  ) {
+    handled();
+    leaveQueue(event.key === 'ArrowLeft' ? 'tracks' : 'sidebar');
+  } else if (['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key) && !mod && !event.altKey) {
+    handled();
+    if (!shown.length) return;
+    const next =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? shown.length - 1
+          : Math.max(
+              0,
+              Math.min(shown.length - 1, (at < 0 ? 0 : at) + (event.key === 'ArrowDown' ? 1 : -1)),
+            );
+    setQueueSelection(shown[next], { extend: event.shiftKey });
+  } else if (event.key === 'Enter' && !mod && !event.altKey && !event.shiftKey) {
+    handled();
+    if (!event.repeat && at >= 0) playQueueItem(shown[at]);
+  } else if (['Delete', 'Backspace'].includes(event.key) && !mod && !event.altKey) {
+    handled();
+    if (!event.repeat) removeQueueSelection();
+  } else if (mod && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'a') {
+    handled();
+    syncQueueSelection();
+    for (const i of shown) queueSelection.indices.add(i);
+    paintQueueSelection();
+  } else if (event.key === 'Escape' && $('context-menu').hidden) {
+    handled();
+    queueSelection.indices.clear();
+    paintQueueSelection();
+  }
+});
 $('all').onclick = () => setScope({ kind: 'all' });
 $('all').ondblclick = () => playRandomCollection({ kind: 'all' });
 $('add-library').onclick = $('empty-add').onclick = addLibrary;
@@ -929,7 +1133,9 @@ $('shuffle').onclick = () => {
   updateSettings({ shuffle, ...(shuffle ? { repeat: 0 } : {}) });
   if (playback.cursor >= 0) {
     playback.setShuffled(shuffle);
-    renderQueue();
+    // A reshuffled queue is a new order: show the playing song at the top again.
+    renderQueue({ reveal: false });
+    if (!$('queue-panel').hidden) revealPlayingQueueItem();
   }
 };
 $('repeat').onclick = () => {
@@ -1189,6 +1395,17 @@ document.onkeydown = (event) => {
     }
     if (['ArrowLeft', 'ArrowRight'].includes(event.key) && !event.shiftKey) {
       event.preventDefault();
+      // An open play queue joins the arrow-key pane cycle between the content pane
+      // and the sidebar (Tab still never enters it).
+      if (
+        !$('queue-panel').hidden &&
+        !windowPresentation.mini &&
+        ((event.key === 'ArrowRight' && selection.pane === 'tracks') ||
+          (event.key === 'ArrowLeft' && selection.pane === 'sidebar'))
+      ) {
+        enterQueueFocus();
+        return;
+      }
       selection.cyclePane(event.key === 'ArrowRight' ? 1 : -1);
       focusBrowseSelection(true);
       return;
@@ -1255,6 +1472,13 @@ document.onkeydown = (event) => {
       if (!event.repeat) {
         event.preventDefault();
         api?.windowAction?.('quit').catch((error) => toast(error.message));
+      }
+      return;
+    }
+    if (action === 'focusQueue') {
+      if (!typing && !document.querySelector('dialog[open]') && $('context-menu').hidden) {
+        event.preventDefault();
+        if (!event.repeat) enterQueueFocus();
       }
       return;
     }
@@ -4245,6 +4469,7 @@ function renderShortcutEditor() {
     random: 'Random next',
     play: 'Play / pause',
     queue: 'Play queue',
+    focusQueue: 'Focus play queue',
     mini: 'Mini player',
     maximize: 'Maximize / restore',
     quit: 'Exit',
@@ -4327,7 +4552,7 @@ function renderShortcutEditor() {
         'redo',
       ],
     ],
-    ['Window', ['settings', 'queue', 'mini', 'maximize', 'quit']],
+    ['Window', ['settings', 'queue', 'focusQueue', 'mini', 'maximize', 'quit']],
   ]) {
     const group = el('section', null, 'preference-group'),
       heading = el('h3', title);

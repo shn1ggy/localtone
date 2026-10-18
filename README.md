@@ -2,7 +2,7 @@
 
 A compact, keyboard-driven music player for **Windows, macOS and Linux**. Browse your own collection, build playlists and edit tags in one quiet desktop interface.
 
-**[Download 0.132.0](https://github.com/shn1ggy/localtone/releases/tag/v0.132.0)** · [User guide](docs/USER-GUIDE.md) · [Roadmap](ROADMAP.md) · [Report a bug](https://github.com/shn1ggy/localtone/issues/new/choose)
+**[Download 1.0.0](https://github.com/shn1ggy/localtone/releases/tag/v1.0.0)** · [User guide](docs/USER-GUIDE.md) · [Roadmap](docs/ROADMAP.md) · [Report a bug](https://github.com/shn1ggy/localtone/issues/new/choose)
 
 ![Localtone showing an artist pane, album covers and a waveform seekbar](docs/images/localtone-covers.webp)
 
@@ -21,16 +21,16 @@ Browsing filters do not restrict the normal playback queue. Your music remains i
 
 ## Download
 
-**Early access · 0.132.0.** These are ready-to-run desktop packages; Node.js is not required.
+**Version 1.0.0 · First stable release.** These are ready-to-run desktop packages; Node.js is not required.
 
 | System | Download |
 | --- | --- |
-| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.132.0/Localtone-0.132.0-win-x64.zip) |
-| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.132.0/Localtone-0.132.0-mac-arm64.zip) |
-| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v0.132.0/Localtone-0.132.0-mac-x64.zip) |
-| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v0.132.0/Localtone-0.132.0-linux-x86_64.AppImage) |
+| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v1.0.0/Localtone-1.0.0-win-x64.zip) |
+| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v1.0.0/Localtone-1.0.0-mac-arm64.zip) |
+| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v1.0.0/Localtone-1.0.0-mac-x64.zip) |
+| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v1.0.0/Localtone-1.0.0-linux-x86_64.AppImage) |
 
-Extract the **complete ZIP** into a writable folder and open Localtone, or make the Linux AppImage executable. Windows portable EXE, Linux ZIP, checksums and matching decoder sources are on the [release page](https://github.com/shn1ggy/localtone/releases/tag/v0.132.0). GitHub’s “Source code” download is for development.
+Extract the **complete ZIP** into a writable folder and open Localtone, or make the Linux AppImage executable. Windows portable EXE, Linux ZIP, checksums and matching decoder sources are on the [release page](https://github.com/shn1ggy/localtone/releases/tag/v1.0.0). GitHub’s “Source code” download is for development.
 
 Windows packages are unsigned. Mac apps are ad-hoc signed but **not Apple notarized**; macOS may require approval in Privacy & Security. Automated checks run on all three systems; broader hardware, audio-device and accessibility testing is ongoing.
 
@@ -68,7 +68,7 @@ X cycles the browsing views; P opens the queue. Captured from the running app; t
 
 Try it with your collection and [report reproducible problems](https://github.com/shn1ggy/localtone/issues/new/choose). Different library layouts, audio devices and keyboard workflows are especially helpful. Please remove private paths and credentials from reports.
 
-See the [roadmap](ROADMAP.md) for priorities and [CONTRIBUTING.md](CONTRIBUTING.md) for development guidance. [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Release notes](CHANGELOG.md)
+See the [roadmap](docs/ROADMAP.md) for priorities and [CONTRIBUTING.md](CONTRIBUTING.md) for development guidance. [Privacy](docs/PRIVACY.md) · [Security](SECURITY.md) · [Release notes](CHANGELOG.md)
 
 ## Run from source
 
@@ -79,12 +79,14 @@ npm ci
 npm start
 ```
 
+On Windows you can also double-click `Start-Localtone.cmd`; it installs dependencies on the first run and starts the app.
+
 ```sh
 npm run verify
 npm run benchmark
 ```
 
-For native packaging and decoder setup, see [RELEASING.md](RELEASING.md). UI and maintenance references: [design rules](DESIGN.md), [renderer structure](RENDERER-STRUCTURE.md), [maintenance](MAINTENANCE.md), [release readiness](RELEASE-READINESS.md). Native audio and platform behavior require real-system testing in addition to automated checks.
+For native packaging and decoder setup, see [RELEASING.md](docs/development/RELEASING.md). UI and maintenance references: [design rules](docs/development/DESIGN.md), [renderer structure](docs/development/RENDERER-STRUCTURE.md), [maintenance](docs/development/MAINTENANCE.md), [release readiness](docs/development/RELEASE-READINESS.md). Native audio and platform behavior require real-system testing in addition to automated checks.
 
 ## License
 

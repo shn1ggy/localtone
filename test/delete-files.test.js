@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import deletion from '../delete-files.cjs';
+import deletion from '../src/delete-files.cjs';
 const {deleteSelectedFiles}=deletion;
 async function fixture(run){const root=await fs.mkdtemp(path.join(os.tmpdir(),'localtone-delete-'));try{const music=path.join(root,'Music'),folder=path.join(music,'Artist','Album');await fs.mkdir(folder,{recursive:true});const file=path.join(folder,'song.mp3');await fs.writeFile(file,'audio');const db={libraries:[{id:'l',root:music}],tracks:[{id:'a',libraryId:'l',path:file},{id:'alias',libraryId:'l',path:file}]};await run({root,music,folder,file,db});}finally{await fs.rm(root,{recursive:true,force:true});}}
 test('permanent deletion confirms once, deduplicates files and prunes only empty parents below the root',async()=>fixture(async({music,folder,file,db})=>{let count=0;const result=await deleteSelectedFiles(db,['a','alias','a'],async files=>{count++;assert.equal(files.length,1);return true;});assert.equal(count,1);assert.deepEqual(result.removed,['a','alias']);assert.deepEqual(result.failures,[]);await assert.rejects(fs.stat(file),{code:'ENOENT'});await assert.rejects(fs.stat(folder),{code:'ENOENT'});assert.ok((await fs.stat(music)).isDirectory());}));

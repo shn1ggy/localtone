@@ -1,4 +1,4 @@
-require('./app/rules/search.js');
+require('../app/rules/search.js');
 const { defaults, validateSettings, upgradeShortcuts } = require('./preferences.cjs');
 const excluded = new Set(['portable', 'audioOutputId', 'audioOutputName', 'shuffle', 'repeat']);
 function exportSettings(settings, collection) {
@@ -116,7 +116,7 @@ function validateCollections(value) {
     clean.missingTags = Array.isArray(item.missingTags) ? item.missingTags.filter(text) : [];
     return clean;
   });
-  const rules = require('./app/rules/playlist-rules.js');
+  const rules = require('../app/rules/playlist-rules.js');
   const playlists = value.playlists.map((item) => {
     if (
       !text(item.name) ||

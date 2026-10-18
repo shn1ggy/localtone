@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import shortcuts from '../global-shortcuts.cjs';
-import preferences from '../preferences.cjs';
+import shortcuts from '../src/global-shortcuts.cjs';
+import preferences from '../src/preferences.cjs';
 test('global shortcuts register each action once and unregister when disabled; conflicts roll back',()=>{
  const registered=new Map(),actions=[];let blocked=false;
  const api={register:(key,fn)=>{if(blocked&&key==='CommandOrControl+Right')return false;registered.set(key,fn);return true;},unregister:key=>registered.delete(key)};

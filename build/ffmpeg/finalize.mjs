@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const source = require('./source.json');
-const { digest } = require('../../release.cjs');
+const { digest } = require('../../src/release.cjs');
 const root = process.cwd();
 const sourceRoot = path.join(root, 'ffmpeg-source');
 const buildRoot = path.join(root, 'ffmpeg-build');

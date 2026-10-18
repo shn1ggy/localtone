@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { deflateRawSync } from 'node:zlib';
 const require = createRequire(import.meta.url);
-const { createManifest, digest } = require('../release.cjs');
+const { createManifest, digest } = require('../src/release.cjs');
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const excluded = new Set([
   'node_modules',
@@ -22,7 +22,7 @@ const projectDotfiles = new Set([
   '.editorconfig',
   '.nvmrc',
 ]);
-const projectFolders = new Set(['app', 'build', 'test', 'docs', '.github']);
+const projectFolders = new Set(['app', 'src', 'scripts', 'build', 'test', 'docs', '.github']);
 export async function sourceFiles(dir = root, prefix = '') {
   const result = [];
   for (const entry of (await fs.readdir(dir, { withFileTypes: true })).sort((a, b) =>

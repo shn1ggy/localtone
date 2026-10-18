@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import preferences from '../preferences.cjs';
+import preferences from '../src/preferences.cjs';
 import { selectTracks } from '../app/core.js';
 test('whole-star ratings reject halves and out-of-range values',()=>{for(const n of [0,1,2,3,4,5])assert.equal(preferences.validateRating(n),n);for(const n of [0.5,5.5,-1,6,'3',NaN])assert.throws(()=>preferences.validateRating(n));});
 test('old collections receive defaults; invalid saved preferences are normalized',()=>{assert.deepEqual(preferences.normalizeSettings(),preferences.defaults);const settings=preferences.normalizeSettings({theme:'blue',volume:4,coverSize:'tiny'});assert.equal(settings.theme,'blue');assert.equal(settings.volume,.8);assert.equal(settings.coverSize,'medium');assert.throws(()=>preferences.validateSettings({theme:'unknown'}));});

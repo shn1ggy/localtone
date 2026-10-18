@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {matchReleaseTrack,proposedTrackNumber} from '../app/album-number-lookup.js';
-const {createMusicBrainz}=createRequire(import.meta.url)('../musicbrainz.cjs');
+const {createMusicBrainz}=createRequire(import.meta.url)('../src/musicbrainz.cjs');
 const id='59211ea4-ffd2-4ad9-9a4e-941d3148024a';
 test('MusicBrainz search escapes names, caches results, serializes requests and counts per disc',async()=>{
  let clock=0;const calls=[],waits=[];

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import session from '../browsing-session.cjs';
-import queueWindow from '../queue-window.cjs';
+import session from '../src/browsing-session.cjs';
+import queueWindow from '../src/queue-window.cjs';
 export const fixture={version:1,scope:{kind:'playlist',id:'p'},view:'covers',pane:'artists',query:'year:2009',sort:'year',direction:-1,seed:42,scroll:{content:740,artists:80,playlists:25,libraries:0,queue:100},expanded:[['album',true]],groups:Object.fromEntries(['artists','tracks','albums','openedAlbums'].map(k=>[k,{keys:[],current:null,anchor:null}])),albumDetail:null,albumFocus:null,coverFocus:null,queueOpen:true,mini:false,deselected:{artists:null,tracks:null},coverReturnScroll:44,window:{bounds:{x:50,y:60,width:1180,height:800},maximized:false}};
 test('browsing session retains navigation, queue state and bounds without accepting malformed state',()=>{
  assert.deepEqual(session.validateSession(fixture),fixture);

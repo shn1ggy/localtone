@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {moveQueueItem,insertQueueItems,seekTo} from '../app/interactions.js';
-import {serveAudio,createAudioSources} from '../media.cjs';
+import {serveAudio,createAudioSources} from '../src/media.cjs';
 import {readFile,mkdtemp,copyFile,rm} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 test('queue reorder preserves the playing occurrence, even with duplicate songs',()=>{
@@ -31,7 +31,7 @@ test('column boundaries move in pixels without changing total width, and layouts
 
 test('rating writes preserve the playing byte source and subsequent seeks, while a new playback gets updated tags',async()=>{
  const {tmpdir}=await import('node:os'),{join}=await import('node:path');
- const {writeRating,readRating}=await import('../rating-tags.cjs');
+ const {writeRating,readRating}=await import('../src/rating-tags.cjs');
  const dir=await mkdtemp(join(tmpdir(),'localtone-playing-rating-')),file=join(dir,'song.mp3'),sources=createAudioSources({directory:()=>join(dir,'playback')});
  try{
   await copyFile(fileURLToPath(new URL('./fixtures/tone.mp3',import.meta.url)),file);

@@ -6,8 +6,8 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { sourceFiles, sourceZip } from '../build/release.mjs';
 const require = createRequire(import.meta.url);
-const release = require('../release.cjs');
-const { prepareUpdate } = require('../update-preparation.cjs');
+const release = require('../src/release.cjs');
+const { prepareUpdate } = require('../src/update-preparation.cjs');
 async function fixture(fn) {
   const dir = await realpath(await mkdtemp(path.join(tmpdir(), 'localtone-release-')));
   try { await fn(dir); } finally { await rm(dir, { recursive: true, force: true }); }
