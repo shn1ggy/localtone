@@ -1,6 +1,6 @@
 # Localtone user guide
 
-[← Project home](../README.md) · [Downloads](https://github.com/shn1ggy/localtone/releases/tag/v0.131.0) · [Report a bug](https://github.com/shn1ggy/localtone/issues/new/choose)
+[← Project home](../README.md) · [Downloads](https://github.com/shn1ggy/localtone/releases/tag/v0.132.0) · [Report a bug](https://github.com/shn1ggy/localtone/issues/new/choose)
 
 ## First run
 

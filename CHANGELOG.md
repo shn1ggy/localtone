@@ -17,7 +17,7 @@
 - Save confirmed tag edits in the background after closing the editor, with progress, persistent error review and unchanged undo/write verification.
 - Preserve settings and music. 384 tests pass across the three operating systems; native Windows UI checks cover 100%, 125% and 130% display scaling.
 
-See [release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.131.0) for downloads and update instructions.
+See [release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.132.0) for downloads and update instructions.
 
 ## 0.114.0
 
