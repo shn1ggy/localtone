@@ -1,6 +1,6 @@
-# Current release status — 17 October 2026
+# Current release status — 18 October 2026
 
-Localtone 0.131.0 is an early-access release. The public GitHub repository, GPL-3.0-or-later license, native builds for Apple Silicon Mac, Intel Mac, Windows x64 and Linux x64, matching FFmpeg sources/notices, checksums and GitHub-hosted updates are established. 384 tests pass on Windows, macOS and Linux. Native Windows UI checks cover 100%, 125% and 130% display scaling, including queue/mini transitions and minimum-height behavior. The project owner approved the tested candidates for publication.
+Localtone 0.132.0 is an early-access release. The public GitHub repository, GPL-3.0-or-later license, native builds for Apple Silicon Mac, Intel Mac, Windows x64 and Linux x64, matching FFmpeg sources/notices, checksums and GitHub-hosted updates are established. 387 tests pass on Windows, macOS and Linux. Native Windows UI checks cover 100%, 125% and 130% display scaling, including the detached Windows mini player, queue transitions and minimum-height behavior. Settings/rating persistence uses the small collection-state.json file, retained by portable migration and prepared updates. The project owner approved the tested candidates for publication.
 
 Remaining priorities are broader independent hardware/audio testing, signing/notarization, accessibility and newcomer testing, clearer public documentation, and playlist interoperability. Passing automated checks does not establish every device, Linux desktop or screen-reader workflow. No broad stable-release claim is made.
 
