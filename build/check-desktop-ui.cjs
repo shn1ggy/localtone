@@ -2,6 +2,10 @@
 const startedAt = Date.now();
 let startupCheckStarted = false,
   startupCheckFinished = false;
+let releaseStartupCheck;
+const startupGate = new Promise((resolve) => {
+  releaseStartupCheck = resolve;
+});
 const electron = require('electron');
 const { app, BrowserWindow, screen } = electron;
 if (process.env.UI_CHECK_GPU !== '1') app.disableHardwareAcceleration();
@@ -96,6 +100,7 @@ app.on('browser-window-created', (_event, win) => {
         'UI_STARTUP',
         JSON.stringify({ shownBeforeRefresh: true, milliseconds: Date.now() - startedAt }),
       );
+      releaseStartupCheck();
       console.log('UI_CHECK loaded');
       win.focus();
       const before = await geometry();
@@ -603,7 +608,9 @@ Module._load = function (name, ...args) {
       async changedTracks(...args) {
         if (!startupCheckStarted) {
           startupCheckStarted = true;
-          await delay(2000); // Represent a slow cloud-folder check, independent of the UI.
+          // Keep reconciliation pending until the real UI is shown. A fixed delay
+          // races slower macOS runners and does not prove startup independence.
+          await startupGate;
         }
         const result = await actual.changedTracks(...args);
         startupCheckFinished = true;
