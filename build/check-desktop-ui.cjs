@@ -346,6 +346,13 @@ app.on('browser-window-created', (_event, win) => {
       fs.mkdirSync(music);
       for (const name of ['song.mp3', 'preview.mp3'])
         fs.copyFileSync(path.join(root, 'test', 'fixtures', 'tone.mp3'), path.join(music, name));
+      fs.writeFileSync(
+        path.join(music, 'song.mp3'),
+        require('node-id3').update(
+          { comment: { language: 'eng', text: 'Live recording' }, publisher: 'Extra publisher' },
+          fs.readFileSync(path.join(music, 'song.mp3')),
+        ),
+      );
       electron.dialog.showOpenDialog = async () => ({ canceled: true, filePaths: [] });
       await js(
         "document.getElementById('empty-add').click();document.getElementById('library-create-name').value='Music';document.getElementById('library-exclude-names').value='*preview*';document.getElementById('library-settings-form').requestSubmit(document.getElementById('library-settings-save'))",
@@ -513,6 +520,72 @@ app.on('browser-window-created', (_event, win) => {
         );
       console.log('UI_CHECK empty pane headings and descriptions aligned in every view');
       console.log('UI_CHECK library and album highlight passed');
+      await js(
+        "document.getElementById('search').value='';document.getElementById('search').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('view-tracks').click()",
+      );
+      await delay(200);
+      const libraryTop = await js(
+        "document.querySelector('.sidebar > .section-label').getBoundingClientRect().top",
+      );
+      await js(
+        "document.querySelector('.brand').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:40,clientY:30}));[...document.querySelectorAll('#track-actions button')].find(b=>b.textContent==='Hide logo').click()",
+      );
+      assert.equal(await js("getComputedStyle(document.querySelector('.brand')).display"), 'none');
+      assert.ok(
+        (await js(
+          "document.querySelector('.sidebar > .section-label').getBoundingClientRect().top",
+        )) <
+          libraryTop - 20,
+      );
+      await js(
+        "document.querySelector('.sidebar > .section-label').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:40,clientY:30}));[...document.querySelectorAll('#track-actions button')].find(b=>b.textContent==='Show logo').click();document.getElementById('open-settings').click();document.getElementById('settings-tab-appearance').click();document.getElementById('setting-showComments').click()",
+      );
+      await delay(100);
+      assert.equal(await js("document.getElementById('setting-showLogo').checked"), true);
+      const switchSize = await js(
+        "(()=>{const r=document.getElementById('setting-showComments').getBoundingClientRect();return [r.width,r.height]})()",
+      );
+      near(switchSize[0], 30);
+      near(switchSize[1], 17);
+      if (process.env.UI_CHECK_CAPTURE)
+        fs.writeFileSync(
+          process.env.UI_CHECK_CAPTURE.replace('.png', '-appearance.png'),
+          (await win.webContents.capturePage()).toPNG(),
+        );
+      await js(
+        "document.getElementById('close-settings').click();document.querySelector('#tracks [data-track-id]').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:650,clientY:150}));[...document.querySelectorAll('#track-actions button')].find(b=>b.textContent==='Edit tags…').click()",
+      );
+      for (let i = 0; i < 100; i++) {
+        if (await js("!!document.getElementById('tag-value-comment')")) break;
+        await delay(25);
+      }
+      assert.equal(
+        await js("document.getElementById('tag-value-comment').value"),
+        'Live recording',
+      );
+      assert.equal(
+        await js("document.querySelector('.track-comment').textContent"),
+        ' (Live recording)',
+      );
+      const buttonStyle = await js(
+        "(()=>{const b=document.getElementById('tag-other-remove'),s=getComputedStyle(b),r=b.getBoundingClientRect();return {height:r.height,font:s.fontSize}})()",
+      );
+      near(buttonStyle.height, 28);
+      assert.equal(buttonStyle.font, '13px');
+      assert.equal(
+        await js(
+          "getComputedStyle(document.querySelector('.track-comment')).color===getComputedStyle(document.querySelector('#tracks td[data-column=duration]')).color",
+        ),
+        true,
+      );
+      if (process.env.UI_CHECK_CAPTURE)
+        fs.writeFileSync(
+          process.env.UI_CHECK_CAPTURE.replace('.png', '-tags.png'),
+          (await win.webContents.capturePage()).toPNG(),
+        );
+      await js("document.getElementById('tag-cancel').click()");
+      console.log('UI_CHECK 1.1 logo, comment display and tag controls passed');
+
       [...createdWindows].forEach((window) => window.hide());
       app.quit();
     } catch (error) {

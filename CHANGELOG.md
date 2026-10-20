@@ -1,3 +1,20 @@
+# 1.1.0
+
+- Release checks: preserve editable fields/artwork when cleaning legacy tag containers, and recheck external edits before every sync-lock retry.
+
+- Tag editor: new Comment field, and Other tags lists every remaining tag (publisher, encoder, catalogue numbers, iTunes data, ID3v1/APE blocks) with one-click Remove other tags for all selected files. Artwork and ratings are always kept; removal is undoable until exit.
+- Optional comment after track titles in the dimmer number/duration colour (Settings → Appearance → Show comments after titles, off by default).
+- Search: `bitrate:` (kbps; comparisons and ranges such as `bitrate:<256` or `bitrate:192-256`) and `comment:`; `has:`/`missing:` support both. Dynamic playlist rules can filter by bitrate.
+- Libraries: right-click → Open folder.
+- Logo: right-click → Hide logo moves the library list up; Settings → Appearance → Show logo or right-clicking the Libraries heading brings it back.
+- Existing libraries re-read bitrates and comments once in the background after updating.
+- Missing files: tick several entries (Shift-click ranges, Select all, Select all with a match) and reconnect or forget them together. The best suggested match is preselected. Every repair is confirmed in an in-app review of old and new paths instead of a Windows message box, and the batch is applied with one save.
+- Other tags no longer lists artwork and ratings, which are never removed.
+- Tag editor: Add field… adds extra tag fields (fields already in the files, common fields such as Composer or BPM, or a custom name). They persist in settings and can be removed from the editor with ×; file tags are unaffected.
+- Fix "EPERM: operation not permitted, rename …" errors when the data folder is inside Dropbox/OneDrive or scanned by antivirus: saving now retries briefly while another program holds the file.
+- Play queue: the context menu now stays inside the window for low rows (it was positioned before its Remove item was added).
+- Missing files: selection uses the app's switches, the Check again button keeps its width beside long messages, the review uses the app's heading and text styles, and library Open folder sits just above Delete library.
+
 # 1.0.0
 
 - Play queue: Shift+Enter opens a song menu you can navigate with the arrow keys; Left/Right now reach the open queue from the neighbouring panes (Tab still never enters it); the queue no longer jumps on every track change and only scrolls once the playing song leaves the view.
@@ -32,7 +49,7 @@
 - Save confirmed tag edits in the background after closing the editor, with progress, persistent error review and unchanged undo/write verification.
 - Preserve settings and music. 384 tests pass across the three operating systems; native Windows UI checks cover 100%, 125% and 130% display scaling.
 
-See [release notes](https://github.com/shn1ggy/localtone/releases/tag/v1.0.0) for downloads and update instructions.
+See [release notes](https://github.com/shn1ggy/localtone/releases/tag/v0.131.0) for downloads and update instructions.
 
 ## 0.114.0
 

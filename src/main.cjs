@@ -30,6 +30,7 @@ const fileNaming = require('./file-naming.cjs'),
   naming = fileNaming.createFileNaming();
 const settingsTransfer = require('./settings-transfer.cjs');
 const { changedTracks } = require('./startup-refresh.cjs');
+const { replaceFile, replaceFileSync } = require('./replace-file.cjs');
 const { cleanUnusedCache } = require('./cache-cleanup.cjs');
 let startupRefresh = { changed: 0, unavailable: 0, warnings: [] };
 let startupReady = Promise.resolve();
@@ -374,7 +375,7 @@ function serialWrite(task) {
 }
 async function writeAtomic(file, data) {
   await fs.writeFile(file + '.tmp', data);
-  await fs.rename(file + '.tmp', file);
+  await replaceFile(file + '.tmp', file);
 }
 const lightState = () =>
   JSON.stringify({ version: 1, ...Object.fromEntries(lightKeys.map((key) => [key, db[key]])) });
@@ -874,7 +875,7 @@ app.whenReady().then(async () => {
       const file = path.join(app.getPath('userData'), 'browsing-session.json'),
         sync = require('node:fs');
       sync.writeFileSync(file + '.tmp', JSON.stringify(browsingSession));
-      sync.renameSync(file + '.tmp', file);
+      replaceFileSync(file + '.tmp', file);
       event.returnValue = true;
     } catch {
       event.returnValue = false;
@@ -890,7 +891,7 @@ app.whenReady().then(async () => {
       const file = path.join(app.getPath('userData'), 'playback-session.json'),
         sync = require('node:fs');
       sync.writeFileSync(file + '.tmp', JSON.stringify(playbackSession));
-      sync.renameSync(file + '.tmp', file);
+      replaceFileSync(file + '.tmp', file);
       event.returnValue = true;
     } catch {
       event.returnValue = false;
@@ -914,8 +915,7 @@ app.whenReady().then(async () => {
     const write = historyWrites
       .catch(() => {})
       .then(async () => {
-        await fs.writeFile(historyPath + '.tmp', data);
-        await fs.rename(historyPath + '.tmp', historyPath);
+        await writeAtomic(historyPath, data);
       });
     historyWrites = write;
     await write;
@@ -1347,8 +1347,17 @@ app.whenReady().then(async () => {
   handle(
     'open-folder',
     async (action) => {
-      if (!action || !['track', 'album', 'artist'].includes(action.kind))
+      if (!action || !['track', 'album', 'artist', 'library'].includes(action.kind))
         throw new Error('Invalid folder request.');
+      if (action.kind === 'library') {
+        const library = db.libraries.find((l) => l.id === action.id);
+        if (!library) throw new Error('Library not found.');
+        if (!(await fs.stat(library.root).catch(() => null))?.isDirectory())
+          throw new Error('The library folder is unavailable. Reconnect it from the library menu.');
+        const error = await shell.openPath(library.root);
+        if (error) throw new Error(error);
+        return null;
+      }
       const track = trackIndex.get(action.id);
       if (!track) throw new Error('Track not found.');
       const library = db.libraries.find((l) => l.id === track.libraryId);
@@ -1826,97 +1835,8 @@ app.whenReady().then(async () => {
       })),
     };
   });
-  handle('repair-missing-track', async (id, action, candidateId = null) => {
-    const track = trackIndex.get(id),
-      library = db.libraries.find((l) => l.id === track?.libraryId);
-    if (!track || !library) throw Error('Track no longer exists in the library.');
-    await libraryRepair.requireMissing(track);
-    let remap = {},
-      updated;
-    if (action === 'reconnect') {
-      let filename;
-      if (candidateId) {
-        const candidate = trackIndex.get(candidateId);
-        if (!candidate || candidate.libraryId !== library.id)
-          throw Error('Suggested file no longer exists in this library.');
-        filename = candidate.path;
-      } else {
-        const chosen = await dialog.showOpenDialog(win, {
-          title: 'Locate ' + track.title,
-          properties: ['openFile'],
-          filters: [
-            {
-              name: 'Audio',
-              extensions: ['mp3', 'flac', 'wav', 'ogg', 'm4a', 'aac', 'opus', 'aiff'],
-            },
-          ],
-        });
-        if (chosen.canceled) return null;
-        filename = chosen.filePaths[0];
-      }
-      const plan = await libraryRepair.planTrackReconnect(library, track, filename, db.tracks);
-      const answer = await dialog.showMessageBox(win, {
-        type: 'question',
-        title: 'Reconnect missing file',
-        message: 'Use this file for ' + track.title + '?',
-        detail:
-          track.path +
-          '\n→ ' +
-          plan.file +
-          '\n\n' +
-          (plan.duplicates.length
-            ? 'The replacement is already indexed. Merge its references into the original entry, preserving playlists and using the replacement file’s current tags and rating.'
-            : 'Keep the original track ID and playlist references, using this file’s current tags and rating.') +
-          ' No music is moved or deleted.',
-        buttons: ['Cancel', 'Reconnect'],
-        defaultId: 0,
-        cancelId: 0,
-      });
-      if (answer.response !== 1) return null;
-      await libraryRepair.requireMissing(track);
-      const info = await fs.stat(plan.file);
-      if (info.size !== plan.size || info.mtimeMs !== plan.mtime)
-        throw Error('The selected file changed while reconnecting. Please try again.');
-      const scanned = await scan(
-        library,
-        [plan.file],
-        [{ ...track, path: plan.file, mtime: -1, size: -1 }],
-      );
-      if (scanned.warnings || scanned.tracks.length !== 1)
-        throw Error(
-          'The selected file could not be read. Wait for syncing to finish or choose another file.',
-        );
-      updated = scanned.tracks[0];
-      const verified = await fs.stat(plan.file);
-      if (verified.size !== plan.size || verified.mtimeMs !== plan.mtime)
-        throw Error('The selected file changed while reconnecting. Please try again.');
-      remap = Object.fromEntries(plan.duplicates.map((duplicate) => [duplicate, id]));
-      db.tracks = db.tracks.filter((t) => t.id !== id && !Object.hasOwn(remap, t.id));
-      db.tracks.push(updated);
-      libraryRepair.replaceTrackReferences(db, remap);
-      delete db.pendingRatings?.[id];
-      if (updated.codec === 'MP3') {
-        if (updated.tagRating) db.ratings[id] = updated.tagRating;
-        else delete db.ratings[id];
-      }
-    } else if (action === 'forget') {
-      const answer = await dialog.showMessageBox(win, {
-        type: 'question',
-        title: 'Forget missing entry',
-        message: 'Forget ' + track.title + '?',
-        detail:
-          track.path +
-          '\n\nRemove only this missing record and its references from playlists and the play queue. No music file is deleted. You can reconnect instead to keep the original playlist references.',
-        buttons: ['Cancel', 'Forget entry'],
-        defaultId: 0,
-        cancelId: 0,
-      });
-      if (answer.response !== 1) return null;
-      await libraryRepair.requireMissing(track);
-      remap = { [id]: null };
-      db.tracks = db.tracks.filter((t) => t.id !== id);
-      libraryRepair.replaceTrackReferences(db, remap);
-    } else throw Error('Unknown missing-file action.');
+  // Saves the collection once and carries ID changes into the saved sessions.
+  async function finishMissingRepair(remap, extra = {}) {
     index();
     await save();
     const map = (value) => (Object.hasOwn(remap, value) ? remap[value] : value);
@@ -1942,17 +1862,174 @@ app.whenReady().then(async () => {
         ['browsing-session.json', browsingSession],
       ].map(async ([name, value]) => {
         const file = path.join(app.getPath('userData'), name);
-        await fs.writeFile(file + '.tmp', JSON.stringify(value));
-        await fs.rename(file + '.tmp', file);
+        await writeAtomic(file, JSON.stringify(value));
       }),
     );
     return {
       state: snapshot(),
       remap,
+      ...extra,
       notice: writes.some((r) => r.status === 'rejected')
         ? 'The library was repaired, but a session file could not be saved. Close the app normally to save the current session.'
         : '',
     };
+  }
+  handle(
+    'choose-missing-file',
+    async (id) => {
+      const track = trackIndex.get(id);
+      if (!track) throw Error('Track no longer exists in the library.');
+      const library = db.libraries.find((l) => l.id === track.libraryId);
+      const chosen = await dialog.showOpenDialog(win, {
+        title: 'Locate ' + track.title,
+        defaultPath: library?.root,
+        properties: ['openFile'],
+        filters: [
+          {
+            name: 'Audio',
+            extensions: ['mp3', 'flac', 'wav', 'ogg', 'm4a', 'aac', 'opus', 'aiff'],
+          },
+        ],
+      });
+      return chosen.canceled ? null : chosen.filePaths[0];
+    },
+    readOnly,
+  );
+  // Batch review of missing files. 'plan' checks every entry and changes nothing;
+  // the renderer shows that plan for confirmation. 'apply' repeats the checks, refuses
+  // files that changed since the plan, then repairs everything with a single save.
+  // Each entry: { id, action: 'reconnect' | 'forget', candidateId?, file?, expect? }.
+  handle('repair-missing-tracks', async (entries, mode) => {
+    if (
+      !['plan', 'apply'].includes(mode) ||
+      !Array.isArray(entries) ||
+      !entries.length ||
+      entries.length > 10000 ||
+      entries.some(
+        (e) =>
+          !e ||
+          typeof e.id !== 'string' ||
+          !['reconnect', 'forget'].includes(e.action) ||
+          (e.candidateId != null && typeof e.candidateId !== 'string') ||
+          (e.file != null && typeof e.file !== 'string'),
+      ) ||
+      new Set(entries.map((e) => e.id)).size !== entries.length
+    )
+      throw Error('Invalid missing-file review.');
+    const plans = [],
+      claimed = new Map();
+    for (const entry of entries) {
+      const track = trackIndex.get(entry.id),
+        library = db.libraries.find((l) => l.id === track?.libraryId);
+      const item = {
+        id: entry.id,
+        action: entry.action,
+        title: track?.title || '',
+        from: track?.path || '',
+      };
+      try {
+        if (!track || !library) throw Error('Track no longer exists in the library.');
+        await libraryRepair.requireMissing(track);
+        if (entry.action === 'reconnect') {
+          let filename = entry.file;
+          if (entry.candidateId) {
+            const candidate = trackIndex.get(entry.candidateId);
+            if (!candidate || candidate.libraryId !== library.id)
+              throw Error('Suggested file no longer exists in this library.');
+            filename = candidate.path;
+          }
+          if (!filename) throw Error('Choose a replacement file first.');
+          const plan = await libraryRepair.planTrackReconnect(library, track, filename, db.tracks);
+          if (claimed.has(plan.file))
+            throw Error('The same file is also chosen for ' + claimed.get(plan.file) + '.');
+          claimed.set(plan.file, track.title);
+          Object.assign(item, {
+            to: plan.file,
+            merge: plan.duplicates.length > 0,
+            size: plan.size,
+            mtime: plan.mtime,
+            plan,
+            library,
+            track,
+          });
+          if (
+            mode === 'apply' &&
+            (!entry.expect ||
+              entry.expect.file !== plan.file ||
+              entry.expect.size !== plan.size ||
+              entry.expect.mtime !== plan.mtime)
+          )
+            throw Error('The file changed since the review. Review again.');
+        } else Object.assign(item, { track });
+      } catch (error) {
+        item.error = error.message;
+      }
+      plans.push(item);
+    }
+    const publicPlan = (item) => ({
+      id: item.id,
+      action: item.action,
+      title: item.title,
+      from: item.from,
+      ...(item.to ? { to: item.to, merge: item.merge, size: item.size, mtime: item.mtime } : {}),
+      ...(item.error ? { error: item.error } : {}),
+    });
+    if (mode === 'plan') return { plan: plans.map(publicPlan) };
+    // Read every replacement first (one scan per library); nothing changes on failure.
+    const failures = plans.filter((item) => item.error).map(publicPlan),
+      ready = plans.filter((item) => !item.error),
+      scanned = new Map();
+    const byLibrary = new Map();
+    for (const item of ready.filter((i) => i.action === 'reconnect')) {
+      if (!byLibrary.has(item.library.id)) byLibrary.set(item.library.id, []);
+      byLibrary.get(item.library.id).push(item);
+    }
+    for (const items of byLibrary.values()) {
+      const result = await scan(
+        items[0].library,
+        items.map((i) => i.plan.file),
+        items.map((i) => ({ ...i.track, path: i.plan.file, mtime: -1, size: -1 })),
+      );
+      for (const track of result.tracks) scanned.set(track.path, track);
+    }
+    const remap = {},
+      repaired = [];
+    for (const item of ready) {
+      if (item.action === 'forget') {
+        remap[item.id] = null;
+        db.tracks = db.tracks.filter((t) => t.id !== item.id);
+        repaired.push(item.id);
+        continue;
+      }
+      const updated = scanned.get(item.plan.file);
+      try {
+        if (!updated || updated.mtime === -1)
+          throw Error(
+            'The file could not be read. Wait for syncing to finish or choose another file.',
+          );
+        const verified = await fs.stat(item.plan.file);
+        if (verified.size !== item.plan.size || verified.mtimeMs !== item.plan.mtime)
+          throw Error('The file changed while reconnecting. Review again.');
+      } catch (error) {
+        failures.push({ ...publicPlan(item), error: error.message });
+        continue;
+      }
+      const merged = Object.fromEntries(
+        item.plan.duplicates.map((duplicate) => [duplicate, item.id]),
+      );
+      Object.assign(remap, merged);
+      db.tracks = db.tracks.filter((t) => t.id !== item.id && !Object.hasOwn(merged, t.id));
+      db.tracks.push(updated);
+      delete db.pendingRatings?.[item.id];
+      if (updated.codec === 'MP3') {
+        if (updated.tagRating) db.ratings[item.id] = updated.tagRating;
+        else delete db.ratings[item.id];
+      }
+      repaired.push(item.id);
+    }
+    if (!repaired.length) return { state: snapshot(), remap: {}, repaired, failures, notice: '' };
+    libraryRepair.replaceTrackReferences(db, remap);
+    return finishMissingRepair(remap, { repaired, failures });
   });
   handle('reconnect-library', async (id) => {
     const library = db.libraries.find((l) => l.id === id);
@@ -2329,7 +2406,12 @@ app.whenReady().then(async () => {
               ? db.tracks
                   .filter(
                     (t) =>
-                      t.libraryId === library.id && !t.missing && typeof t.discRaw !== 'string',
+                      t.libraryId === library.id &&
+                      !t.missing &&
+                      // Re-read once for fields added in later versions.
+                      (typeof t.discRaw !== 'string' ||
+                        typeof t.bitrate !== 'number' ||
+                        typeof t.comment !== 'string'),
                   )
                   .map((t) => t.path)
               : []),

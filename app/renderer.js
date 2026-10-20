@@ -60,6 +60,8 @@ let prefs = {
   renameAlbumFormula: '%year% %album%',
   renameTrackFormula: '%tracknumber% %title%',
   animateLogo: true,
+  showLogo: true,
+  showComments: false,
   exportCollections: false,
   confirmMultiFileTags: true,
   totalLeadingZeros: false,
@@ -74,6 +76,7 @@ let prefs = {
   audioOutputName: 'System default',
   shortcuts: shortcutDefaults,
   albumDetails: ['artist', 'year', 'tracks', 'duration'],
+  tagCustomFields: [],
   trackNumberFormat: 'number',
   showDiscNumber: false,
   albumLayout: 'side',
@@ -812,9 +815,9 @@ function renderQueue({ reveal = true } = {}) {
           removeQueueSelection();
         };
         $('track-actions').append(remove);
-        normalizeContextMenu();
-        // Rebuilding the menu moves its buttons; keep keyboard focus inside the menu.
-        $('track-actions').querySelector('button:not(:disabled)')?.focus();
+        // Re-open with the extra item so the menu is measured and kept inside the
+        // window at its final height, with keyboard focus on its first item.
+        openContextMenu(event);
       }
     };
     item.onkeydown = (event) => {
@@ -1764,7 +1767,26 @@ document.querySelector('.brand').oncontextmenu = (event) => {
     paintMenuCheck(button, prefs.animateLogo !== false);
     closeContextMenu(true);
   };
-  $('track-actions').replaceChildren(button);
+  const hide = el('button', 'Hide logo');
+  hide.onclick = () => {
+    closeContextMenu(true);
+    updateSettings({ showLogo: false });
+    toast('Logo hidden. Show it again in Settings → Appearance or from the Libraries menu.');
+  };
+  $('track-actions').replaceChildren(button, hide);
+  openContextMenu(event);
+};
+// With the logo hidden, the Libraries heading offers it back.
+document.querySelector('.sidebar > .section-label').oncontextmenu = (event) => {
+  if (prefs.showLogo !== false) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const show = el('button', 'Show logo');
+  show.onclick = () => {
+    closeContextMenu(true);
+    updateSettings({ showLogo: true });
+  };
+  $('track-actions').replaceChildren(show);
   openContextMenu(event);
 };
 setIcon(document.querySelector('.search>span'), 'search');
@@ -2242,6 +2264,7 @@ const tagLabels = {
   genre: 'Genre',
   track: 'Track number',
   disc: 'Disc number',
+  comment: 'Comment',
 };
 const tagEditor = createTagEditor({
   document,
@@ -2271,6 +2294,8 @@ const tagEditor = createTagEditor({
     $('toast').append(document.createTextNode(' '), review);
   },
   onSaved: (result) => rememberTagEdit(result, result.saved),
+  getCustomFields: () => prefs.tagCustomFields || [],
+  saveCustomFields: (tagCustomFields) => updateSettings({ tagCustomFields }),
   applyTagState: applyFileState,
   getTrack: (id) => trackLookup.get(id),
   toast,
@@ -2671,6 +2696,9 @@ function showCollectionActions(item, kind, event) {
     add('Rescan folder', () =>
       operation(() => api.rescan(item.id), 'Checking your folder for new and changed music…'),
     );
+    // Open folder sits on its own just above Delete library.
+    add('Open folder', () => openFolder(item.id, 'library'));
+    container.lastElementChild.dataset.menuRank = '5';
     add('Delete library', () => deleteCollection(item, kind));
   } else {
     add('Playlist settings…', () => openPlaylistSettings(item));
@@ -2745,7 +2773,10 @@ async function rateTrack(id, rating) {
   }
 }
 function applyPreferences() {
-  pulseAnimation.setEnabled(prefs.animateLogo !== false);
+  pulseAnimation.setEnabled(prefs.animateLogo !== false && prefs.showLogo !== false);
+  document.querySelector('.brand').hidden = prefs.showLogo === false;
+  $('setting-showLogo').checked = prefs.showLogo !== false;
+  $('setting-showComments').checked = !!prefs.showComments;
   $('setting-exportCollections').checked = !!prefs.exportCollections;
   $('setting-confirmMultiFileTags').checked = prefs.confirmMultiFileTags !== false;
   $('setting-totalLeadingZeros').checked = !!prefs.totalLeadingZeros;
@@ -3028,6 +3059,11 @@ $('setting-seekStep').onchange = (event) =>
 $('setting-portable').onchange = (event) => updateSettings({ portable: event.target.checked });
 $('setting-showColumnHeaders').onchange = (event) =>
   updateSettings({ showColumnHeaders: event.target.checked });
+$('setting-showLogo').onchange = (event) => updateSettings({ showLogo: event.target.checked });
+$('setting-showComments').onchange = (event) => {
+  updateSettings({ showComments: event.target.checked });
+  render({ preserveScroll: true });
+};
 $('setting-showDiscNumber').onchange = (event) => {
   updateSettings({ showDiscNumber: event.target.checked });
   render({ preserveScroll: true });
@@ -3525,6 +3561,9 @@ function buildTrackTable(table, tracks, playSource, playlist = null) {
         const title = el('div', null, 'track-title');
         if (main) title.append(cover(track));
         const name = el('span', track.title, 'track-name');
+        // Optional comment, directly after the title in the dimmer number/duration colour.
+        if (prefs.showComments && track.comment)
+          name.append(el('span', ` (${track.comment.replace(/\s+/g, ' ')})`, 'track-comment'));
         if (row.classList.contains('current')) name.prepend(icon('playback'));
         title.append(name);
         cell.append(title);
@@ -5496,11 +5535,150 @@ function applyMissingRepair(result) {
     }
   }
 }
+// Missing files: rows can be checked (Shift-click selects a range) and repaired together.
+// Every repair goes through an in-app review of the planned changes before anything is
+// written; the main process re-checks the files when the review is confirmed.
+const missingRows = new Map();
+let missingAnchor = null,
+  missingReview = null;
+const missingError = (error) =>
+  error.message.replace(/^Error invoking remote method '[^']+': Error: /, '');
+function syncMissingToolbar() {
+  const rows = [...missingRows.values()],
+    checked = rows.filter((row) => row.check.checked),
+    all = $('missing-select-all');
+  all.checked = rows.length > 0 && checked.length === rows.length;
+  all.disabled = !rows.length;
+  $('missing-select-matched').disabled = !rows.some((row) => row.track.candidates?.length);
+  $('missing-reconnect-selected').disabled = !checked.length;
+  $('missing-forget-selected').disabled = !checked.length;
+  $('missing-reconnect-selected').textContent = checked.length
+    ? `Reconnect ${checked.length}…`
+    : 'Reconnect…';
+  $('missing-forget-selected').textContent = checked.length
+    ? `Forget ${checked.length}…`
+    : 'Forget…';
+  for (const row of rows) row.node.classList.toggle('selected', row.check.checked);
+}
+function missingEntry(row, action) {
+  const value = row.select.value;
+  return {
+    id: row.track.id,
+    action,
+    ...(action === 'reconnect' && value.startsWith('file:') ? { file: value.slice(5) } : {}),
+    ...(action === 'reconnect' && value && !value.startsWith('file:')
+      ? { candidateId: value }
+      : {}),
+  };
+}
+async function reviewMissing(rows, action) {
+  if (busy || !rows.length) return;
+  busy = true;
+  setBusy(true);
+  const status = $('missing-status').textContent;
+  $('missing-status').textContent = 'Checking…';
+  try {
+    const entries = rows.map((row) => missingEntry(row, action)),
+      { plan } = await api.repairMissingTracks(entries, 'plan');
+    $('missing-status').textContent = status;
+    missingReview = { action, entries, plan };
+    paintMissingReview();
+  } catch (error) {
+    $('missing-status').textContent = missingError(error);
+  } finally {
+    busy = false;
+    setBusy(false);
+  }
+}
+function paintMissingReview() {
+  const { action, plan } = missingReview,
+    ready = plan.filter((item) => !item.error),
+    skipped = plan.filter((item) => item.error),
+    merges = ready.filter((item) => item.merge).length,
+    noun = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  $('missing-main').hidden = true;
+  $('missing-review').hidden = false;
+  $('missing-review-title').textContent =
+    action === 'reconnect'
+      ? `Reconnect ${noun(ready.length, 'file', 'files')}?`
+      : `Forget ${noun(ready.length, 'entry', 'entries')}?`;
+  $('missing-review-note').textContent =
+    action === 'reconnect'
+      ? `Each entry keeps its track ID and playlist references and takes the new file's current tags and rating.${merges ? ` ${noun(merges, 'replacement is', 'replacements are')} already indexed and will be merged into the original entry.` : ''} No music is moved or deleted.`
+      : 'Removes only these missing records and their references from playlists and the play queue. No music file is deleted. Reconnect instead to keep playlist references.';
+  const item = (entry) => {
+    const node = el('li', null, entry.error ? 'skipped' : '');
+    node.append(el('strong', entry.title || 'Unknown track'));
+    node.append(el('span', entry.from, 'missing-path'));
+    if (entry.to)
+      node.append(el('span', '→ ' + entry.to + (entry.merge ? ' (merge)' : ''), 'missing-path'));
+    if (entry.error) node.append(el('small', entry.error));
+    return node;
+  };
+  $('missing-review-list').replaceChildren(...ready.map(item));
+  $('missing-review-skipped').replaceChildren(...skipped.map(item));
+  $('missing-review-skipped-heading').hidden = !skipped.length;
+  $('missing-review-skipped-heading').textContent = `Skipped · ${skipped.length}`;
+  $('missing-review-apply').disabled = !ready.length;
+  $('missing-review-apply').textContent =
+    action === 'reconnect' ? `Reconnect ${ready.length}` : `Forget ${ready.length}`;
+  // Keyboard users can confirm with Enter; no focus ring is drawn for mouse users.
+  $('missing-review-apply').focus({ focusVisible: false });
+}
+function closeMissingReview() {
+  missingReview = null;
+  $('missing-review').hidden = true;
+  $('missing-main').hidden = false;
+}
+$('missing-review-back').onclick = closeMissingReview;
+$('missing-review-apply').onclick = async () => {
+  if (busy || !missingReview) return;
+  const review = missingReview,
+    ready = new Map(review.plan.filter((item) => !item.error).map((item) => [item.id, item])),
+    entries = review.entries
+      .filter((entry) => ready.has(entry.id))
+      .map((entry) => {
+        const planned = ready.get(entry.id);
+        return planned.to
+          ? { ...entry, expect: { file: planned.to, size: planned.size, mtime: planned.mtime } }
+          : entry;
+      });
+  busy = true;
+  setBusy(true);
+  $('missing-review-apply').disabled = $('missing-review-back').disabled = true;
+  let message = '';
+  try {
+    const result = await api.repairMissingTracks(entries, 'apply');
+    if (result.repaired.length) applyMissingRepair(result);
+    const verb = review.action === 'reconnect' ? 'Reconnected' : 'Forgot';
+    message =
+      `${verb} ${result.repaired.length} of ${entries.length}.` +
+      (result.failures.length
+        ? ' ' + result.failures.map((f) => `${f.title}: ${f.error}`).join(' ')
+        : '') +
+      (result.notice ? ' ' + result.notice : '');
+  } catch (error) {
+    message = missingError(error);
+  } finally {
+    busy = false;
+    setBusy(false);
+    $('missing-review-apply').disabled = $('missing-review-back').disabled = false;
+  }
+  closeMissingReview();
+  await refreshMissingFiles();
+  $('missing-status').textContent = message;
+};
 async function refreshMissingFiles() {
   const button = $('missing-refresh'),
     list = $('missing-list');
   button.disabled = true;
+  closeMissingReview();
   $('missing-status').textContent = 'Checking files…';
+  const wasChecked = new Set(
+    [...missingRows.values()].filter((row) => row.check.checked).map((row) => row.track.id),
+  );
+  missingRows.clear();
+  missingAnchor = null;
   try {
     const result = await api.missingFiles();
     state = result.state;
@@ -5534,8 +5712,15 @@ async function refreshMissingFiles() {
       header.append(el('strong', `${library?.name || 'Library'} · ${tracks.length}`), button);
       section.append(header);
       for (const track of tracks) {
-        const row = el('div', null, 'missing-row');
-        row.append(
+        const row = el('div', null, 'missing-row'),
+          check = el('input'),
+          text = el('div', null, 'missing-text');
+        check.type = 'checkbox';
+        check.className = 'preference-switch';
+        check.setAttribute('role', 'switch');
+        check.setAttribute('aria-label', 'Select ' + track.title);
+        check.checked = wasChecked.has(track.id);
+        text.append(
           el('span', track.title),
           el('small', track.reason),
           el('span', track.path, 'missing-path'),
@@ -5545,64 +5730,98 @@ async function refreshMissingFiles() {
           reconnect = el('button', 'Reconnect…', 'chip dialog-button'),
           forget = el('button', 'Forget entry…', 'chip dialog-button');
         select.setAttribute('aria-label', 'Replacement for ' + track.title);
-        const choose = el('option', 'Choose file…');
-        choose.value = '';
-        select.append(choose);
         for (const candidate of track.candidates || []) {
           const option = el('option', candidate.path.split(/[\\/]/).at(-1));
           option.value = candidate.id;
           option.title = candidate.path + ' · Matches ' + candidate.reasons.join(', ');
           select.append(option);
         }
+        // The strongest suggestion is preselected; browsing stays one choice away.
+        const none = el('option', 'No replacement chosen'),
+          browse = el('option', 'Browse for file…');
+        none.value = '';
+        browse.value = '__browse';
+        select.append(none, browse);
+        select.value = track.candidates?.[0]?.id || '';
+        let previous = select.value;
         const matchNote = el('small', null, 'missing-match-note');
         const describe = () => {
           const candidate = track.candidates?.find((c) => c.id === select.value);
           matchNote.textContent = candidate
             ? 'Matches ' + candidate.reasons.join(', ') + '. ' + candidate.path
-            : track.candidates?.length
-              ? 'Possible renamed files found. Choose a match or browse.'
-              : 'Choose the new file, or forget an obsolete entry.';
+            : select.value.startsWith('file:')
+              ? 'Chosen file: ' + select.value.slice(5)
+              : track.candidates?.length
+                ? 'Possible renamed files found. Choose a match or browse.'
+                : 'Browse for the new file, or forget an obsolete entry.';
         };
-        select.onchange = describe;
-        describe();
-        const repair = async (action) => {
-          if (busy) return;
-          busy = true;
-          setBusy(true);
-          const controls = [...$('missing-dialog').querySelectorAll('button,select')];
-          controls.forEach((n) => (n.disabled = true));
-          try {
-            const result = await api.repairMissingTrack(track.id, action, select.value || null);
-            if (result) {
-              applyMissingRepair(result);
-              await refreshMissingFiles();
-              if (result.notice) $('missing-status').textContent = result.notice;
-            }
-          } catch (error) {
-            $('missing-status').textContent = error.message.replace(
-              /^Error invoking remote method '[^']+': Error: /,
-              '',
-            );
-          } finally {
-            busy = false;
-            setBusy(false);
-            controls.forEach((n) => (n.disabled = false));
+        select.onchange = async () => {
+          if (select.value !== '__browse') {
+            previous = select.value;
+            describe();
+            return;
           }
+          select.value = previous;
+          let file = null;
+          try {
+            file = await api.chooseMissingFile(track.id);
+          } catch (error) {
+            $('missing-status').textContent = missingError(error);
+          }
+          if (file) {
+            let option = [...select.options].find((o) => o.value === 'file:' + file);
+            if (!option) {
+              option = el('option', file.split(/[\\/]/).at(-1));
+              option.value = 'file:' + file;
+              option.title = file;
+              select.insertBefore(option, none);
+            }
+            select.value = previous = option.value;
+          }
+          describe();
         };
-        reconnect.onclick = () => repair('reconnect');
-        forget.onclick = () => repair('forget');
+        describe();
+        const entry = { track, node: row, check, select };
+        missingRows.set(track.id, entry);
+        check.onclick = (event) => {
+          const ids = [...missingRows.keys()];
+          if (event.shiftKey && missingAnchor && missingRows.has(missingAnchor)) {
+            const [a, b] = [ids.indexOf(missingAnchor), ids.indexOf(track.id)].sort(
+              (x, y) => x - y,
+            );
+            for (const rowId of ids.slice(a, b + 1))
+              missingRows.get(rowId).check.checked = check.checked;
+          }
+          missingAnchor = track.id;
+          syncMissingToolbar();
+        };
+        reconnect.onclick = () => reviewMissing([entry], 'reconnect');
+        forget.onclick = () => reviewMissing([entry], 'forget');
         actions.append(select, reconnect, forget);
-        row.append(actions, matchNote);
+        row.append(check, text, actions, matchNote);
         section.append(row);
       }
       list.append(section);
     }
   } catch (error) {
-    $('missing-status').textContent = error.message;
+    $('missing-status').textContent = missingError(error);
   } finally {
     button.disabled = false;
+    syncMissingToolbar();
   }
 }
+$('missing-select-all').onchange = (event) => {
+  for (const row of missingRows.values()) row.check.checked = event.target.checked;
+  syncMissingToolbar();
+};
+$('missing-select-matched').onclick = () => {
+  for (const row of missingRows.values())
+    row.check.checked = !!row.select.value && row.select.value !== '__browse';
+  syncMissingToolbar();
+};
+const checkedMissingRows = () => [...missingRows.values()].filter((row) => row.check.checked);
+$('missing-reconnect-selected').onclick = () => reviewMissing(checkedMissingRows(), 'reconnect');
+$('missing-forget-selected').onclick = () => reviewMissing(checkedMissingRows(), 'forget');
 $('missing-refresh').onclick = refreshMissingFiles;
 $('open-missing-files').onclick = () => {
   dialogs.open($('missing-dialog'));
@@ -5611,6 +5830,13 @@ $('open-missing-files').onclick = () => {
 $('missing-close').onclick = () => {
   if (!busy) $('missing-dialog').close();
 };
+$('missing-dialog').addEventListener('keydown', (event) => {
+  // Escape steps back from the review before it closes the window.
+  if (event.key === 'Escape' && missingReview && !busy) {
+    event.preventDefault();
+    closeMissingReview();
+  }
+});
 $('missing-dialog').addEventListener('cancel', (event) => {
   if (busy) event.preventDefault();
 });

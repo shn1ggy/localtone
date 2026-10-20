@@ -49,6 +49,8 @@ const defaults = Object.freeze({
   renameTrackFormula: '%tracknumber% %title%',
   renameReplacements: {},
   animateLogo: true,
+  showLogo: true,
+  showComments: false,
   exportCollections: false,
   confirmMultiFileTags: true,
   totalLeadingZeros: false,
@@ -64,6 +66,7 @@ const defaults = Object.freeze({
   audioOutputName: 'System default',
   shortcuts: shortcutDefaults,
   albumDetails: ['artist', 'year', 'tracks', 'duration'],
+  tagCustomFields: [],
   trackNumberFormat: 'number',
   showDiscNumber: false,
   albumLayout: 'side',
@@ -162,6 +165,26 @@ function validateSettings(patch) {
       clean[key] = value;
       continue;
     }
+    if (key === 'tagCustomFields') {
+      // Extra tag-editor fields: { key: frame ID or TXXX:<description>, label }.
+      const { validCustomKey } = require('./tag-frames.cjs');
+      if (
+        !Array.isArray(value) ||
+        value.length > 50 ||
+        value.some(
+          (field) =>
+            !field ||
+            !validCustomKey(field.key) ||
+            typeof field.label !== 'string' ||
+            !field.label.trim() ||
+            field.label.length > 64,
+        ) ||
+        new Set(value.map((field) => field.key.toUpperCase())).size !== value.length
+      )
+        throw new Error('Invalid tag fields.');
+      clean[key] = value.map((field) => ({ key: field.key, label: field.label.trim() }));
+      continue;
+    }
     if (key === 'albumDetails') {
       if (
         !Array.isArray(value) ||
@@ -238,6 +261,8 @@ function validateSettings(patch) {
         throw new Error('Invalid volume.');
     } else if (
       key === 'animateLogo' ||
+      key === 'showLogo' ||
+      key === 'showComments' ||
       key === 'exportCollections' ||
       key === 'confirmMultiFileTags' ||
       key === 'renumberIgnoreDiscs' ||

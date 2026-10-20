@@ -1,5 +1,5 @@
 (function (root) {
-  const numeric = { rating: 5, year: 9999, duration: 86400, disc: 9999 };
+  const numeric = { rating: 5, year: 9999, duration: 86400, disc: 9999, bitrate: 100000 };
   const dateFields = ['addedAt', 'modifiedAt'],
     emptyOps = ['isEmpty', 'isNotEmpty'];
   const fields = [
@@ -7,6 +7,7 @@
     'year',
     'disc',
     'duration',
+    'bitrate',
     'title',
     'artist',
     'albumArtist',

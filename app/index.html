@@ -316,7 +316,31 @@
             ><div id="tag-field-headings" hidden
               ><span>Field</span><span>Local value</span><span>MusicBrainz proposal</span
               ><span>Use</span></div
-            ><div id="tag-fields"></div></details
+            ><div id="tag-fields"></div
+            ><div id="tag-add-field" class="tag-add-field"
+              ><button type="button" id="tag-add-field-open" class="settings-link"
+                >Add field…</button
+              ><div id="tag-add-field-form" hidden
+                ><select id="tag-add-field-choice" aria-label="Field to add"></select
+                ><input
+                  id="tag-add-field-name"
+                  aria-label="Custom field name"
+                  placeholder="Field name"
+                  maxlength="64"
+                  hidden
+                /><button type="button" id="tag-add-field-add" class="chip dialog-button"
+                  >Add</button
+                ><button type="button" id="tag-add-field-cancel" class="chip dialog-button"
+                  >Cancel</button
+                ></div
+              ><p id="tag-add-field-error" class="settings-note" role="alert"></p></div></details
+          ><details id="tag-other" hidden
+            ><summary
+              ><span id="tag-other-title">Other tags</span
+              ><button type="button" id="tag-other-remove" class="chip dialog-button"
+                >Remove other tags</button
+              ></summary
+            ><p id="tag-other-note" class="settings-note"></p><ul id="tag-other-list"></ul></details
           ><details id="tag-mb-numbers" hidden open
             ><summary>Track numbers</summary
             ><label class="tag-mb-zero-row"
@@ -723,6 +747,12 @@
           aria-labelledby="settings-tab-appearance"
           hidden=""
           ><section class="preference-group"
+            ><h3>Sidebar</h3
+            ><div class="settings-fields"
+              ><div class="setting-row"
+                ><span><label for="setting-showLogo">Show logo</label></span
+                ><input id="setting-showLogo" type="checkbox" role="switch" /></div></div></section
+          ><section class="preference-group"
             ><h3>Colors</h3
             ><div class="settings-fields"
               ><div class="setting-row"
@@ -810,6 +840,9 @@
               ><div class="setting-row"
                 ><span><label for="setting-showDiscNumber">Show disc number</label></span
                 ><input id="setting-showDiscNumber" type="checkbox" role="switch" /></div
+              ><div class="setting-row"
+                ><span><label for="setting-showComments">Show comments after titles</label></span
+                ><input id="setting-showComments" type="checkbox" role="switch" /></div
               ><div class="setting-row"
                 ><span><label for="setting-showColumnHeaders">Show column headings</label></span
                 ><input
@@ -1108,8 +1141,9 @@
               ><code>artist:</code> <code>albumartist:</code> <code>album:</code>
               <code>title:</code> <code>genre:</code> <code>year:</code> <code>rating:</code>
               <code>track:</code> <code>disc:</code> / <code>discnumber:</code> <code>has:</code>
-              <code>duration:</code> (seconds) <code>format:</code> / <code>codec:</code>
-              <code>folder:</code></p
+              <code>duration:</code> (seconds) <code>bitrate:</code> (kbps, e.g.
+              <code>bitrate:&lt;256</code> or <code>bitrate:192-256</code>) <code>comment:</code>
+              <code>format:</code> / <code>codec:</code> <code>folder:</code></p
             ><h3>Operators</h3
             ><p
               >Quote phrases. AND combines terms; OR accepts either; NOT or EXCEPT excludes the next
@@ -1120,8 +1154,8 @@
               <code>title</code>, <code>artist</code>, <code>albumartist</code>, <code>album</code>,
               <code>genre</code>, <code>year</code>, <code>rating</code>, <code>track</code>,
               <code>disc</code> (or <code>discnumber</code>), <code>totaltracks</code>,
-              <code>duration</code>, <code>format</code> (or <code>codec</code>) and
-              <code>folder</code>.</p
+              <code>duration</code>, <code>bitrate</code>, <code>comment</code>,
+              <code>format</code> (or <code>codec</code>) and <code>folder</code>.</p
             ><p
               ><code>has:disc</code> checks the actual disc-number tag, not the Disc 1 fallback.
               <code>has:rating</code> means a rating above zero; numeric tags require a positive
@@ -1199,13 +1233,44 @@
       ><div class="settings-heading"
         ><h2>Missing files</h2
         ><button id="missing-close" aria-label="Close missing files">×</button></div
-      ><div class="missing-toolbar"
-        ><p id="missing-status" class="settings-note" role="status"></p
-        ><button id="missing-refresh" class="chip dialog-button">Check again</button></div
-      ><div id="missing-list"></div
-      ><p class="settings-note"
-        >Unavailable files are hidden from browsing. Reconnect moved files to keep playlist
-        references, or forget obsolete entries. Music files are never moved or deleted.</p
+      ><div id="missing-main"
+        ><div class="missing-toolbar"
+          ><p id="missing-status" class="settings-note" role="status"></p
+          ><button id="missing-refresh" class="chip dialog-button">Check again</button></div
+        ><div class="missing-bulk"
+          ><label class="missing-select-all"
+            ><input
+              id="missing-select-all"
+              class="preference-switch"
+              type="checkbox"
+              role="switch"
+            />
+            Select all</label
+          ><button type="button" id="missing-select-matched" class="chip dialog-button"
+            >Select all with a match</button
+          ><span class="missing-bulk-spacer"></span
+          ><button type="button" id="missing-reconnect-selected" class="chip dialog-button"
+            >Reconnect…</button
+          ><button type="button" id="missing-forget-selected" class="chip dialog-button"
+            >Forget…</button
+          ></div
+        ><div id="missing-list"></div
+        ><p class="settings-note"
+          >Unavailable files are hidden from browsing. Reconnect moved files to keep playlist
+          references, or forget obsolete entries. The best suggested match is preselected;
+          Shift-click selects a range. Music files are never moved or deleted.</p
+        ></div
+      ><section id="missing-review" hidden aria-labelledby="missing-review-title"
+        ><h3 id="missing-review-title"></h3><p id="missing-review-note" class="settings-note"></p
+        ><ul id="missing-review-list" class="missing-review-list"></ul
+        ><h3 id="missing-review-skipped-heading" hidden></h3
+        ><ul id="missing-review-skipped" class="missing-review-list"></ul
+        ><div class="dialog-actions"
+          ><button type="button" id="missing-review-back" class="chip dialog-button">Back</button
+          ><button type="button" id="missing-review-apply" class="primary dialog-button"
+            >Confirm</button
+          ></div
+        ></section
       ></dialog
     >
   </body></html

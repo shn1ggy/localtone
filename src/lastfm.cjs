@@ -1,4 +1,5 @@
 const fs = require('node:fs/promises');
+const { replaceFile } = require('./replace-file.cjs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 function signature(params, secret) {
@@ -87,7 +88,7 @@ class LastfmService {
     await fs.writeFile(this.file + '.tmp', this.storage.encryptString(JSON.stringify(this.data)), {
       mode: 0o600,
     });
-    await fs.rename(this.file + '.tmp', this.file);
+    await replaceFile(this.file + '.tmp', this.file);
   }
   async request(method, extra = {}, session = true) {
     const params = { method, api_key: this.data.key, ...extra };

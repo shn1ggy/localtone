@@ -692,6 +692,11 @@ dialog input {
   white-space: nowrap;
 }
 
+/* Optional comment after the title, in the track-number / duration colour. */
+.track-comment {
+  color: var(--text-dim);
+}
+
 #tag-fields {
   grid-template-columns: 1fr 1fr;
 }
@@ -5064,6 +5069,15 @@ body.queue-extended .work-row > main {
 
 #missing-dialog button {
   height: 28px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+/* Long status or error text wraps; it never squeezes the toolbar buttons. */
+#missing-dialog #missing-status {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 #missing-list {
@@ -7256,4 +7270,207 @@ body.mini-window .sidebar-player {
 }
 body[data-browse-focus='queue'] #queue-panel > .section-label {
   box-shadow: 0 2px 0 rgb(var(--accent-rgb) / 0.45);
+}
+
+/* Other tags: every frame outside the editor's fields, removable in one step. */
+#tag-dialog #tag-other {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+#tag-dialog #tag-other > summary {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 28px;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+#tag-dialog #tag-other-remove {
+  float: right;
+  font-weight: normal;
+}
+#tag-dialog #tag-other-note {
+  margin: 0 0 6px;
+}
+#tag-dialog #tag-other-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+#tag-dialog #tag-other-list li {
+  display: flex;
+  gap: 10px;
+  padding: 3px 0;
+  min-width: 0;
+}
+#tag-dialog #tag-other-list .tag-other-label {
+  flex: 0 0 120px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#tag-dialog #tag-other-list .tag-other-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#tag-dialog #tag-other.removing #tag-other-list li {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+
+/* Bulk missing-file review: a check column, then the existing row content. */
+#missing-dialog .missing-row {
+  grid-template-columns: 30px 1fr;
+  column-gap: 12px;
+  align-items: start;
+}
+#missing-dialog .missing-row > .preference-switch {
+  margin-top: 1px;
+}
+#missing-dialog .missing-text {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  min-width: 0;
+}
+#missing-dialog .missing-row > .missing-actions,
+#missing-dialog .missing-row > .missing-match-note {
+  grid-column: 2;
+}
+#missing-dialog .missing-row.selected {
+  background: rgb(var(--accent-rgb) / 0.031);
+}
+#missing-dialog .missing-bulk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+#missing-dialog .missing-bulk-spacer {
+  flex: 1;
+}
+#missing-dialog .missing-select-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-right: 4px;
+}
+#missing-dialog .missing-select-all .preference-switch {
+  flex: 0 0 30px;
+}
+/* Same type scale as the other function windows' section headings and rows. */
+#missing-review h3 {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 16px 0 6px;
+}
+#missing-review #missing-review-skipped-heading {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+#missing-review .missing-review-list strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+#missing-review .missing-review-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 40vh;
+  overflow: auto;
+}
+#missing-review .missing-review-list li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 1.45;
+}
+#missing-review .missing-review-list li:last-child {
+  border-bottom: 0;
+}
+#missing-review .missing-review-list li.skipped small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+#missing-review .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* Extra tag fields: same rows as the standard fields, with a remove control. */
+#tag-fields .tag-field-row.custom label {
+  gap: 6px;
+}
+#tag-dialog #tag-fields .tag-field-remove {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  max-height: 16px;
+  min-width: 16px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  position: relative;
+  align-self: center;
+  top: 0;
+}
+#tag-fields .tag-field-remove::before,
+#tag-fields .tag-field-remove::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 7.5px;
+  width: 8px;
+  height: 1px;
+  background: currentColor;
+  transform: rotate(45deg);
+}
+#tag-fields .tag-field-remove::after {
+  transform: rotate(-45deg);
+}
+#tag-fields .tag-field-remove:hover,
+#tag-fields .tag-field-remove:focus-visible {
+  color: var(--text-primary);
+}
+#tag-dialog .tag-add-field {
+  margin-top: 8px;
+}
+#tag-dialog #tag-add-field-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#tag-dialog #tag-add-field-form[hidden] {
+  display: none;
+}
+#tag-dialog #tag-add-field-choice {
+  width: 220px;
+}
+#tag-dialog #tag-add-field-name {
+  flex: 1;
+  min-width: 0;
+}
+#tag-dialog #tag-add-field-error {
+  margin: 4px 0 0;
+}
+#tag-dialog #tag-add-field-error:empty {
+  display: none;
 }

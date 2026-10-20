@@ -93,6 +93,8 @@ test('ignoring discs for renumbering is opt-in and validated',()=>{assert.equal(
 
 
 test('disc-number display is off by default and persists only boolean preferences',()=>{
+ assert.deepEqual(preferences.normalizeSettings().tagCustomFields,[]);assert.deepEqual(preferences.validateSettings({tagCustomFields:[{key:'TCOM',label:' Composer '},{key:'TXXX:Mood',label:'Mood'}]}).tagCustomFields,[{key:'TCOM',label:'Composer'},{key:'TXXX:Mood',label:'Mood'}]);for(const bad of [[{key:'TIT2',label:'Title'}],[{key:'TXXX:RATING',label:'Rating'}],[{key:'TCOM',label:''}],[{key:'TXXX:a',label:'a'},{key:'TXXX:A',label:'A'}],'TCOM'])assert.throws(()=>preferences.validateSettings({tagCustomFields:bad}));
+ assert.equal(preferences.normalizeSettings().showLogo,true);assert.equal(preferences.normalizeSettings().showComments,false);assert.equal(preferences.normalizeSettings({showLogo:false,showComments:true}).showLogo,false);assert.throws(()=>preferences.validateSettings({showComments:'yes'}));
  assert.equal(preferences.normalizeSettings().showDiscNumber,false);
  assert.equal(preferences.normalizeSettings({showDiscNumber:true}).showDiscNumber,true);
  assert.throws(()=>preferences.validateSettings({showDiscNumber:'true'}));

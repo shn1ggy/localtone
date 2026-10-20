@@ -45,6 +45,7 @@ export function createPlaylistEditor({
     year: 'Year',
     disc: 'Disc',
     duration: 'Duration (seconds)',
+    bitrate: 'Bitrate (kbps)',
     title: 'Title',
     artist: 'Artist',
     albumArtist: 'Album artist',

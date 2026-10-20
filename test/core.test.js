@@ -62,3 +62,14 @@ test('All music excludes playlist-only imports but regular playlists retain them
  assert.deepEqual(selectTracks(collection,{kind:'playlist',id:'p'},'','manual').map(t=>t.id),['1','2']);
  assert.deepEqual(selectTracks(collection,{kind:'all'},'title:"Song 2"','manual'),[]);
 });
+test('bitrate and comment search: numeric bitrate comparisons and ranges, unknown bitrate never matches, comment text and presence',async()=>{
+ const {compileSearch}=await import('../app/core.js'),rules=(await import('node:module')).createRequire(import.meta.url)('../app/rules/playlist-rules.js');
+ const tracks=[{id:'a',bitrate:320,comment:'Vinyl rip'},{id:'b',bitrate:192,comment:''},{id:'c',bitrate:0},{id:'d',bitrate:256,comment:'vinyl, remastered'}];
+ const ids=q=>{const s=compileSearch(q);assert.equal(s.error,null);return tracks.filter(t=>s.matches(t,{})).map(t=>t.id);};
+ assert.deepEqual(ids('bitrate:320'),['a']);assert.deepEqual(ids('bitrate:<256'),['b']);assert.deepEqual(ids('bitrate:192-256'),['b','d']);assert.deepEqual(ids('kbps:>=256'),['a','d']);
+ assert.deepEqual(ids('bitrate:!=320'),['b','d']);assert.deepEqual(ids('missing:bitrate'),['c']);
+ assert.deepEqual(ids('comment:vinyl'),['a','d']);assert.deepEqual(ids('has:comment'),['a','d']);assert.deepEqual(ids('missing:comment'),['b','c']);
+ assert.match(compileSearch('bitrate:fast').error,/number/);
+ const dynamic={enabled:true,libraryId:'l',match:'all',rules:[{field:'bitrate',op:'gte',value:256}]};
+ assert.deepEqual(rules.validateDynamic(dynamic).rules,[{field:'bitrate',op:'gte',value:256}]);
+});

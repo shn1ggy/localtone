@@ -2,7 +2,7 @@
 
 [← Project home](../README.md)
 
-Localtone focuses on local music collections, compact browsing and keyboard control. Version 1.0.0 is the first stable release. This is a direction, not a release schedule; feedback and reliability take priority over feature count.
+Localtone focuses on local music collections, compact browsing and keyboard control. Version 1.0.0 was the first stable release; 1.1.0 adds tagging and library-management improvements. This is a direction, not a release schedule; feedback and reliability take priority over feature count.
 
 ## Now — confidence for more listeners
 

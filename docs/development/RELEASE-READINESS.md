@@ -1,6 +1,6 @@
-# Current release status — 18 October 2026
+# Current release status — 20 October 2026
 
-Localtone 1.0.0 is the first stable release selected by the project owner. The public repository and GPL-3.0-or-later license are established. Native packages cover Windows x64, Apple Silicon Mac, Intel Mac and Linux x64, with matching decoder sources, dependency notices and checksums. Stable publishing must set `prerelease: false` and mark 1.0.0 as the latest release; early-access clients and stable clients must discover the appropriate update.
+Localtone 1.1.0 follows the first stable 1.0.0 release and is authorized by the project owner. The public repository and GPL-3.0-or-later license are established. Native packages cover Windows x64, Apple Silicon Mac, Intel Mac and Linux x64, with matching decoder sources, dependency notices and checksums. Stable publishing must set `prerelease: false` and mark 1.1.0 as the latest release; early-access clients and stable clients must discover the appropriate update.
 
 The release review checks the reorganized `src/` packaging, settings/rating persistence, serialized collection requests, detached mini player, queue keyboard navigation, platform window behavior and public update discovery. Cross-platform CI and archive verification are required before publication.
 

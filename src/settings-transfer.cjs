@@ -96,11 +96,20 @@ function validateCollections(value) {
       'trackRaw',
       'discRaw',
       'codec',
+      'comment',
     ]) {
       if (!text(item[key] ?? '')) throw Error('Invalid track metadata.');
       clean[key] = item[key] ?? '';
     }
-    for (const key of ['track', 'disc', 'duration', 'addedAt', 'modifiedAt', 'tagRating']) {
+    for (const key of [
+      'track',
+      'disc',
+      'duration',
+      'bitrate',
+      'addedAt',
+      'modifiedAt',
+      'tagRating',
+    ]) {
       if (
         item[key] != null &&
         (typeof item[key] !== 'number' || !Number.isFinite(item[key]) || item[key] < 0)

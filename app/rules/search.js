@@ -10,6 +10,9 @@
     genre: 'genre',
     rating: 'rating',
     duration: 'duration',
+    bitrate: 'bitrate',
+    kbps: 'bitrate',
+    comment: 'comment',
     format: 'codec',
     codec: 'codec',
     albumartist: 'albumArtist',
@@ -36,7 +39,7 @@
     return (
       value == null ||
       String(value).trim() === '' ||
-      (['year', 'duration'].includes(field) && !(Number(value) > 0)) ||
+      (['year', 'duration', 'bitrate'].includes(field) && !(Number(value) > 0)) ||
       (!track.missingTags &&
         ['artist', 'albumArtist', 'album'].includes(field) &&
         /^Unknown (artist|album)$/.test(value))
@@ -104,7 +107,7 @@
           return (t, state) =>
             field === 'has' ? !missingTag(t, key, state) : missingTag(t, key, state);
         }
-        if (field && ['year', 'rating', 'duration', 'track', 'disc'].includes(field)) {
+        if (field && ['year', 'rating', 'duration', 'track', 'disc', 'bitrate'].includes(field)) {
           const range = /^(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)$/.exec(value),
             cmp = /^(>=|<=|!=|>|<|=)?(\d+(?:\.\d+)?)$/.exec(value);
           if (!range && !cmp)
@@ -113,6 +116,8 @@
             if (field === 'disc' && missingTag(t, 'disc', state)) return false;
             const n = field === 'rating' ? state.ratings?.[t.id] || 0 : Number(t[field]);
             if (!Number.isFinite(n)) return false;
+            // Bitrate is unknown (not 0 kbps) until the file has been indexed.
+            if (field === 'bitrate' && !(n > 0)) return false;
             if (range) return n >= Number(range[1]) && n <= Number(range[2]);
             const v = Number(cmp[2]);
             return {

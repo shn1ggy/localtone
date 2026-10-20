@@ -32,7 +32,7 @@ async function launch(userData, music) {
     isDestroyed() { return false; }
   }
   const electron = {
-    app: { getVersion: () => '1.0.0', requestSingleInstanceLock: () => true, on() {}, getPath: () => userData, whenReady: () => ({ then: (fn) => { ready = fn(); return ready; } }), quit() {} },
+    app: { getVersion: () => '1.1.0', requestSingleInstanceLock: () => true, on() {}, getPath: () => userData, whenReady: () => ({ then: (fn) => { ready = fn(); return ready; } }), quit() {} },
     BrowserWindow: Window,
     ipcMain: { handle: (n, fn) => handlers.set(n, fn), on: (n, fn) => handlers.set(n, fn) },
     protocol: { registerSchemesAsPrivileged() {}, handle() {} },

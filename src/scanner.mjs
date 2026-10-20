@@ -6,6 +6,7 @@ const excluded = libraryFilters.compileFilters(workerData.root, workerData.filte
 import { createHash } from 'node:crypto';
 import NodeID3 from 'node-id3';
 import ratingTags from './rating-tags.cjs';
+import tagFrames from './tag-frames.cjs';
 import { parseFile } from 'music-metadata';
 const extensions = new Set([
   '.mp3',
@@ -51,7 +52,9 @@ async function readTrack(filename) {
     'tagRating' in previous &&
     Array.isArray(previous.missingTags) &&
     typeof previous.trackRaw === 'string' &&
-    typeof previous.discRaw === 'string'
+    typeof previous.discRaw === 'string' &&
+    typeof previous.comment === 'string' &&
+    typeof previous.bitrate === 'number'
   )
     return { ...previous, missing: false };
   const id = previous?.id || hash(workerData.libraryId + '\0' + filename);
@@ -60,7 +63,8 @@ async function readTrack(filename) {
     cover = false,
     tagRating = null,
     trackRaw = '',
-    discRaw = '';
+    discRaw = '',
+    comment = '';
   try {
     ({ common, format } = await parseFile(filename, { duration: true }));
     if (previous && format.hasAudio === false) throw Error('The changed audio file is incomplete.');
@@ -70,12 +74,16 @@ async function readTrack(filename) {
     discRaw = common.disk?.no
       ? `${common.disk.no}${common.disk.of ? '/' + common.disk.of : ''}`
       : '';
+    const firstComment = common.comment?.[0];
+    comment = typeof firstComment === 'string' ? firstComment : firstComment?.text || '';
     if (path.extname(filename).toLowerCase() === '.mp3') {
       const bytes = await readFile(filename);
       tagRating = ratingTags.readRating(bytes);
       const tags = NodeID3.read(bytes);
       trackRaw = String(tags.trackNumber || trackRaw);
       discRaw = String(tags.partOfSet || discRaw);
+      // Only the plain comment counts; iTunes' described COMM frames are not notes.
+      comment = tagFrames.comment(bytes);
     }
     const picture = common.picture?.[0];
     if (picture && ['image/jpeg', 'image/png', 'image/webp'].includes(picture.format)) {
@@ -102,6 +110,9 @@ async function readTrack(filename) {
     disc: common.disk?.no || 1,
     discRaw,
     duration: format.duration || 0,
+    // Average bitrate in kbps (0 when the format does not report one).
+    bitrate: Math.round((format.bitrate || 0) / 1000),
+    comment: String(comment).trim(),
     codec: path.extname(filename).slice(1).toUpperCase(),
     addedAt: previous ? (previous.addedAt ?? null) : Date.now(),
     modifiedAt: info.mtimeMs,

@@ -2,7 +2,8 @@
 const fs = require('node:fs/promises'),
   path = require('node:path'),
   crypto = require('node:crypto'),
-  frames = require('./tag-frames.cjs');
+  frames = require('./tag-frames.cjs'),
+  { replaceFile } = require('./replace-file.cjs');
 const digest = (b) => crypto.createHash('sha256').update(b).digest('hex');
 function audioBytes(buffer) {
   const body = frames.tails(buffer).body;
@@ -82,9 +83,12 @@ function createTagHistory(root) {
           flag: 'wx',
           mode: (await fs.stat(plan.file)).mode,
         });
-        if (digest(await fs.readFile(plan.file)) !== from.hash)
-          throw Error('A file changed while restoring tags.');
-        await fs.rename(temporary, plan.file);
+        await replaceFile(temporary, plan.file, {
+          beforeRename: async () => {
+            if (digest(await fs.readFile(plan.file)) !== from.hash)
+              throw Error('A file changed while restoring tags.');
+          },
+        });
       } finally {
         await fs.rm(temporary, { force: true });
       }

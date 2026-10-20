@@ -30,6 +30,8 @@ export function normalizeMenu(menu) {
     main = boundary < 0 ? children : children.slice(0, boundary),
     tail = boundary < 0 ? [] : children.slice(boundary);
   const rank = (node) => {
+    // An owner may place an item in a specific group (see the library menu).
+    if (node.dataset?.menuRank) return Number(node.dataset.menuRank);
     const t = node.textContent.trim();
     if (/^Delete files permanently/.test(t)) return 1;
     return /^(Add to play queue|Add to playlist|Create playlist from selection)/.test(t)

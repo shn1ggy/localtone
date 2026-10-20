@@ -3,6 +3,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const NodeID3 = require('node-id3');
 const frames = require('./tag-frames.cjs');
+const { replaceFile } = require('./replace-file.cjs');
 const fields = {
   title: 'title',
   artist: 'artist',
@@ -12,6 +13,7 @@ const fields = {
   genre: 'genre',
   track: 'trackNumber',
   disc: 'partOfSet',
+  comment: 'comment',
 };
 const digest = (buffer) => crypto.createHash('sha256').update(buffer).digest('hex');
 function assertMp3(file, buffer) {
@@ -26,6 +28,9 @@ function assertMp3(file, buffer) {
 async function readTags(file) {
   const buffer = await fs.readFile(file);
   assertMp3(file, buffer);
+  return readBufferTags(buffer);
+}
+async function readBufferTags(buffer) {
   const tags = NodeID3.read(buffer);
   const { parseBuffer } = await import('music-metadata');
   const { common } = await parseBuffer(
@@ -43,14 +48,26 @@ async function readTags(file) {
     genre: common.genre?.join(', '),
     track: number(common.track),
     disc: number(common.disk),
+    comment: '',
   };
+  const legacy = frames.tails(buffer).items.find((item) => item.id === 'ID3v1')?.raw;
+  const legacyComment = legacy
+    ? legacy
+        .subarray(97, legacy[125] === 0 ? 125 : 127)
+        .toString('latin1')
+        .replace(/\0.*$/, '')
+        .trim()
+    : '';
+  const plainComment = frames.comment(buffer) || legacyComment;
   return {
     extras: frames.extras(buffer),
+    // Values of every extra text field in the file, for user-added editor fields.
+    custom: frames.customValues(buffer),
     token: digest(buffer),
     values: Object.fromEntries(
       Object.entries(fields).map(([key, alias]) => [
         key,
-        String(tags[alias] || fallback[key] || ''),
+        key === 'comment' ? plainComment : String(tags[alias] || fallback[key] || ''),
       ]),
     ),
   };
@@ -81,28 +98,76 @@ async function prepareTags({ file, values, patch, remove = [], token }) {
     !patch ||
     typeof patch !== 'object' ||
     Array.isArray(patch) ||
-    Object.keys(patch).some((k) => !Object.hasOwn(fields, k))
+    Object.keys(patch).some(
+      (k) =>
+        !Object.hasOwn(fields, k) && !(k.startsWith('x:') && frames.validCustomKey(k.slice(2))),
+    )
   )
     throw new Error('Invalid tag changes.');
+  const custom = Object.entries(patch).filter(([k]) => k.startsWith('x:'));
+  for (const [key, value] of custom)
+    if (typeof value !== 'string' || value.length > 1000 || value.includes('\0'))
+      throw new Error(`Invalid ${key.slice(2)}.`);
   if (!Array.isArray(remove) || remove.some((k) => typeof k !== 'string'))
     throw new Error('Invalid tag removals.');
-  const checked = validate({
-    ...Object.fromEntries(Object.keys(fields).map((k) => [k, ''])),
-    ...patch,
-  });
-  patch = Object.fromEntries(Object.keys(patch).map((k) => [k, checked[fields[k]]]));
-  // Legacy ID3v1 is removed on a standard edit to prevent cleared fields reappearing.
-  const base = original;
-  const updated = frames.update(base, patch, remove);
+  const standardPatch = Object.fromEntries(
+      Object.entries(patch).filter(([k]) => !k.startsWith('x:')),
+    ),
+    checked = validate({
+      ...Object.fromEntries(Object.keys(fields).map((k) => [k, ''])),
+      ...standardPatch,
+    });
+  patch = {
+    ...Object.fromEntries(Object.keys(standardPatch).map((k) => [k, checked[fields[k]]])),
+    ...Object.fromEntries(custom.map(([k, v]) => [k, v.trim()])),
+  };
+  // Removing a legacy container must not erase the represented values it owns.
+  // Migrate only missing ID3 fields, retaining all existing frames verbatim.
+  let artwork = [];
+  const tails = frames.tails(original).items;
+  if (tails.some((item) => remove.includes(item.key))) {
+    const existing = frames.parse(original).frames,
+      saved = await readBufferTags(original);
+    for (const [key, ids] of Object.entries(frames.standard))
+      if (
+        !Object.hasOwn(patch, key) &&
+        saved.values[key] &&
+        !existing.some((frame) => ids.includes(frame.id) && frames.standardFrame(frame))
+      )
+        patch[key] = saved.values[key];
+    if (!existing.some((frame) => frame.id === 'APIC')) {
+      const { parseBuffer } = await import('music-metadata');
+      const { common } = await parseBuffer(
+        original,
+        { mimeType: 'audio/mpeg' },
+        { duration: false },
+      );
+      artwork = (common.picture || []).map((picture) => ({
+        mime: picture.format,
+        type: { id: 3, name: 'front cover' },
+        description: picture.description || '',
+        imageBuffer: picture.data,
+      }));
+    }
+  }
+  const updated = frames.update(original, patch, remove, artwork);
   if (
     !frames
       .parse(frames.tails(original).body)
       .audio.equals(frames.parse(frames.tails(updated).body).audio)
   )
     throw new Error('Tag verification failed: audio data would change.');
-  const readback = NodeID3.read(updated);
+  const readback = NodeID3.read(updated),
+    written = custom.length ? frames.customValues(updated) : {};
   for (const [key, value] of Object.entries(patch))
-    if (String(readback[fields[key]] || (key === 'year' ? readback.raw?.TDRC : '') || '') !== value)
+    if (
+      (key.startsWith('x:')
+        ? frames.customValue(written, key.slice(2))
+        : key === 'comment'
+          ? frames.comment(updated)
+          : String(readback[fields[key]] || (key === 'year' ? readback.raw?.TDRC : '') || '')) !==
+      value
+    )
       throw new Error(`Could not verify ${key}. File left untouched.`);
   return { file, original, updated, token };
 }
@@ -131,9 +196,12 @@ async function commitTags({
   try {
     await fs.writeFile(temporary, updated, { flag: 'wx', mode: info.mode });
     // Check again just before replacement to avoid overwriting external edits.
-    if (digest(await fs.readFile(file)) !== token)
-      throw new Error('This file changed while saving. File left untouched.');
-    await fs.rename(temporary, file);
+    await replaceFile(temporary, file, {
+      beforeRename: async () => {
+        if (digest(await fs.readFile(file)) !== token)
+          throw new Error('This file changed while saving. File left untouched.');
+      },
+    });
     replaced = true;
     await onSaved();
     return { backup };
@@ -142,7 +210,14 @@ async function commitTags({
       // Roll back only our own write, never a later edit by another program.
       if (digest(await fs.readFile(file)) === digest(updated)) {
         await fs.writeFile(temporary, original, { mode: info.mode });
-        await fs.rename(temporary, file);
+        await replaceFile(temporary, file, {
+          beforeRename: async () => {
+            if (digest(await fs.readFile(file)) !== digest(updated))
+              throw new Error(
+                `Another program changed the file after this save. Original backup: ${backup}`,
+              );
+          },
+        });
       } else
         throw new Error(
           `Another program changed the file after this save. Original backup: ${backup}`,

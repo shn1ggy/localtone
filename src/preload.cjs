@@ -79,8 +79,9 @@ contextBridge.exposeInMainWorld('localtone', {
   addLibrary: (name, filters) => ipcRenderer.invoke('add-library', name, filters),
   refreshLibraries: () => ipcRenderer.invoke('refresh-libraries'),
   missingFiles: () => ipcRenderer.invoke('missing-files'),
-  repairMissingTrack: (id, action, candidateId) =>
-    ipcRenderer.invoke('repair-missing-track', id, action, candidateId),
+  chooseMissingFile: (id) => ipcRenderer.invoke('choose-missing-file', id),
+  repairMissingTracks: (entries, mode) =>
+    ipcRenderer.invoke('repair-missing-tracks', entries, mode),
   reconnectLibrary: (id) => ipcRenderer.invoke('reconnect-library', id),
   rescan: (id) => ipcRenderer.invoke('rescan', id),
   deleteLibrary: (id) => ipcRenderer.invoke('delete-library', id),

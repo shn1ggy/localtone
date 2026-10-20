@@ -331,19 +331,48 @@ test('separate indexes refresh shared MP3 edits on restart and update rating and
  }finally{await rm(dir,{recursive:true,force:true});}
 });
 
+test('batch missing-file review plans without native dialogs, rejects double use and stale plans, and repairs several entries with one save',async()=>{
+ const dir=await realpath(await mkdtemp(path.join(tmpdir(),'localtone-repair-batch-')));
+ try{
+  const music=path.join(dir,'music'),data=path.join(dir,'data'),away=path.join(dir,'away');await mkdir(music);await mkdir(away);const {rename}=await import('node:fs/promises');
+  for(const [name,title] of [['one.mp3','One'],['two.mp3','Two'],['three.mp3','Three']]){const file=path.join(music,name);await copyFile(new URL('./fixtures/tone.mp3',import.meta.url),file);assert.equal(require('node-id3').update({title},file),true);}
+  const invoke=await launch(data,music,{showMessageBox:async()=>{throw Error('Batch review must not open a native dialog.');}});
+  const initial=await invoke('add-library','Music'),library=initial.state.libraries[0],byFile=name=>initial.state.tracks.find(t=>t.relativePath===name);
+  const [one,two,three]=['one.mp3','two.mp3','three.mp3'].map(byFile);await invoke('playlist',{type:'create',name:'All three',trackIds:[one.id,two.id,three.id]});await invoke('rating',two.id,3);
+  await rename(path.join(music,'one.mp3'),path.join(music,'one (remaster).mp3'));await rename(path.join(music,'two.mp3'),path.join(music,'two (remaster).mp3'));await rename(path.join(music,'three.mp3'),path.join(away,'three.mp3'));
+  const rescanned=await invoke('rescan',library.id),fresh=title=>rescanned.state.tracks.find(t=>!t.missing&&t.relativePath===title.toLowerCase()+' (remaster).mp3');
+  const entries=[{id:one.id,action:'reconnect',candidateId:fresh('One').id},{id:two.id,action:'reconnect',candidateId:fresh('Two').id},{id:three.id,action:'forget'}];
+  const {plan}=await invoke('repair-missing-tracks',entries,'plan');
+  assert.ok(plan.every(p=>!p.error));assert.ok(plan[0].to.endsWith('one (remaster).mp3'));assert.equal(plan[0].merge,true);assert.equal(plan[2].action,'forget');
+  assert.equal((await invoke('load')).tracks.length,5,'planning changes nothing');
+  const twice=(await invoke('repair-missing-tracks',[entries[0],{...entries[1],candidateId:fresh('One').id}],'plan')).plan;assert.equal(twice[0].error,undefined);assert.match(twice[1].error,/also chosen for/);
+  assert.match((await invoke('repair-missing-tracks',[{id:one.id,action:'reconnect'}],'plan')).plan[0].error,/Choose a replacement/);
+  const stale=await invoke('repair-missing-tracks',[entries[0]],'apply');assert.equal(stale.repaired.length,0);assert.match(stale.failures[0].error,/changed since the review/);
+  const expect=item=>item.to?{expect:{file:item.to,size:item.size,mtime:item.mtime}}:{};
+  const applied=await invoke('repair-missing-tracks',entries.map((e,i)=>({...e,...expect(plan[i])})),'apply');
+  assert.deepEqual([...applied.repaired].sort(),[one.id,two.id,three.id].sort());assert.equal(applied.failures.length,0);
+  assert.equal(applied.remap[fresh('One').id],one.id);assert.equal(applied.remap[three.id],null);
+  assert.deepEqual([...applied.state.tracks.map(t=>t.id)].sort(),[one.id,two.id].sort());assert.deepEqual([...applied.state.playlists[0].trackIds],[one.id,two.id]);
+  assert.equal(applied.state.tracks.find(t=>t.id===one.id).relativePath,'one (remaster).mp3');assert.equal((await invoke('missing-files')).missing.length,0);
+  assert.ok(await readFile(path.join(away,'three.mp3')),'forgetting never deletes music');
+ }finally{await rm(dir,{recursive:true,force:true});}
+});
+
 test('individual missing-file repair merges externally renamed duplicates, preserves references and forgets records without deleting music',async()=>{
  const dir=await realpath(await mkdtemp(path.join(tmpdir(),'localtone-repair-individual-')));
  try{
   const music=path.join(dir,'music'),data=path.join(dir,'data');await mkdir(music);const oldFile=path.join(music,'old.mp3'),newFile=path.join(music,'new.mp3'),{rename}=await import('node:fs/promises');await copyFile(new URL('./fixtures/tone.mp3',import.meta.url),oldFile);
-  let choice=music,response=1,invoke=await launch(data,music,{showOpenDialog:async()=>({canceled:false,filePaths:[choice]}),showMessageBox:async()=>({response})});
+  let choice=music,invoke=await launch(data,music,{showOpenDialog:async()=>({canceled:false,filePaths:[choice]}),showMessageBox:async()=>{throw Error('Missing-file repair must not open a native confirmation.');}});
+  // Plans like the in-app review, then confirms exactly that plan.
+  const repair=async(id,action,extra={})=>{const entry={id,action,...extra},{plan}=await invoke('repair-missing-tracks',[entry],'plan');if(plan[0].error)throw Error(plan[0].error);const result=await invoke('repair-missing-tracks',[{...entry,...(plan[0].to?{expect:{file:plan[0].to,size:plan[0].size,mtime:plan[0].mtime}}:{})}],'apply');if(result.failures.length)throw Error(result.failures[0].error);return result;};
   const initial=await invoke('add-library','Music'),old=initial.state.tracks[0],library=initial.state.libraries[0];await invoke('rating',old.id,4);await invoke('playlist',{type:'create',name:'Original',trackIds:[old.id]});
   await rename(oldFile,newFile);const rescanned=await invoke('rescan',library.id),replacement=rescanned.state.tracks.find(t=>!t.missing);assert.notEqual(replacement.id,old.id);await invoke('rating',replacement.id,5);await invoke('playlist',{type:'create',name:'New entry',trackIds:[replacement.id,old.id]});await invoke('remember-played',replacement.id);await invoke('save-playback',{id:replacement.id,position:12,origin:{kind:'all'}});
   const missing=await invoke('missing-files');assert.equal(missing.missing[0].candidates[0].id,replacement.id);
-  response=0;assert.equal(await invoke('repair-missing-track',old.id,'reconnect',replacement.id),null);assert.equal((await invoke('load')).tracks.length,2);
-  response=1;const fixed=await invoke('repair-missing-track',old.id,'reconnect',replacement.id);assert.equal(fixed.state.tracks.length,1);assert.equal(fixed.state.tracks[0].id,old.id);assert.equal(fixed.state.tracks[0].addedAt,old.addedAt);assert.equal(fixed.state.tracks[0].relativePath,'new.mp3');assert.equal(fixed.state.ratings[old.id],5);assert.equal(fixed.remap[replacement.id],old.id);for(const p of fixed.state.playlists)assert.deepEqual([...p.trackIds],[old.id]);assert.equal(fixed.state.playbackHistory.all,old.id);assert.equal(fixed.state.playbackSession.id,old.id);assert.equal((await invoke('missing-files')).missing.length,0);const preview=await invoke('preview-file-names',[old.id],{files:true,folders:false,trackFormula:'%title%',albumFormula:'%album%'});assert.ok(preview.token);
-  await assert.rejects(invoke('repair-missing-track',old.id,'forget'),/available again/);
-  const third=path.join(music,'third.mp3');await rename(newFile,third);choice=third;const located=await invoke('repair-missing-track',old.id,'reconnect');assert.equal(located.state.tracks[0].id,old.id);assert.equal(located.state.tracks[0].relativePath,'third.mp3');
-  const fourth=path.join(music,'fourth.mp3');await rename(third,fourth);await invoke('rescan',library.id);const fresh=(await invoke('load')).tracks.find(t=>!t.missing),bytes=await readFile(fourth);const forgotten=await invoke('repair-missing-track',old.id,'forget');assert.equal(forgotten.state.tracks.length,1);assert.equal(forgotten.state.tracks[0].id,fresh.id);assert.ok(forgotten.state.playlists.every(p=>p.trackIds.length===0));assert.deepEqual(await readFile(fourth),bytes);
+  await invoke('repair-missing-tracks',[{id:old.id,action:'reconnect',candidateId:replacement.id}],'plan');assert.equal((await invoke('load')).tracks.length,2);
+  const fixed=await repair(old.id,'reconnect',{candidateId:replacement.id});assert.equal(fixed.state.tracks.length,1);assert.equal(fixed.state.tracks[0].id,old.id);assert.equal(fixed.state.tracks[0].addedAt,old.addedAt);assert.equal(fixed.state.tracks[0].relativePath,'new.mp3');assert.equal(fixed.state.ratings[old.id],5);assert.equal(fixed.remap[replacement.id],old.id);for(const p of fixed.state.playlists)assert.deepEqual([...p.trackIds],[old.id]);assert.equal(fixed.state.playbackHistory.all,old.id);assert.equal(fixed.state.playbackSession.id,old.id);assert.equal((await invoke('missing-files')).missing.length,0);const preview=await invoke('preview-file-names',[old.id],{files:true,folders:false,trackFormula:'%title%',albumFormula:'%album%'});assert.ok(preview.token);
+  await assert.rejects(repair(old.id,'forget'),/available again/);
+  const third=path.join(music,'third.mp3');await rename(newFile,third);choice=third;const picked=await invoke('choose-missing-file',old.id);assert.equal(picked,third);const located=await repair(old.id,'reconnect',{file:picked});assert.equal(located.state.tracks[0].id,old.id);assert.equal(located.state.tracks[0].relativePath,'third.mp3');
+  const fourth=path.join(music,'fourth.mp3');await rename(third,fourth);await invoke('rescan',library.id);const fresh=(await invoke('load')).tracks.find(t=>!t.missing),bytes=await readFile(fourth);const forgotten=await repair(old.id,'forget');assert.equal(forgotten.state.tracks.length,1);assert.equal(forgotten.state.tracks[0].id,fresh.id);assert.ok(forgotten.state.playlists.every(p=>p.trackIds.length===0));assert.deepEqual(await readFile(fourth),bytes);
   invoke=await launch(data,music);assert.equal((await invoke('load')).tracks.length,1);assert.equal((await invoke('missing-files')).missing.length,0);
  }finally{await rm(dir,{recursive:true,force:true});}
 });

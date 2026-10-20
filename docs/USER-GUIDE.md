@@ -1,6 +1,6 @@
 # Localtone user guide
 
-[← Project home](../README.md) · [Downloads](https://github.com/shn1ggy/localtone/releases/tag/v1.0.0) · [Report a bug](https://github.com/shn1ggy/localtone/issues/new/choose)
+[← Project home](../README.md) · [Downloads](https://github.com/shn1ggy/localtone/releases/tag/v1.1.0) · [Report a bug](https://github.com/shn1ggy/localtone/issues/new/choose)
 
 ## First run
 
@@ -16,11 +16,13 @@ Localtone edits real files when you rate MP3s, save tags or rename files. Try bu
 
 Artist grouping can use album artist (the app default), artist or parent folder. Selecting artists and typing a search filter what you see, without narrowing the normal playback queue. **All music** and dynamic playlists draw from libraries; files dropped directly into a regular playlist do not become part of All music.
 
+Search accepts fields such as `bitrate:320`, `bitrate:<256`, `bitrate:192-256` (kbps) and `comment:vinyl`; the Search guide in Settings lists them all. After updating, Localtone reads bitrates and comments once in the background, so these searches fill in shortly after the first start.
+
 Double-click a library, playlist or All music to start a random song from that complete collection. The queue follows the collection's sort order and current shuffle/repeat mode. Add to queue inserts the selection after the active track. The visible queue limit controls displayed rows, not the collection or shuffle pool.
 
 Click the now-playing artwork to reveal the playing track in its original collection, keeping the current Albums/Covers/Tracks tab. The playing track takes priority when an entire album is too tall to fit. Clicking a cover in Albums expands/collapses it; clicking its title selects the album. In Covers, Enter opens selected albums; Backspace returns to the grid.
 
-Right-click tracks, artists or albums for tag editing, queue/playlist actions, opening their location and file tools. Right-click a tab to show/hide column headings; right-click headings for column visibility and alignment. Pane dividers and waveform height can be dragged and locked through their context menus.
+Right-click tracks, artists or albums for tag editing, queue/playlist actions, opening their location and file tools. Right-click a library and choose **Open folder** to open its music folder in Explorer, Finder or your file manager. Right-click the logo to stop its animation or hide it; the library list then moves up. Bring the logo back from **Settings → Appearance → Show logo** or by right-clicking the Libraries heading. Right-click a tab to show/hide column headings; right-click headings for column visibility and alignment. Pane dividers and waveform height can be dragged and locked through their context menus.
 
 ## Keyboard essentials
 
@@ -48,7 +50,7 @@ These are defaults; change them in **Settings → Shortcuts**. Ctrl means Ctrl o
 | Undo / redo | Ctrl+Z / Ctrl+Shift+Z |
 | Open context menu | Shift+Enter |
 
-Tab switches between artist and content panes. Shift+P focuses the open play queue; Left/Right can also enter it. In the queue, arrows and Shift select songs, Enter plays, and Delete/Backspace removes the selection with undo. Shift+Tab enters the library/playlist pane; arrows move and Enter opens a collection. Left/Right also cycle panes. In the artist/content panes, Up/Down navigate, Shift extends selection, and Ctrl+A selects all in that pane. Enter on an artist focuses its content; Enter on a track plays it. Backspace clears selection while retaining focus and navigation position. Escape clears selection and returns to the preceding pane; in search it cancels the search. Delete removes tracks from a regular playlist; file deletion is a separate confirmed action.
+Tab switches between artist and content panes. Shift+Tab enters the library/playlist pane; arrows move and Enter opens a collection. Left/Right also cycle panes. In the artist/content panes, Up/Down navigate, Shift extends selection, and Ctrl+A selects all in that pane. Enter on an artist focuses its content; Enter on a track plays it. Backspace clears selection while retaining focus and navigation position. Escape clears selection and returns to the preceding pane; in search it cancels the search. Delete removes tracks from a regular playlist; file deletion is a separate confirmed action.
 
 In the play queue, a single click selects a song (Ctrl/Cmd+click toggles, Shift+click selects a range) and a double click plays it. Shift+P moves keyboard focus into the queue, opening it if needed, with the same short highlight as the other panes. There, Up/Down move (Shift extends), Enter plays, Delete or Backspace removes the selected songs (the playing song stays; Ctrl+Z restores), Ctrl+A selects all and Escape clears the selection. Shift+Enter opens the song menu, navigable with the arrow keys. Left returns to the content pane, Right to the library/playlist pane and Tab to the content pane. While the queue is open, Left/Right also reach it from the neighbouring panes; Tab never moves into it.
 
@@ -115,13 +117,21 @@ General → Settings & storage → Cache → Clean unused removes artwork no lon
 
 ## Repair externally renamed files
 
-General → Library → Unavailable files → Review… lists old paths that are unavailable. Each entry offers suggested replacements already in the same library, based on file size, duration and tags. These are hints: select the correct recording and press Reconnect…, or leave Choose file… selected to locate it manually. The replacement must be inside this library; use Reconnect folder… if the whole library moved.
+General → Library → Missing files → Review… lists old paths that are unavailable. Each entry offers suggested replacements already in the same library, based on file size, duration and tags. These are hints: the best match is preselected; pick another, or choose **Browse for file…** to locate it manually. The replacement must be inside this library; use Reconnect folder… if the whole library moved.
+
+To repair many entries at once, tick them (Shift-click ticks a range, **Select all** or **Select all with a match** tick in bulk) and press **Reconnect N…** or **Forget N…**. Localtone first shows every planned change in the same window: old path, new path and whether it merges with an already indexed copy, plus any entries it has to skip and why (no replacement chosen, the same file chosen twice, file no longer missing). Confirm to apply them all at once, or press Back (or Escape) to adjust. The single-entry Reconnect… and Forget entry… buttons use the same review.
 
 After confirmation, Localtone preserves the original track ID and playlist membership, reads the replacement's current tags/rating, and merges an already indexed replacement. Forget entry… removes only an obsolete missing record and its playlist/queue references; it never deletes a music file. A missing file is not assumed deleted automatically. Localtone's own Rename files & folders keeps references up to date; external renames appear under their new path automatically, but use this explicit repair if you want to carry the original entry’s playlist references across.
 
 ## Edit tags
 
 Select tracks, albums or artists and press **E**, or choose **Edit tags…** from the context menu. Shared values appear normally; differing values show a multiple-values hint. Edit only the fields you want to apply to the whole selection. Untouched mixed fields remain unchanged; explicitly clearing a field removes it. The Tags and Track numbers sections remember whether you left them expanded.
+
+**Comment** edits the file's plain comment. Turn on **Settings → Appearance → Show comments after titles** to see it in parentheses right after each track title, in the same dimmer colour as track numbers and durations (off by default).
+
+**Add field…** below the fields adds more tag fields to the editor: fields already used by the selected files but not shown (such as Publisher or a custom CATALOGNUMBER tag), common fields such as Composer, BPM, Grouping or ISRC, or **Custom field…** with a name you choose, stored as a custom text tag (TXXX). Added fields stay in the editor for all files until you remove them with the small × beside the field name. Removing a field only takes it out of the editor; the tags in your files stay unchanged and appear under Other tags again.
+
+**Other tags** lists everything in the selected files that the fields above do not cover, such as publisher, encoder settings, catalogue numbers, iTunes data or legacy ID3v1/APE blocks. **Remove other tags** marks all of them for removal; Save then removes them from every selected file, and **Keep other tags** undoes the choice before saving. Artwork and ratings are always kept. Like any tag save, this is undoable until exit.
 
 For MusicBrainz suggestions, choose the relevant album and release, review the proposed values, and enable only the fields you want copied. Unmatched tracks and fields you leave disabled remain unchanged. Track-number matching shares this review and Save action. A database match is a proposal, not proof that you have that exact edition.
 
