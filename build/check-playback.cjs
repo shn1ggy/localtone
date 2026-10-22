@@ -2,7 +2,6 @@
 const { app } = require('electron');
 const syncFs = require('node:fs');
 const { spawnSync } = require('node:child_process');
-const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
@@ -11,6 +10,15 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 const binary = require('ffmpeg-static');
 let directory = require('node:fs').mkdtempSync(path.join(os.tmpdir(), 'localtone-audio-check-'));
 app.setPath('userData', directory);
+app.on('quit', () => {
+  // Chromium owns databases in userData until its windows have shut down.
+  // A temporary-file cleanup failure must not hide the audio test result.
+  try {
+    syncFs.rmSync(directory, { recursive: true, force: true, maxRetries: 3, retryDelay: 40 });
+  } catch (error) {
+    console.warn('Temporary audio test data cleanup deferred:', error.code);
+  }
+});
 const timeout = setTimeout(() => {
   console.error('Playback verification timed out.');
   app.exit(1);
@@ -140,12 +148,10 @@ app.once('browser-window-created', (_event, win) => {
         console.log('Chromium rendered seamless audio:', JSON.stringify(item));
       }
 
-      await fs.rm(directory, { recursive: true, force: true, maxRetries: 3 });
       clearTimeout(timeout);
-      app.exit(0);
+      app.quit();
     } catch (error) {
       console.error(error);
-      if (directory) await fs.rm(directory, { recursive: true, force: true, maxRetries: 3 });
       app.exit(1);
     }
   });
