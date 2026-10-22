@@ -12,6 +12,7 @@ class StreamDecoder {
     this.binary = binary?.replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep);
     this.directory = directory;
     this.sessions = new Map();
+    this.closing = new Map();
     this.writes = new Map();
   }
   init() {
@@ -172,6 +173,7 @@ class StreamDecoder {
     this.allWrites = gate;
     try {
       await previous;
+      await Promise.all([...this.closing.values()].map((job) => job.promise));
       await Promise.all(
         [...new Set([...this.sessions.values()].map((s) => s.file))].map((file) =>
           this.beforeWrite(file),
@@ -184,6 +186,9 @@ class StreamDecoder {
     }
   }
   async beforeWrite(file) {
+    await Promise.all(
+      [...this.closing.values()].filter((job) => job.file === file).map((job) => job.promise),
+    );
     await Promise.all(
       [...this.sessions.values()]
         .filter((s) => s.file === file)
@@ -207,28 +212,38 @@ class StreamDecoder {
               await rm(directory, { recursive: true, force: true });
               throw error;
             }
-          }).catch((error) => {
+          }).catch(async (error) => {
             if (!session.closed) throw error;
+            await session.exit;
           }),
         ),
     );
   }
-  async close(token) {
+  close(token) {
     const session = this.sessions.get(token);
-    if (!session) return;
+    if (!session) return this.closing.get(token)?.promise || Promise.resolve();
     this.sessions.delete(token);
     session.closed = true;
-    session.child.kill('SIGKILL');
-    session.child.stdout.destroy();
-    await session.exit;
-    await session.serial;
-    if (session.snapshot)
-      await rm(session.snapshot, { recursive: true, force: true, maxRetries: 3 });
+    const promise = (async () => {
+      session.child.kill('SIGKILL');
+      session.child.stdout.destroy();
+      await session.exit;
+      await session.serial;
+      if (session.snapshot)
+        await rm(session.snapshot, { recursive: true, force: true, maxRetries: 3 });
+    })();
+    this.closing.set(token, { file: session.file, promise });
+    const finished = () => this.closing.delete(token);
+    promise.then(finished, finished);
+    return promise;
   }
   async dispose() {
     this.disposed = true;
     await Promise.allSettled([...this.writes.values(), this.allWrites]);
-    await Promise.allSettled([...this.sessions.keys()].map((token) => this.close(token)));
+    await Promise.allSettled([
+      ...[...this.sessions.keys()].map((token) => this.close(token)),
+      ...[...this.closing.values()].map((job) => job.promise),
+    ]);
     if (this.root) await rm(await this.root, { recursive: true, force: true, maxRetries: 3 });
   }
 }
