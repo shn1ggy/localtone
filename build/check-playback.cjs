@@ -113,7 +113,13 @@ app.once('browser-window-created', (_event, win) => {
         live.setNext(transitions<3?{url:'localtone://audio/'+(transitions%2?'A':'B')+'.mp3',key:String(transitions),index:transitions+1}:null);
       };
       const ended=new Promise((resolve,reject)=>{
-        const deadline=setTimeout(()=>reject(Error('Live playback did not finish')),6000);
+        const deadline=setTimeout(()=>reject(Error('Live playback did not finish: '+JSON.stringify({
+          clock:clock.currentTime,state:clock.state,transitions,buffered:live.buffered,
+          paused:live.paused,position:live.currentTime,
+          current:live.current&&{clock:live.current.clock,eof:live.current.eof,duration:live.current.duration,chunks:live.current.chunks.length},
+          next:live.next&&{clock:live.next.clock,eof:live.next.eof,chunks:live.next.chunks.length},
+          rendered:results
+        }))),6000);
         live.onended=()=>{clearTimeout(deadline);resolve();};
         live.onerror=()=>{clearTimeout(deadline);reject(Error('Live playback failed'));};
       });

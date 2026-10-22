@@ -2483,9 +2483,11 @@ app.whenReady().then(async () => {
   });
   windowLoadAt = Date.now();
   await win.loadURL('localtone://app/index.html');
-  audioSources.init().catch((error) => console.warn('Playback cache:', error.message));
-  streamDecoder.init().catch((error) => console.warn('Playback edit cache:', error.message));
-  await startupReady;
+  await Promise.all([
+    audioSources.init().catch((error) => console.warn('Playback cache:', error.message)),
+    streamDecoder.init().catch((error) => console.warn('Playback edit cache:', error.message)),
+    startupReady,
+  ]);
 });
 app.on('will-quit', () => {
   playbackShortcuts.set(false);
