@@ -15,6 +15,7 @@
     "format": "prettier --write \"*.{cjs,mjs}\" \"src/**/*.{cjs,mjs}\" \"scripts/**/*.{cjs,mjs}\" \"app/**/*.{js,css,html}\" \"build/**/*.{cjs,mjs}\"",
     "verify": "npm run lint && npm run format:check && npm test",
     "benchmark": "node scripts/benchmark-render.mjs",
+    "verify:playback": "electron build/check-playback.cjs",
     "verify:desktop-ui": "electron build/check-desktop-ui.cjs",
     "release:source": "node build/release.mjs source",
     "release:mac": "node build/release.mjs mac",
