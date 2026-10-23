@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "1.1.0",
-  "commit": "467b0e2691363128a2cc578c46d77a1494ca3ad4",
-  "buildRun": 39414467994,
-  "tag": "v1.1.0",
+  "version": "1.1.1",
+  "commit": "220287faba74b9329f69c1591d6dd55751100f4e",
+  "buildRun": 40026041030,
+  "tag": "v1.1.1",
   "attempt": 1,
-  "title": "Localtone 1.1.0 — Cleaner tags and library repair"
+  "title": "Localtone 1.1.1 — Faster playback and smoother gapless transitions"
 }
