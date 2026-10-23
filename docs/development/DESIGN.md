@@ -358,3 +358,14 @@ Inline comments follow the title in the track-name span, in `--text-dim` (the nu
 Hide logo hides `.brand` entirely so the Libraries heading takes its place at the sidebar's top padding; the pulse animation stops while hidden. The Libraries heading's context menu offers Show logo only while it is hidden. Library Open folder opens the library root itself (not its parent with the folder selected).
 
 Legacy tag cleanup must materialize editable values and artwork held only in ID3v1/APE blocks before removing those containers. Keep the audio byte-identical and retain exact session undo. When replacing music files after a transient sync/antivirus lock, repeat the external-change check before every rename attempt, including undo and rollback; a retry must never overwrite a newer external edit.
+
+
+## Playback responsiveness
+
+Starting, seeking or skipping must not wait for whole-song decoding or a protective file copy. The progressive player pulls half-second PCM chunks and keeps approximately six seconds of the current song and one second of the next in memory. Schedule adjoining chunks and the next track on the audio clock, never from a UI timeout. Preserve pending next-track preparation when it becomes the chosen track. Changing the gapless preference must not restart the current song.
+
+Waveform cache reads may happen immediately. Uncached waveform analysis waits until audio starts, with a short grace period to fill the playback buffer. Keep UI work out of the audio preparation path where possible. A cached waveform must not disappear while waiting for unnecessary re-analysis.
+
+Tag and rating writes preserve scheduled audio. Before replacing an original file that an active decoder reads, isolate its remaining input in the app data folder and resume decoding at the delivered frame with codec preroll. Block new opens of a file while its write runs. Rename and undo transactions protect current and prefetched inputs. Remove temporary playback edit copies on retirement, shutdown and next startup; portable mode uses the portable data directory.
+
+Verify the real Chromium audio output with generated adjoining WAV and MP3 tracks, plus live consecutive transitions. Cover seeking, pause/resume, rapid replacement, pending-preload reuse, bounded memory, cancellation, file replacement and session restoration. Benchmarks must distinguish decoder readiness from total audible/device latency. Keep the gapless preference and saved values intact.

@@ -1,3 +1,11 @@
+# 1.1.1
+
+- Progressive audio starts from a half-second PCM buffer instead of decoding or copying the whole song first. Memory stays bounded for long tracks.
+- Gapless transitions share the audio clock; clicking Next reuses pending preparation. Seeking includes codec preroll to prevent MP3 reservoir artifacts.
+- Cached waveforms appear immediately; new waveform analysis waits for playback to start.
+- Playing and prefetched files are isolated only when edits require it. Ratings and tag edits preserve scheduled audio; simultaneous track starts wait for writes to that file.
+- Add real Chromium sample-continuity and live-transition checks on macOS, Windows and Linux.
+
 # 1.1.0
 
 - Release checks: preserve editable fields/artwork when cleaning legacy tag containers, and recheck external edits before every sync-lock retry.

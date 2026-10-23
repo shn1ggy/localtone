@@ -21,6 +21,10 @@ let motionJobs = Promise.resolve(),
 const gaplessDecoder = new (require('./gapless-decoder.cjs').GaplessDecoder)(
   require('ffmpeg-static'),
 );
+const streamDecoder = new (require('./stream-decoder.cjs').StreamDecoder)(
+  require('ffmpeg-static'),
+  { directory: () => path.join(app.getPath('userData'), 'playback-edits') },
+);
 const duplicates = require('./duplicates.cjs').createDuplicates();
 const numberActions = require('../app/rules/number-actions.js');
 const libraryRepair = require('./library-repair.cjs');
@@ -672,6 +676,7 @@ app.whenReady().then(async () => {
           'shortcuts.js',
           'queue-view.js',
           'buffered-audio.js',
+          'progressive-audio.js',
           'core.js',
           'name-dialog.js',
           'browse.js',
@@ -759,11 +764,11 @@ app.whenReady().then(async () => {
     return lastfm.submit(kind, play, cached.tags);
   });
   waveforms = new WaveformService(path.join(app.getPath('userData'), 'waveforms'));
-  ipcMain.handle('waveform', async (event, id) => {
+  ipcMain.handle('waveform', async (event, id, cachedOnly = false) => {
     check(event);
     const track = trackIndex.get(id);
     if (!track) throw new Error('Track not found.');
-    return waveforms.get(track);
+    return waveforms.get(track, { cachedOnly: cachedOnly === true });
   });
   ipcMain.handle('waveform-cancel', (event) => {
     check(event);
@@ -1290,12 +1295,14 @@ app.whenReady().then(async () => {
     let undoToken = null;
     if (track.codec === 'MP3') {
       await audioSources.beforeWrite(track.path);
-      const saved = await ratingTags.writeRating({
-        file: track.path,
-        rating,
-        backupStore: tagHistory.store,
-        onSaved: persist,
-      });
+      const saved = await streamDecoder.withWrite(track.path, () =>
+        ratingTags.writeRating({
+          file: track.path,
+          rating,
+          backupStore: tagHistory.store,
+          onSaved: persist,
+        }),
+      );
       undoToken = tagHistory.register([{ id, backup: saved.backup }]);
     } else {
       if (rating) db.ratings[id] = rating;
@@ -1403,16 +1410,18 @@ app.whenReady().then(async () => {
     const library = db.libraries.find((l) => l.id === track.libraryId);
     if (!library) throw new Error('Library not found.');
     let result;
-    const saved = await tagEditor.writeTags({
-      file: track.path,
-      values,
-      token,
-      backupStore: tagHistory.store,
-      onSaved: async () => {
-        track.mtime = -1;
-        result = await importLibrary(library, [track.path]);
-      },
-    });
+    const saved = await streamDecoder.withWrite(track.path, () =>
+      tagEditor.writeTags({
+        file: track.path,
+        values,
+        token,
+        backupStore: tagHistory.store,
+        onSaved: async () => {
+          track.mtime = -1;
+          result = await importLibrary(library, [track.path]);
+        },
+      }),
+    );
     return { ...result, undoToken: tagHistory.register([{ id, backup: saved.backup }]) };
   });
   const tagTracks = (ids) => {
@@ -1495,12 +1504,14 @@ app.whenReady().then(async () => {
     }
     for (const { track, patch, token } of plans) {
       try {
-        const written = await tagEditor.writeTags({
-          file: track.path,
-          patch,
-          token,
-          backupStore: tagHistory.store,
-        });
+        const written = await streamDecoder.withWrite(track.path, () =>
+          tagEditor.writeTags({
+            file: track.path,
+            patch,
+            token,
+            backupStore: tagHistory.store,
+          }),
+        );
         records.push({ id: track.id, backup: written.backup });
         track.mtime = -1;
         saved.push(track);
@@ -1611,13 +1622,15 @@ app.whenReady().then(async () => {
     const outcomes = await tagEditor.mapTagFiles(targets, async (track) => {
       const entry = entriesById.get(track.id);
       try {
-        const written = await tagEditor.writeTags({
-          file: track.path,
-          patch: { ...patch, ...entry.patch },
-          remove: remove.filter((k) => (entry.extraKeys || []).includes(k)),
-          token: entry.token,
-          backupStore: tagHistory.store,
-        });
+        const written = await streamDecoder.withWrite(track.path, () =>
+          tagEditor.writeTags({
+            file: track.path,
+            patch: { ...patch, ...entry.patch },
+            remove: remove.filter((k) => (entry.extraKeys || []).includes(k)),
+            token: entry.token,
+            backupStore: tagHistory.store,
+          }),
+        );
         track.mtime = -1;
         return { track, backup: written.backup };
       } catch (error) {
@@ -1684,7 +1697,9 @@ app.whenReady().then(async () => {
         });
         return answer.response === 1;
       },
-      trash: (file) => shell.trashItem(file),
+      trash: async (file) => {
+        return streamDecoder.withWrite(file, () => shell.trashItem(file));
+      },
       onRemoved: async (removed) => {
         const ids = new Set(removed);
         db.tracks = db.tracks.filter((t) => !ids.has(t.id));
@@ -1699,24 +1714,26 @@ app.whenReady().then(async () => {
     return { ...result, state: snapshot() };
   });
   handle('delete-files', async (ids) => {
-    const result = await deleteSelectedFiles(db, ids, async (files) => {
-      const answer = await dialog.showMessageBox(win, {
-        type: 'warning',
-        title: 'Delete music files permanently',
-        message: `Permanently delete ${files.length} music ${files.length === 1 ? 'file' : 'files'}?`,
-        detail:
-          'This cannot be undone. Files will not go to Trash. Their playlist and queue entries will be removed. Empty album and artist folders will also be removed; the library folder stays.\n\n' +
-          files
-            .slice(0, 20)
-            .map((file) => file.path)
-            .join('\n') +
-          (files.length > 20 ? `\n… and ${files.length - 20} more files` : ''),
-        buttons: ['Cancel', 'Delete permanently'],
-        defaultId: 0,
-        cancelId: 0,
-      });
-      return answer.response === 1;
-    });
+    const result = await streamDecoder.withAllWrites(() =>
+      deleteSelectedFiles(db, ids, async (files) => {
+        const answer = await dialog.showMessageBox(win, {
+          type: 'warning',
+          title: 'Delete music files permanently',
+          message: `Permanently delete ${files.length} music ${files.length === 1 ? 'file' : 'files'}?`,
+          detail:
+            'This cannot be undone. Files will not go to Trash. Their playlist and queue entries will be removed. Empty album and artist folders will also be removed; the library folder stays.\n\n' +
+            files
+              .slice(0, 20)
+              .map((file) => file.path)
+              .join('\n') +
+            (files.length > 20 ? `\n… and ${files.length - 20} more files` : ''),
+          buttons: ['Cancel', 'Delete permanently'],
+          defaultId: 0,
+          cancelId: 0,
+        });
+        return answer.response === 1;
+      }),
+    );
     if (result.removed.length) {
       const removed = new Set(result.removed);
       db.tracks = db.tracks.filter((track) => !removed.has(track.id));
@@ -1731,13 +1748,17 @@ app.whenReady().then(async () => {
   });
   handle('preview-file-names', async (ids, config) => naming.preview(ids, config, db), readOnly);
   handle('apply-file-names', async (token, selectedIds) => {
-    const result = await naming.apply(token, commitNames, selectedIds);
+    const result = await streamDecoder.withAllWrites(() =>
+      naming.apply(token, commitNames, selectedIds),
+    );
     return { ...result, state: snapshot() };
   });
   handle('restore-file-names', async (token, redo) => {
     if (typeof token !== 'string' || typeof redo !== 'boolean')
       throw Error('Invalid rename history.');
-    const affected = await naming.restore(token, redo, commitNames);
+    const affected = await streamDecoder.withAllWrites(() =>
+      naming.restore(token, redo, commitNames),
+    );
     return { state: snapshot(), affected };
   });
   handle('merge-tag-undo', async (tokens) => {
@@ -1747,7 +1768,9 @@ app.whenReady().then(async () => {
   });
   handle('restore-tag-edit', async (token, redo) => {
     if (typeof token !== 'string' || typeof redo !== 'boolean') throw Error('Invalid tag history.');
-    const ids = await tagHistory.restore(token, redo, (id) => trackIndex.get(id)?.path);
+    const ids = await streamDecoder.withAllWrites(() =>
+      tagHistory.restore(token, redo, (id) => trackIndex.get(id)?.path),
+    );
     try {
       for (const id of ids) trackIndex.get(id).mtime = -1;
       for (const libraryId of new Set(ids.map((id) => trackIndex.get(id).libraryId)))
@@ -1763,7 +1786,9 @@ app.whenReady().then(async () => {
         );
       return { state: snapshot(), saved: ids };
     } catch (error) {
-      await tagHistory.restore(token, !redo, (id) => trackIndex.get(id)?.path);
+      await streamDecoder.withAllWrites(() =>
+        tagHistory.restore(token, !redo, (id) => trackIndex.get(id)?.path),
+      );
       throw error;
     }
   });
@@ -1781,6 +1806,20 @@ app.whenReady().then(async () => {
     const library = { id: randomUUID(), name, root, filters };
     db.libraries.push(library);
     return importLibrary(library);
+  });
+  ipcMain.handle('audio-open', (event, id, sampleRate, offset) => {
+    check(event);
+    const track = trackIndex.get(id);
+    if (!track) throw Error('Track not found.');
+    return streamDecoder.open(track, sampleRate, offset);
+  });
+  ipcMain.handle('audio-read', (event, token) => {
+    check(event);
+    return streamDecoder.read(token);
+  });
+  ipcMain.handle('audio-close', (event, token) => {
+    check(event);
+    return streamDecoder.close(token);
   });
   ipcMain.handle('decode-gapless', async (event, id, sampleRate) => {
     check(event);
@@ -2444,8 +2483,11 @@ app.whenReady().then(async () => {
   });
   windowLoadAt = Date.now();
   await win.loadURL('localtone://app/index.html');
-  audioSources.init().catch((error) => console.warn('Playback cache:', error.message));
-  await startupReady;
+  await Promise.all([
+    audioSources.init().catch((error) => console.warn('Playback cache:', error.message)),
+    streamDecoder.init().catch((error) => console.warn('Playback edit cache:', error.message)),
+    startupReady,
+  ]);
 });
 app.on('will-quit', () => {
   playbackShortcuts.set(false);
@@ -2473,6 +2515,7 @@ app.on('before-quit', (event) => {
       onlineUpdates.shutdown(),
       startupReady,
       audioSources.dispose(),
+      streamDecoder.dispose(),
       historyWrites,
       lastfmReady?.then(() => lastfm.close()),
       (async () => {

@@ -20,6 +20,8 @@ Search accepts fields such as `bitrate:320`, `bitrate:<256`, `bitrate:192-256` (
 
 Double-click a library, playlist or All music to start a random song from that complete collection. The queue follows the collection's sort order and current shuffle/repeat mode. Add to queue inserts the selection after the active track. The visible queue limit controls displayed rows, not the collection or shuffle pool.
 
+Settings → Audio → Gapless playback prepares the next track and schedules it on the same audio clock. Playback uses small decoded buffers in both modes, so starting a long song does not require decoding it all first. Waveform analysis waits until playback starts; cached waveforms can appear immediately.
+
 Click the now-playing artwork to reveal the playing track in its original collection, keeping the current Albums/Covers/Tracks tab. The playing track takes priority when an entire album is too tall to fit. Clicking a cover in Albums expands/collapses it; clicking its title selects the album. In Covers, Enter opens selected albums; Backspace returns to the grid.
 
 Right-click tracks, artists or albums for tag editing, queue/playlist actions, opening their location and file tools. Right-click a library and choose **Open folder** to open its music folder in Explorer, Finder or your file manager. Right-click the logo to stop its animation or hide it; the library list then moves up. Bring the logo back from **Settings → Appearance → Show logo** or by right-clicking the Libraries heading. Right-click a tab to show/hide column headings; right-click headings for column visibility and alignment. Pane dividers and waveform height can be dragged and locked through their context menus.

@@ -22,7 +22,7 @@ export const settingsHelp = {
   },
   'setting-gaplessPlayback': {
     title: 'Gapless playback',
-    body: 'Buffers the current and next track for seamless transitions. Uses more memory; very long or unsupported files use normal playback.',
+    body: 'Prepares the next track for seamless transitions. Audio is decoded in small buffers, including for long tracks. Unsupported files use normal playback.',
   },
   'setting-globalPlaybackShortcuts': {
     title: 'Global playback keys',

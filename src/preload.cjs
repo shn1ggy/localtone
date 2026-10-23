@@ -40,9 +40,12 @@ contextBridge.exposeInMainWorld('localtone', {
     });
   },
   rememberPlayed: (id) => ipcRenderer.invoke('remember-played', id),
+  audioOpen: (id, rate, offset) => ipcRenderer.invoke('audio-open', id, rate, offset),
+  audioRead: (token) => ipcRenderer.invoke('audio-read', token),
+  audioClose: (token) => ipcRenderer.invoke('audio-close', token),
   decodeGapless: (id, sampleRate) => ipcRenderer.invoke('decode-gapless', id, sampleRate),
   cancelGapless: () => ipcRenderer.invoke('cancel-gapless'),
-  waveform: (id) => ipcRenderer.invoke('waveform', id),
+  waveform: (id, cachedOnly = false) => ipcRenderer.invoke('waveform', id, cachedOnly),
   cancelWaveform: () => ipcRenderer.invoke('waveform-cancel'),
   searchWeb: (action) => ipcRenderer.invoke('search-web', action),
   openFolder: (action) => ipcRenderer.invoke('open-folder', action),

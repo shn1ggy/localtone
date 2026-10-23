@@ -1,4 +1,8 @@
-# Current release status — 20 October 2026
+# Current release status — 23 October 2026
+
+Localtone 1.1.1 is authorized by the project owner and improves progressive playback, gapless preparation, seeking and tag-edit continuity. All 408 automated tests, native interface checks and real Chromium sample-continuity/live-transition checks passed on Windows, macOS and Linux before release preparation. Native packages additionally run playback verification with the source-built release decoder. Public assets must pass the existing archive, checksum, source/provenance and upload verification gates before publication. Physical hardware/device and signing limitations remain as described below.
+
+# Previous release status — 20 October 2026
 
 Localtone 1.1.0 follows the first stable 1.0.0 release and is authorized by the project owner. The public repository and GPL-3.0-or-later license are established. Native packages cover Windows x64, Apple Silicon Mac, Intel Mac and Linux x64, with matching decoder sources, dependency notices and checksums. Stable publishing must set `prerelease: false` and mark 1.1.0 as the latest release; early-access clients and stable clients must discover the appropriate update.
 

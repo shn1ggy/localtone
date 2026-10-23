@@ -18,6 +18,7 @@ import { normalizeMenu } from './context-menu.js';
 import { shortcutDefaults } from './shortcuts.js';
 import { createQueueViewCache, queuePage } from './queue-view.js';
 import { BufferedAudio } from './buffered-audio.js';
+import { ProgressiveAudio } from './progressive-audio.js';
 import { waveformPath } from './waveform-view.js';
 import { ListenTracker } from './listen.js';
 import { seekTo, columnWidths, resizeColumnBoundary } from './interactions.js';
@@ -151,15 +152,23 @@ let dragPayload = null,
 let playingOrigin = null,
   pendingPlaybackPosition = null;
 const audio =
-  typeof BufferedAudio !== 'undefined' && window.AudioContext && api.decodeGapless
-    ? new BufferedAudio($('audio'), {
-        decode: (id, rate) => api.decodeGapless(id, rate),
-        cancelDecode: () => api.cancelGapless?.().catch(() => {}),
+  typeof ProgressiveAudio !== 'undefined' && window.AudioContext && api.audioOpen
+    ? new ProgressiveAudio($('audio'), {
+        stream: { open: api.audioOpen, read: api.audioRead, close: api.audioClose },
         status: (message) => {
           $('gapless-status').textContent = message;
         },
       })
-    : $('audio');
+    : typeof BufferedAudio !== 'undefined' && window.AudioContext && api.decodeGapless
+      ? new BufferedAudio($('audio'), {
+          decode: (id, rate) => api.decodeGapless(id, rate),
+          cancelDecode: () => api.cancelGapless?.().catch(() => {}),
+          status: (message) => {
+            $('gapless-status').textContent = message;
+          },
+        })
+      : $('audio');
+let waveformStartTimer, waveformStartListener;
 let waveformPeaks = null,
   waveformGeneration = 0;
 let lastfmState = { enabled: false };
@@ -612,8 +621,8 @@ async function startTrack(resume = null, scheduled = false, { preserveQueueScrol
   pendingPlaybackPosition =
     resume !== null ? Math.max(0, Math.min(Number(resume) || 0, track.duration || Infinity)) : null;
   listener.begin(track);
-  loadWaveform(track);
   if (!scheduled) audio.src = `localtone://audio/${track.id}`;
+  queueWaveform(track, resume !== null);
   const artwork = el('button', null, 'cover');
   artwork.id = 'now-art';
   artwork.type = 'button';
@@ -3331,6 +3340,7 @@ async function saveRating(id, rating, refresh = true) {
   return result;
 }
 async function withReleasedTrack(id, work) {
+  if (audio.supportsLiveEdits) return work();
   const active = currentTrack()?.id === id && !!audio.getAttribute('src');
   const position = audio.currentTime,
     wasPlaying = !audio.paused;
@@ -4102,7 +4112,35 @@ if (typeof ResizeObserver !== 'undefined') {
 }
 window.addEventListener('resize', syncScrollbarControls);
 
-async function loadWaveform(track) {
+function queueWaveform(track, restoring = false) {
+  clearTimeout(waveformStartTimer);
+  if (waveformStartListener) {
+    audio.removeEventListener('playing', waveformStartListener);
+    audio.removeEventListener('loadedmetadata', waveformStartListener);
+  }
+  waveformStartListener = null;
+  waveformGeneration++;
+  waveformPeaks = null;
+  applyWaveformAppearance();
+  api?.cancelWaveform?.().catch(() => {});
+  loadWaveform(track, true);
+  const start = () => {
+    clearTimeout(waveformStartTimer);
+    waveformStartTimer = setTimeout(() => {
+      if (currentTrack()?.id === track.id && !waveformPeaks) loadWaveform(track);
+    }, 750);
+  };
+  if (!audio.paused) start();
+  else {
+    const ready = () => {
+      audio.removeEventListener('playing', ready);
+      start();
+    };
+    waveformStartListener = ready;
+    audio.addEventListener(restoring ? 'loadedmetadata' : 'playing', ready, { once: true });
+  }
+}
+async function loadWaveform(track, cachedOnly = false) {
   const generation = ++waveformGeneration;
   waveformPeaks = null;
   applyWaveformAppearance();
@@ -4112,7 +4150,7 @@ async function loadWaveform(track) {
   }
   $('seek-visual').title = 'Analyzing waveform…';
   try {
-    const peaks = await api.waveform(track.id);
+    const peaks = await api.waveform(track.id, cachedOnly);
     if (generation !== waveformGeneration) return;
     waveformPeaks = peaks;
     $('seek-visual').title = '';

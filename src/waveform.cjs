@@ -21,7 +21,7 @@ class WaveformService {
       this.active = null;
     }
   }
-  async get(track) {
+  async get(track, { cachedOnly = false } = {}) {
     if (!this.binary) throw new Error('Waveform decoder is unavailable.');
     const info = await fs.stat(track.path),
       key = waveformCacheKey(track, info);
@@ -31,6 +31,7 @@ class WaveformService {
       if (cached.length === 1600 && cached.every((n) => Number.isFinite(n) && n >= 0 && n <= 1))
         return cached;
     } catch {}
+    if (cachedOnly) return null;
     if (this.active?.key === key) return this.active.promise;
     this.cancel();
     if (!(track.duration > 0) || track.duration > 21600)
