@@ -75,6 +75,12 @@ jobs:
         shell: msys2 {0}
         run: node build/ffmpeg/finalize.mjs
       - run: node build/ffmpeg/smoke.mjs
+      - name: Verify playback with the release decoder
+        if: runner.os != 'Linux'
+        run: npm run verify:playback
+      - name: Verify playback with the release decoder (Linux)
+        if: runner.os == 'Linux'
+        run: ./node_modules/.bin/electron --no-sandbox --ozone-platform=headless --disable-dev-shm-usage build/check-playback.cjs
       - run: npm run release:${{ matrix.target }}
       - run: npm run release:verify-downloads -- dist/checksums.json
       - if: runner.os == 'macOS'

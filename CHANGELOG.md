@@ -1,4 +1,4 @@
-# Unreleased
+# 1.1.1
 
 - Progressive audio starts from a half-second PCM buffer instead of decoding or copying the whole song first. Memory stays bounded for long tracks.
 - Gapless transitions share the audio clock; clicking Next reuses pending preparation. Seeking includes codec preroll to prevent MP3 reservoir artifacts.

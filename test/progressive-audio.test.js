@@ -1,10 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, copyFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { ProgressiveAudio } from '../app/progressive-audio.js';
 const require = createRequire(import.meta.url);
 const { StreamDecoder } = require('../src/stream-decoder.cjs');
@@ -58,9 +57,9 @@ test('editing the original leaves delivered and remaining playback samples intac
   const rest = await drain(decoder, item.token);
   assert.deepEqual(Buffer.concat([Buffer.from(first.pcm), rest]), wav().subarray(44));
 }));
-test('MP3 edit handoff preserves decoder samples and encoder padding', () => fixture(async ({ decoder, file, root }) => {
+test('MP3 edit handoff preserves decoder samples and encoder padding', () => fixture(async ({ decoder, root }) => {
   const mp3 = path.join(root, 'tone.mp3');
-  assert.equal(spawnSync(ffmpeg, ['-v', 'error', '-i', file, '-c:a', 'libmp3lame', mp3]).status, 0);
+  await copyFile(new URL('./fixtures/gapless-a.mp3', import.meta.url), mp3);
   const reference = await decoder.open({ path: mp3, duration: 3 }, rate);
   const expected = await drain(decoder, reference.token); await decoder.close(reference.token);
   const item = await decoder.open({ path: mp3, duration: 3 }, rate);

@@ -1,13 +1,11 @@
 // Real Chromium audio rendering, with isolated generated files and no user data.
 const { app } = require('electron');
 const syncFs = require('node:fs');
-const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
 app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
-const binary = require('ffmpeg-static');
 let directory = require('node:fs').mkdtempSync(path.join(os.tmpdir(), 'localtone-audio-check-'));
 app.setPath('userData', directory);
 app.on('quit', () => {
@@ -48,16 +46,10 @@ const tracks = [];
 for (const [index, id] of ['A', 'B'].entries()) {
   const file = path.join(directory, id + '.wav');
   syncFs.writeFileSync(file, pcm(index * frames, frames, rate));
-  const encode = spawnSync(binary, [
-    '-v',
-    'error',
-    '-i',
-    file,
-    '-c:a',
-    'libmp3lame',
+  syncFs.copyFileSync(
+    path.join(__dirname, '../test/fixtures/gapless-' + id.toLowerCase() + '.mp3'),
     path.join(directory, id + '.mp3'),
-  ]);
-  assert.equal(encode.status, 0, encode.stderr.toString());
+  );
   for (const format of ['wav', 'mp3'])
     tracks.push({
       id: id + '.' + format,
