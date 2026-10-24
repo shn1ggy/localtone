@@ -1,9 +1,9 @@
 {
   "repository": "shn1ggy/localtone",
-  "version": "1.1.1",
-  "commit": "220287faba74b9329f69c1591d6dd55751100f4e",
-  "buildRun": 40026041030,
-  "tag": "v1.1.1",
+  "version": "1.1.2",
+  "commit": "3ecc0fefec979380aa03c921f2e8cf9576d0056c",
+  "buildRun": 40080138110,
+  "tag": "v1.1.2",
   "attempt": 1,
-  "title": "Localtone 1.1.1 — Faster playback and smoother gapless transitions"
+  "title": "Localtone 1.1.2 — Playlist icons"
 }
