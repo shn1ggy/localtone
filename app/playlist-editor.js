@@ -9,6 +9,7 @@ import {
   dateOps,
   emptyOps,
 } from './core.js';
+import { createPlaylistIconPicker } from './playlist-icon-picker.js';
 export function createPlaylistEditor({
   document,
   api,
@@ -22,6 +23,11 @@ export function createPlaylistEditor({
   onConfigured,
 }) {
   const $ = (id) => document.getElementById(id);
+  const iconPicker = createPlaylistIconPicker({
+    document,
+    icon,
+    getDynamic: () => $('playlist-dynamic').checked,
+  });
   function fitRuleSelect(select) {
     const probe = el('span');
     probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;font-size:13px;';
@@ -199,6 +205,7 @@ export function createPlaylistEditor({
     };
   }
   function updatePlaylistPreview() {
+    iconPicker.refresh();
     const enabled = $('playlist-dynamic').checked;
     $('playlist-filters').hidden = !enabled;
     for (const input of $('playlist-filters').querySelectorAll('input,select,button'))
@@ -232,6 +239,7 @@ export function createPlaylistEditor({
     editingPlaylistId = playlist?.id || null;
     $('playlist-settings-title').textContent = playlist ? 'Playlist settings' : 'New playlist';
     $('playlist-name').value = playlist?.name || '';
+    iconPicker.set(playlist?.icon);
     $('playlist-settings-error').hidden = true;
     $('playlist-settings-form').querySelector('[type=submit]').textContent = playlist
       ? 'Save'
@@ -306,6 +314,7 @@ export function createPlaylistEditor({
             type: creating ? 'create' : 'configure',
             ...(creating ? {} : { id: editingPlaylistId }),
             name,
+            icon: iconPicker.value,
             dynamic,
             ...(creating && playlistSeedIds ? { trackIds: playlistSeedIds } : {}),
           }),
@@ -327,6 +336,7 @@ export function createPlaylistEditor({
   return {
     open: openPlaylistSettings,
     dispose() {
+      iconPicker.dispose();
       for (const id of [
         'playlist-filter-mode',
         'playlist-dynamic',

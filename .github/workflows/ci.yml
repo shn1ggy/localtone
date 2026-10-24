@@ -59,6 +59,14 @@ jobs:
         timeout-minutes: 2
         if: runner.os == 'Linux'
         run: ./node_modules/.bin/electron --no-sandbox --ozone-platform=headless --disable-dev-shm-usage build/check-playback.cjs
+      - name: Floating playlist icon picker
+        timeout-minutes: 2
+        if: runner.os != 'Linux'
+        run: npm run verify:playlist-icons
+      - name: Floating playlist icon picker (Linux)
+        timeout-minutes: 2
+        if: runner.os == 'Linux'
+        run: ./node_modules/.bin/electron --no-sandbox --ozone-platform=headless --disable-dev-shm-usage build/check-playlist-icons.cjs
       - run: npm run benchmark
       - name: Album and queue benchmark
         run: npm run benchmark

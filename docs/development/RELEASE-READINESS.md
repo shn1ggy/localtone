@@ -1,4 +1,8 @@
-# Current release status — 23 October 2026
+# Current release status — 24 October 2026
+
+Localtone 1.1.2 is authorized by the project owner after hands-on Windows testing of the local playlist-icon candidate. It adds 32 persistent playlist icons and the approved compact floating picker. Existing playlists keep their default symbols. Source checks, native Windows dialog checks and packaged-app checks cover selection, cancellation, keyboard dismissal, compact/short-window layout and persistence. Cross-platform CI, native packages and archive/source/checksum verification must pass before publication. Signing and physical-device limitations remain unchanged.
+
+# Previous release status — 23 October 2026
 
 Localtone 1.1.1 is authorized by the project owner and improves progressive playback, gapless preparation, seeking and tag-edit continuity. All 408 automated tests, native interface checks and real Chromium sample-continuity/live-transition checks passed on Windows, macOS and Linux before release preparation. Native packages additionally run playback verification with the source-built release decoder. Public assets must pass the existing archive, checksum, source/provenance and upload verification gates before publication. Physical hardware/device and signing limitations remain as described below.
 

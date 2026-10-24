@@ -2,7 +2,7 @@
 
 A compact, keyboard-driven music player for **Windows, macOS and Linux**. Browse your own collection, build playlists and edit tags in one quiet desktop interface.
 
-**[Download 1.1.1](https://github.com/shn1ggy/localtone/releases/tag/v1.1.1)** · [User guide](docs/USER-GUIDE.md) · [Roadmap](docs/ROADMAP.md) · [Report a bug](https://github.com/shn1ggy/localtone/issues/new/choose)
+**[Download 1.1.2](https://github.com/shn1ggy/localtone/releases/tag/v1.1.2)** · [User guide](docs/USER-GUIDE.md) · [Roadmap](docs/ROADMAP.md) · [Report a bug](https://github.com/shn1ggy/localtone/issues/new/choose)
 
 ![Localtone showing an artist pane, album covers and a waveform seekbar](docs/images/localtone-covers.webp)
 
@@ -21,16 +21,16 @@ Browsing filters do not restrict the normal playback queue. Your music remains i
 
 ## Download
 
-**Version 1.1.1 · Stable release.** These are ready-to-run desktop packages; Node.js is not required.
+**Version 1.1.2 · Stable release.** These are ready-to-run desktop packages; Node.js is not required.
 
 | System | Download |
 | --- | --- |
-| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v1.1.1/Localtone-1.1.1-win-x64.zip) |
-| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v1.1.1/Localtone-1.1.1-mac-arm64.zip) |
-| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v1.1.1/Localtone-1.1.1-mac-x64.zip) |
-| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v1.1.1/Localtone-1.1.1-linux-x86_64.AppImage) |
+| Windows · 64-bit | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v1.1.2/Localtone-1.1.2-win-x64.zip) |
+| macOS · Apple Silicon | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v1.1.2/Localtone-1.1.2-mac-arm64.zip) |
+| macOS · Intel | [App ZIP](https://github.com/shn1ggy/localtone/releases/download/v1.1.2/Localtone-1.1.2-mac-x64.zip) |
+| Linux · 64-bit | [AppImage](https://github.com/shn1ggy/localtone/releases/download/v1.1.2/Localtone-1.1.2-linux-x86_64.AppImage) |
 
-Extract the **complete ZIP** into a writable folder and open Localtone, or make the Linux AppImage executable. Windows portable EXE, Linux ZIP, checksums and matching decoder sources are on the [release page](https://github.com/shn1ggy/localtone/releases/tag/v1.1.1). GitHub’s “Source code” download is for development.
+Extract the **complete ZIP** into a writable folder and open Localtone, or make the Linux AppImage executable. Windows portable EXE, Linux ZIP, checksums and matching decoder sources are on the [release page](https://github.com/shn1ggy/localtone/releases/tag/v1.1.2). GitHub’s “Source code” download is for development.
 
 Windows packages are unsigned. Mac apps are ad-hoc signed but **not Apple notarized**; macOS may require approval in Privacy & Security. Automated checks run on all three systems; broader hardware, audio-device and accessibility testing is ongoing.
 

@@ -62,6 +62,10 @@ M switches to the mini player instantly and back; the play queue keeps its state
 
 Context menus use Up/Down and Enter. Right enters a playlist submenu; Left returns. Escape closes the innermost menu/help/dialog first. Checkmarked menu options generally remain open so you can change several; single-option logo/column-heading menus close after toggling.
 
+## Playlist icons
+
+Choose an icon using the small button beside the name when creating a playlist or opening its Playlist settings. The floating palette contains 32 outline icons; click one or move with the arrow keys and press Enter. Escape closes only the palette. Save or Create commits your choice; Cancel discards it. Reset to default restores the normal or dynamic playlist symbol. Existing playlists keep their default icons, and collection backups include saved icon choices.
+
 ## Search and dynamic playlists
 
 Use plain words or field expressions. **Settings → General → Search guide…** contains the full, current syntax. Boolean operators are uppercase; use quotes for phrases.

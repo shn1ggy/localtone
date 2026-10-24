@@ -375,8 +375,17 @@
         ><div class="playlist-editor-body"
           ><section class="preference-group playlist-identity"
             ><div class="settings-fields"
-              ><label class="playlist-name-row"
-                >Name<input id="playlist-name" maxlength="100" required /></label
+              ><div class="playlist-name-row"
+                ><label for="playlist-name">Name</label
+                ><input id="playlist-name" maxlength="100" required />
+                <button
+                  type="button"
+                  id="playlist-icon-trigger"
+                  aria-label="Choose playlist icon"
+                  aria-haspopup="dialog"
+                  aria-controls="playlist-icon-picker"
+                  aria-expanded="false"
+                ></button></div
               ><label class="check-setting playlist-dynamic-row"
                 ><span>Dynamic playlist</span
                 ><input

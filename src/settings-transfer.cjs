@@ -135,6 +135,8 @@ function validateCollections(value) {
     )
       throw Error('Invalid playlist backup.');
     const clean = { id: item.id, name: item.name, trackIds: [...item.trackIds] };
+    if (item.icon !== undefined)
+      clean.icon = require('../app/rules/playlist-icons.js').validateIcon(item.icon);
     if (item.browse !== undefined) {
       if (typeof item.browse !== 'boolean') throw Error('Invalid playlist browsing setting.');
       clean.browse = item.browse;

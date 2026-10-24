@@ -1,3 +1,100 @@
+/* Playlist identity stays compact; the icon palette lives in Chromium's top layer. */
+#playlist-settings-dialog .playlist-name-row {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+}
+#playlist-settings-dialog .playlist-name-row > label {
+  display: block;
+  min-height: 0;
+}
+#playlist-settings-dialog #playlist-icon-trigger {
+  display: inline-flex;
+  height: 28px;
+  width: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+}
+#playlist-settings-dialog #playlist-icon-trigger:hover,
+#playlist-settings-dialog #playlist-icon-trigger[aria-expanded='true'] {
+  color: var(--accent);
+}
+#playlist-icon-picker {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 12px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow: auto;
+  color: var(--text-primary);
+  background: hsl(
+    var(--background-hue, 220) var(--background-saturation, 12%)
+      clamp(2%, calc(12.5% + var(--background-brightness-offset, 0%)), 40%)
+  );
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 24px #0007;
+  font-size: 13px;
+}
+#playlist-icon-picker::backdrop {
+  background: transparent;
+  pointer-events: none;
+}
+#playlist-icon-picker .playlist-icon-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+#playlist-icon-picker .playlist-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 4px;
+}
+#playlist-settings-dialog #playlist-icon-picker button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  height: 32px;
+  min-height: 32px;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-muted);
+}
+#playlist-settings-dialog #playlist-icon-picker button:hover,
+#playlist-settings-dialog #playlist-icon-picker button:focus-visible,
+#playlist-settings-dialog #playlist-icon-picker button[aria-pressed='true'] {
+  color: var(--accent);
+  background: transparent;
+}
+#playlist-icon-picker .ui-icon {
+  width: 18px;
+  height: 18px;
+}
+#playlist-settings-dialog #playlist-icon-picker .dialog-close {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+}
+#playlist-settings-dialog #playlist-icon-picker .playlist-icon-reset {
+  justify-content: flex-start;
+  flex: 1;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 0;
+  gap: 8px;
+}
+
 :root {
   --font-small: 11px;
   --font-normal: 12px;

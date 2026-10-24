@@ -1,5 +1,7 @@
+import './rules/playlist-icons.js';
 // Shared SVG definitions and construction; no application state.
 const iconPaths = {
+  ...globalThis.LocaltonePlaylistIcons.paths,
   play: 'M8 5l11 7-11 7Z',
   pause: 'M6 5h4v14H6ZM14 5h4v14h-4Z',
   previous: 'M4 5h2v14H4ZM19 5 8 12l11 7Z',
@@ -85,6 +87,7 @@ export function createIcons(document) {
   }
   return {
     icon,
+    playlistIcon: globalThis.LocaltonePlaylistIcons.playlistIcon,
     setIcon,
     animatePulse: (svg, audio) =>
       animatePulse(svg, audio, document, markers, (shape) => {

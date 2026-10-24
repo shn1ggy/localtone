@@ -186,7 +186,7 @@ const listener = new ListenTracker((kind, play) => {
     });
 });
 audio.volume = 0.8;
-const { icon, setIcon, animatePulse } = createIcons(document);
+const { icon, setIcon, animatePulse, playlistIcon } = createIcons(document);
 const windowPresentation = createWindowPresentation({
   window,
   document,
@@ -378,7 +378,7 @@ function renderSidebar() {
       button.dataset.sourceId = item.id;
       const dynamic = kind === 'playlist' && item.dynamic?.enabled;
       const mark = el('span');
-      mark.append(icon(kind === 'library' ? 'folder' : dynamic ? 'dynamic' : 'playlist'));
+      mark.append(icon(kind === 'library' ? 'folder' : playlistIcon(item)));
       button.append(mark, document.createTextNode(item.name));
       button.classList.toggle('dynamic-playlist', !!dynamic);
       button.classList.toggle(

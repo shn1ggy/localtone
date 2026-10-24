@@ -369,3 +369,8 @@ Waveform cache reads may happen immediately. Uncached waveform analysis waits un
 Tag and rating writes preserve scheduled audio. Before replacing an original file that an active decoder reads, isolate its remaining input in the app data folder and resume decoding at the delivered frame with codec preroll. Block new opens of a file while its write runs. Rename and undo transactions protect current and prefetched inputs. Remove temporary playback edit copies on retirement, shutdown and next startup; portable mode uses the portable data directory.
 
 Verify the real Chromium audio output with generated adjoining WAV and MP3 tracks, plus live consecutive transitions. Cover seeking, pause/resume, rapid replacement, pending-preload reuse, bounded memory, cancellation, file replacement and session restoration. Benchmarks must distinguish decoder readiness from total audible/device latency. Keep the gapless preference and saved values intact.
+
+
+## Playlist icons
+
+The playlist name and 28px-square icon button share one row. The button shows only the chosen symbol, with no dropdown arrow. The icon palette is a floating top-layer popover; it never reserves height in the parent dialog or pushes Dynamic playlist down. Use 32 shared outline icons in an eight-column grid, no individual borders/background tiles, 12px outer padding and 4px grid gaps. Omit the visible picker title; retain an accessible dialog label. Reset to default and the shared close icon share the footer. Arrow keys navigate; Enter selects; Escape dismisses only the palette and restores trigger focus. Outside click dismisses it. Save commits choices, Cancel discards them. Default icons follow the regular/dynamic state; explicit choices remain independent.

@@ -8,6 +8,24 @@ import { realpath, mkdtemp, mkdir, copyFile, readFile, writeFile, rm } from 'nod
 import { tmpdir } from 'node:os';
 const mainPath=fileURLToPath(new URL('../src/main.cjs',import.meta.url));
 const source=await readFile(mainPath,'utf8'),require=createRequire(mainPath);
+test('playlist icon configuration persists across main-process restart and invalid icons cannot replace it', async()=>{
+ const dir=await realpath(await mkdtemp(path.join(tmpdir(),'localtone-icons-')));
+ try {
+  let invoke=await launch(dir,dir);
+  let state=await invoke('playlist',{type:'create',name:'Night',icon:'moon'});
+  const id=state.playlists[0].id;
+  assert.equal(state.playlists[0].icon,'moon');
+  await assert.rejects(invoke('playlist',{type:'configure',id,icon:'<svg/>',dynamic:{enabled:false,libraryId:'',match:'all',rules:[]}}));
+  await invoke.shutdown();
+  invoke=await launch(dir,dir);
+  state=await invoke('load');
+  assert.equal(state.playlists[0].icon,'moon');
+  state=await invoke('playlist',{type:'configure',id,icon:'',dynamic:{enabled:true,libraryId:'',match:'all',rules:[]}});
+  assert.equal(state.playlists[0].icon,'');
+  assert.equal(state.playlists[0].dynamic.enabled,true);
+  await invoke.shutdown();
+ } finally {await rm(dir,{recursive:true,force:true,maxRetries:3});}
+});
 async function launch(userData,music,dialogs={}) {
  const handlers=new Map(),events=new Map(),opened=[];let quitCount=0;let ready,windowInstance,assetHandler;
  class Window {constructor(options){windowInstance=this;this.visible=options.show!==false;this.size=[options.width,options.height];this.minimum=[options.minWidth,options.minHeight];this.webContents={capturePage:async()=>({toDataURL:()=> 'data:image/png;base64,snapshot'}),setWindowOpenHandler(){},on(){},send(name){dialogs.onSend?.(name,(channel,...args)=>handlers.get(channel)({senderFrame:{url:'localtone://app/index.html'}},...args));}};}on(name,fn){(this.events??=new Map()).set(name,fn);}requestClose(){let prevented=false;this.events.get('close')?.({preventDefault(){prevented=true;}});return prevented;}getBounds(){return {x:this.x??20,y:this.y??20,width:this.size[0],height:this.size[1]};}getNormalBounds(){return this.restoreBounds||this.getBounds();}setBounds(b){const next={...this.getBounds(),...b};this.x=next.x;this.y=next.y;this.size=[next.width,next.height];}setResizable(value){this.resizable=value;}setContentSize(w,h){this.size=[w+16,h+32];}isMaximized(){return !!this.maximized;}maximize(){this.restoreBounds=this.getBounds();this.maximized=true;this.setBounds({x:0,y:0,width:1920,height:1080});}unmaximize(){this.maximized=false;if(this.restoreBounds)this.setBounds(this.restoreBounds);}getSize(){return this.size;}getContentSize(){return [this.size[0]-16,this.size[1]-32];}setMinimumSize(w,h){this.minimum=[w,h];}setSize(w,h){this.size=[w,h];}show(){this.visible=true;}async loadURL(){await dialogs.onLoad?.((name,...args)=>handlers.get(name)({senderFrame:{url:'localtone://app/index.html'}},...args));}isDestroyed(){return false;}}

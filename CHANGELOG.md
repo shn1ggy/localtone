@@ -1,3 +1,9 @@
+# 1.1.2
+
+- Add 32 selectable playlist icons in the sidebar, with a compact icon button beside the playlist name and a floating, keyboard-accessible picker.
+- Keep icon choices through restarts and collection export/import; preserve existing default regular/dynamic symbols and discard cancelled edits.
+- Verify the floating picker in real Electron at normal and short window heights alongside persistence and backup regressions.
+
 # 1.1.1
 
 - Progressive audio starts from a half-second PCM buffer instead of decoding or copying the whole song first. Memory stays bounded for long tracks.

@@ -55,6 +55,7 @@ const { randomUUID } = require('node:crypto');
 const { Worker } = require('node:worker_threads');
 require('../app/rules/search.js');
 const playlistRules = require('../app/rules/playlist-rules.js');
+const { validateIcon } = require('../app/rules/playlist-icons.js');
 const { WaveformService } = require('./waveform.cjs');
 const portableStorage = require('./portable.cjs');
 const releaseInfo = require('./release.cjs');
@@ -658,6 +659,8 @@ app.whenReady().then(async () => {
           'settings-writes.js',
           'tag-editor.js',
           'playlist-editor.js',
+          'playlist-icon-picker.js',
+          'rules/playlist-icons.js',
           'lastfm-settings.js',
           'dialog-coordinator.js',
           'settings-tabs.js',
@@ -2219,10 +2222,18 @@ app.whenReady().then(async () => {
         throw new Error('Choose an existing source library.');
       if (action.browse !== undefined && typeof action.browse !== 'boolean')
         throw new Error('Invalid playlist browsing setting.');
-      return { dynamic, ...(action.browse !== undefined ? { browse: action.browse } : {}) };
+      return {
+        dynamic,
+        ...(action.browse !== undefined ? { browse: action.browse } : {}),
+        ...(action.icon !== undefined ? { icon: validateIcon(action.icon) } : {}),
+      };
     };
     if (action.type === 'create') {
-      const config = action.dynamic ? configuration() : {};
+      const config = action.dynamic
+        ? configuration()
+        : action.icon !== undefined
+          ? { icon: validateIcon(action.icon) }
+          : {};
       let ids = [];
       if (action.trackIds !== undefined) {
         if (
