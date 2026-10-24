@@ -162,6 +162,17 @@ Module._load = function (name, ...args) {
   if (name === 'electron')
     return {
       ...electron,
+      BrowserWindow:
+        process.platform === 'linux'
+          ? class extends BrowserWindow {
+              constructor(options) {
+                super({
+                  ...options,
+                  webPreferences: { ...options.webPreferences, offscreen: true, sandbox: false },
+                });
+              }
+            }
+          : BrowserWindow,
       globalShortcut: { register: () => false, unregister() {}, unregisterAll() {} },
     };
   return load.call(this, name, ...args);
